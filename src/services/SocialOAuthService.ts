@@ -38,6 +38,8 @@
  *   5. Ative YouTube Data API v3
  */
 
+import { flowFetch } from './FlowAPIService';
+
 // ─── Configurações das Plataformas ────────────────────────────────────────────
 // ⚠️  PREENCHA AQUI COM SUAS CREDENCIAIS REAIS
 export const PLATFORM_CONFIGS = {
@@ -328,20 +330,13 @@ export function openOAuthPopup(platform: PlatformKey): Promise<{ code: string; s
   });
 }
 
-// ─── Troca `code` por token (DEVE ser feita no backend!) ─────────────────────
-// ⚠️ Em produção, NUNCA troque o code no frontend (expõe o App Secret).
-// Crie um endpoint no backend: POST /api/oauth/exchange
-// que recebe { platform, code } e retorna { access_token, expires_in, refresh_token }
+// ─── Troca `code` por token (via Flow Backend) ──────────────────────────────
 export async function exchangeCodeForToken(
   platform: PlatformKey,
   code: string
 ): Promise<SocialToken> {
-  // ── MODO DESENVOLVIMENTO: chama backend local ──
-  const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8080';
-
-  const response = await fetch(`${backendUrl}/api/oauth/exchange`, {
+  const response = await flowFetch('/social/oauth/exchange', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ platform, code, redirect_uri: REDIRECT_URI }),
   });
 
@@ -367,11 +362,8 @@ export async function exchangeCodeForToken(
 
 // ─── Fetch perfil do usuário após conectar ────────────────────────────────────
 export async function fetchUserProfile(platform: PlatformKey, token: SocialToken): Promise<ConnectedAccount> {
-  const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8080';
-
-  const response = await fetch(`${backendUrl}/api/social/profile`, {
+  const response = await flowFetch('/social/profile', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ platform, access_token: token.accessToken, page_id: token.pageId }),
   });
 
@@ -404,11 +396,8 @@ export async function publishToSocial(
     throw new Error(`Conta ${platform} não conectada ou token expirado. Reconecte.`);
   }
 
-  const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8080';
-
-  const response = await fetch(`${backendUrl}/api/social/publish`, {
+  const response = await flowFetch('/social/publish', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       platform,
       access_token: token.accessToken,
@@ -435,6 +424,97 @@ export function getConnectionStatus(platform: PlatformKey): 'connected' | 'expir
   if (!token) return 'disconnected';
   if (!TokenStore.isValid(platform)) return 'expired';
   return 'connected';
+}
+
+// ─── Login com Google (popup, sem redirect URI) ──────────────────────────────
+declare global {
+  interface Window {
+    google?: {
+      accounts: {
+        oauth2: {
+          initCodeClient(config: {
+            client_id: string;
+            scope: string;
+            ux_mode: 'popup';
+            callback: (resp: { code?: string; error?: string }) => void;
+          }): { requestCode(): void };
+        };
+      };
+    };
+  }
+}
+
+export async function loginWithGoogle(
+  onStatus: (msg: string) => void
+): Promise<ConnectedAccount> {
+  const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+  if (!clientId) throw new Error('VITE_GOOGLE_CLIENT_ID nao configurado no .env');
+
+  if (!window.google?.accounts?.oauth2) {
+    throw new Error('Google Identity Services nao carregado. Recarregue a pagina.');
+  }
+
+  onStatus('Abrindo login Google...');
+
+  const code = await new Promise<string>((resolve, reject) => {
+    const client = window.google!.accounts.oauth2.initCodeClient({
+      client_id: clientId,
+      scope: [
+        'https://www.googleapis.com/auth/youtube.upload',
+        'https://www.googleapis.com/auth/youtube.readonly',
+        'https://www.googleapis.com/auth/userinfo.profile',
+        'https://www.googleapis.com/auth/userinfo.email',
+      ].join(' '),
+      ux_mode: 'popup',
+      callback: (resp) => {
+        if (resp.error) reject(new Error(resp.error));
+        else if (resp.code) resolve(resp.code);
+        else reject(new Error('Login cancelado'));
+      },
+    });
+    client.requestCode();
+  });
+
+  onStatus('Trocando token com Google...');
+
+  const response = await flowFetch('/social/oauth/exchange', {
+    method: 'POST',
+    body: JSON.stringify({ platform: 'youtube', code, redirect_uri: 'postmessage' }),
+  });
+
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}));
+    throw new Error(err.error || 'Erro ao trocar token Google');
+  }
+
+  const data = await response.json();
+  const tokenData = data.token || data;
+
+  const token: SocialToken = {
+    platform: 'youtube',
+    accessToken: tokenData.accessToken || tokenData.access_token,
+    refreshToken: tokenData.refreshToken || tokenData.refresh_token,
+    expiresAt: tokenData.expiresAt || Date.now() + 3600000,
+    userId: tokenData.userId || '',
+    pageId: tokenData.handle,
+  };
+  TokenStore.save(token);
+
+  onStatus('Buscando dados do canal...');
+
+  const account: ConnectedAccount = {
+    platform: 'youtube',
+    handle: tokenData.handle || tokenData.userId || 'YouTube',
+    name: tokenData.handle || 'YouTube Channel',
+    followers: 0,
+    userId: token.userId,
+    connectedAt: Date.now(),
+    status: 'active',
+  };
+  AccountStore.save(account);
+
+  onStatus('YouTube conectado via Google!');
+  return account;
 }
 
 // ─── Fluxo completo de login social ──────────────────────────────────────────

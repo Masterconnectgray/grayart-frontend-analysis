@@ -29,7 +29,7 @@ async function getToken(): Promise<string> {
   return cachedToken!;
 }
 
-async function flowFetch(path: string, options: RequestInit = {}): Promise<Response> {
+export async function flowFetch(path: string, options: RequestInit = {}): Promise<Response> {
   const token = await getToken();
   const fullPath = IS_DEV ? `/flow/grayart${path}` : `${FLOW_URL}/flow/grayart${path}`;
   return fetch(fullPath, {
@@ -133,4 +133,47 @@ export async function getStats(division?: string): Promise<GrayArtStats> {
 
 export function isFlowConfigured(): boolean {
   return !!(FLOW_URL && FLOW_USER && FLOW_PASS);
+}
+
+// ── Social Credentials ──────────────────────────────────────────────────────
+
+export async function saveSocialCredential(platform: string, appId: string, appSecret: string): Promise<boolean> {
+  const resp = await flowFetch('/social/credentials', {
+    method: 'POST',
+    body: JSON.stringify({ platform, appId, appSecret }),
+  });
+  return resp.ok;
+}
+
+export async function listSocialCredentials(): Promise<{ platform: string; hasAppId: boolean; hasAppSecret: boolean }[]> {
+  const resp = await flowFetch('/social/credentials');
+  if (!resp.ok) return [];
+  const data = await resp.json();
+  return data.credentials || [];
+}
+
+export async function deleteSocialCredential(platform: string): Promise<boolean> {
+  const resp = await flowFetch(`/social/credentials/${platform}`, { method: 'DELETE' });
+  return resp.ok;
+}
+
+export interface SocialAccountStatus {
+  platform: string;
+  status: 'connected' | 'disconnected' | 'expired';
+  handle?: string;
+  userId?: string;
+}
+
+export async function getSocialStatus(): Promise<SocialAccountStatus[]> {
+  const resp = await flowFetch('/social/status');
+  if (!resp.ok) return [];
+  const data = await resp.json();
+  return data.accounts || [];
+}
+
+export async function getSocialConfig(): Promise<{ platform: string; configured: boolean }[]> {
+  const resp = await flowFetch('/social/config');
+  if (!resp.ok) return [];
+  const data = await resp.json();
+  return data.platforms || [];
 }
