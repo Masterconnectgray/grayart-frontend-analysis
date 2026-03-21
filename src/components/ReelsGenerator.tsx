@@ -5,6 +5,7 @@ import { CONTENT_TEMPLATES } from '../constants/ContentTemplates';
 import type { Platform } from '../constants/ContentTemplates';
 import { useAppContext } from '../context/AppContext';
 import { PlatformIcon } from '../constants/SocialIcons';
+import { generateCopyWithGemini } from '../services/GeminiService';
 
 interface ReelsGeneratorProps {
   division: Division;
@@ -22,6 +23,8 @@ const ReelsGenerator: React.FC<ReelsGeneratorProps> = ({ division }) => {
   const [copyFeedback, setCopyFeedback] = useState(false);
   const [sendingToVideo, setSendingToVideo] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [customTopic, setCustomTopic] = useState('');
+  const [useAI, setUseAI] = useState(true);
   const [prevDivision, setPrevDivision] = useState(division);
 
   if (division !== prevDivision) {
@@ -45,9 +48,30 @@ const ReelsGenerator: React.FC<ReelsGeneratorProps> = ({ division }) => {
 
   const pick = <T,>(arr: T[]): T => arr[Math.floor(Math.random() * arr.length)];
 
-  const generateScript = () => {
+  const generateScript = async () => {
     setIsGenerating(true);
-    setTimeout(() => {
+
+    if (useAI) {
+      try {
+        const result = await generateCopyWithGemini(division, activePlatform, customTopic || undefined);
+        setGeneratedScript({
+          hook: result.hook,
+          body: result.body,
+          cta: result.cta,
+          tags: result.tags,
+        });
+        addNotification(`Conteudo IA para ${activePlatform} gerado com Gemini!`, 'success');
+      } catch (err) {
+        addNotification(`Erro na IA, usando template local: ${err}`, 'info');
+        const pd = template.platforms[activePlatform];
+        setGeneratedScript({
+          hook: pick(pd.hooks),
+          body: pick(pd.body),
+          cta: pick(pd.cta),
+          tags: pd.tags,
+        });
+      }
+    } else {
       const pd = template.platforms[activePlatform];
       setGeneratedScript({
         hook: pick(pd.hooks),
@@ -55,9 +79,10 @@ const ReelsGenerator: React.FC<ReelsGeneratorProps> = ({ division }) => {
         cta: pick(pd.cta),
         tags: pd.tags,
       });
-      addNotification(`Conteúdo para ${activePlatform} gerado!`, 'success');
-      setIsGenerating(false);
-    }, 600);
+      addNotification(`Conteudo para ${activePlatform} gerado!`, 'success');
+    }
+
+    setIsGenerating(false);
   };
 
   const copyToClipboard = async () => {
@@ -131,11 +156,48 @@ const ReelsGenerator: React.FC<ReelsGeneratorProps> = ({ division }) => {
             Conteúdo estratégico otimizado para o algoritmo.
           </p>
 
-          <div style={{ marginBottom: '1.2rem' }}>
+          <div style={{ marginBottom: '1rem' }}>
             <div style={{ fontSize: '0.65rem', fontWeight: 700, opacity: 0.4, marginBottom: '0.3rem', textTransform: 'uppercase' }}>Público-Alvo</div>
             <div style={{ padding: '0.8rem', borderRadius: '8px', background: subBg, fontSize: '0.8rem' }}>
               {template.audience}
             </div>
+          </div>
+
+          <div style={{ marginBottom: '1rem' }}>
+            <div style={{ fontSize: '0.65rem', fontWeight: 700, opacity: 0.4, marginBottom: '0.3rem', textTransform: 'uppercase' }}>Tema / Assunto (opcional)</div>
+            <input
+              type="text"
+              value={customTopic}
+              onChange={e => setCustomTopic(e.target.value)}
+              placeholder="Ex: Coffee Meet de marco, modernizacao de elevador..."
+              style={{
+                width: '100%', padding: '0.8rem', borderRadius: '8px',
+                background: subBg, border: 'none', color: cardText,
+                fontSize: '0.8rem', outline: 'none',
+              }}
+            />
+          </div>
+
+          <div style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            marginBottom: '1rem', padding: '0.6rem 0.8rem', borderRadius: '8px', background: subBg,
+          }}>
+            <span style={{ fontSize: '0.75rem', fontWeight: 700 }}>Gemini IA</span>
+            <button
+              onClick={() => setUseAI(!useAI)}
+              style={{
+                width: '44px', height: '24px', borderRadius: '12px',
+                background: useAI ? theme.colors.primary : '#555',
+                position: 'relative', transition: 'background 0.3s',
+              }}
+            >
+              <span style={{
+                position: 'absolute', top: '2px',
+                left: useAI ? '22px' : '2px',
+                width: '20px', height: '20px', borderRadius: '50%',
+                background: '#fff', transition: 'left 0.3s',
+              }} />
+            </button>
           </div>
 
           <button

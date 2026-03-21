@@ -2,9 +2,9 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
 // https://vite.dev/config/
-export default defineConfig({
+export default defineConfig(({ command }) => ({
   plugins: [react()],
-  base: '/grayart/',
+  base: command === 'serve' ? '/' : '/grayart/',
   server: {
     proxy: {
       '/api/evolution': {
@@ -19,4 +19,4 @@ export default defineConfig({
       },
     },
   },
-})
+}))
