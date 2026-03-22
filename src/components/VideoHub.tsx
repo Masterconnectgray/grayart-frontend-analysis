@@ -172,7 +172,7 @@ export default function VideoHub({ division }: VideoHubProps) {
               const apiBadge = API_BADGE[p.api];
               const statusBadge = STATUS_BADGE[p.status];
               return (
-                <div key={i} className="rounded-2xl overflow-hidden border border-white/10 hover:border-white/20 transition-all">
+                <div key={i} className="rounded-2xl overflow-hidden border border-black/10 dark:border-white/10 hover:border-black/20 dark:hover:border-white/20 transition-all">
                   {/* Header colorido */}
                   <div className="px-5 py-4 flex items-center justify-between" style={{ backgroundColor: `${p.color}20`, borderBottom: `2px solid ${p.color}40` }}>
                     <div className="flex items-center gap-3">
@@ -193,15 +193,15 @@ export default function VideoHub({ division }: VideoHubProps) {
                     </span>
                   </div>
                   {/* Body */}
-                  <div className="px-5 py-4 bg-[#1e1e1e] space-y-3">
+                  <div className="px-5 py-4 bg-[var(--card-bg)] space-y-3">
                     <div className="flex items-center gap-3">
                       <span className={`px-2.5 py-1 rounded border text-[10px] font-bold ${apiBadge.class}`}>
                         {apiBadge.label}
                       </span>
                       <Stars count={p.quality} />
                     </div>
-                    <p className="text-sm font-bold text-white">{p.tier}</p>
-                    <p className="text-sm text-white/70">{p.bestFor}</p>
+                    <p className="text-sm font-bold text-[var(--card-text)]">{p.tier}</p>
+                    <p className="text-sm text-[var(--card-text)] opacity-60">{p.bestFor}</p>
                   </div>
                 </div>
               );

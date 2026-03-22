@@ -13,11 +13,11 @@ import { getOAuthCredential } from './oauthCredentials';
 const PLATFORM_META: Record<SocialPlatform, Omit<PlatformConfig, 'clientId' | 'clientSecret'>> = {
   instagram: {
     scopes: ['instagram_basic', 'instagram_content_publish', 'instagram_manage_insights', 'pages_show_list'],
-    authUrl: 'https://www.facebook.com/v19.0/dialog/oauth',
+    authUrl: 'https://www.facebook.com/v21.0/dialog/oauth',
   },
   facebook: {
-    scopes: ['pages_manage_posts', 'pages_read_engagement', 'publish_to_groups', 'pages_show_list'],
-    authUrl: 'https://www.facebook.com/v19.0/dialog/oauth',
+    scopes: ['pages_manage_posts', 'pages_read_engagement', 'pages_show_list'],
+    authUrl: 'https://www.facebook.com/v21.0/dialog/oauth',
   },
   linkedin: {
     scopes: ['w_member_social', 'r_liteprofile', 'r_emailaddress', 'r_organization_social', 'w_organization_social'],

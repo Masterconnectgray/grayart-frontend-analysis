@@ -7,7 +7,10 @@ import os
 import io
 import json
 import uuid
+import re
+import subprocess
 import base64
+import tempfile
 from pathlib import Path
 
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException
@@ -54,7 +57,7 @@ def health():
     return {
         "ok": True,
         "service": "grayart-ai",
-        "features": ["tts-kokoro", "photo-analysis-moondream", "photo-report-gemini"],
+        "features": ["tts-kokoro", "photo-analysis-moondream", "photo-report-gemini", "captions-gemini"],
     }
 
 
@@ -245,6 +248,80 @@ Responda APENAS com o JSON, sem markdown."""
         }
     except Exception as e:
         raise HTTPException(500, f"Erro na análise: {e}")
+
+
+# ── Captions / Subtitles ─────────────────────────────────────────────────────
+
+def _parse_srt(srt_text: str) -> list[dict]:
+    segments = []
+    for block in re.split(r"\n\n+", srt_text.strip()):
+        lines = block.strip().split("\n")
+        if len(lines) >= 3:
+            ts = lines[1]
+            m = re.match(r"(\d[\d:,]+)\s*-->\s*(\d[\d:,]+)", ts)
+            if m:
+                segments.append({"start": m.group(1).strip(), "end": m.group(2).strip(), "text": "\n".join(lines[2:])})
+    return segments
+
+@app.post("/captions/generate")
+async def captions_generate(
+    video: UploadFile = File(...),
+    language: str = Form("pt-BR"),
+):
+    gemini_key = os.environ.get("GEMINI_API_KEY", "")
+    if not gemini_key:
+        raise HTTPException(503, "GEMINI_API_KEY não configurada")
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        video_path = os.path.join(tmpdir, f"input_{uuid.uuid4().hex[:8]}{Path(video.filename or 'v.mp4').suffix}")
+        audio_path = os.path.join(tmpdir, "audio.mp3")
+
+        with open(video_path, "wb") as f:
+            f.write(await video.read())
+
+        result = subprocess.run(
+            ["ffmpeg", "-i", video_path, "-vn", "-acodec", "libmp3lame", "-q:a", "4", "-y", audio_path],
+            capture_output=True, timeout=120,
+        )
+        if result.returncode != 0:
+            raise HTTPException(500, f"FFmpeg falhou: {result.stderr.decode()[-300:]}")
+
+        with open(audio_path, "rb") as f:
+            audio_b64 = base64.b64encode(f.read()).decode()
+
+        import urllib.request
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={gemini_key}"
+        prompt = f"Transcreva este áudio em {language}. Retorne APENAS no formato de legenda SRT com timestamps precisos. Não inclua markdown, apenas o SRT puro."
+        payload = json.dumps({
+            "contents": [{"parts": [
+                {"text": prompt},
+                {"inline_data": {"mime_type": "audio/mp3", "data": audio_b64}},
+            ]}],
+            "generationConfig": {"temperature": 0.2, "maxOutputTokens": 4096, "thinkingBudget": 0},
+        }).encode()
+
+        req = urllib.request.Request(url, data=payload, headers={"Content-Type": "application/json"})
+        try:
+            with urllib.request.urlopen(req, timeout=60) as resp:
+                gemini_data = json.loads(resp.read().decode())
+        except Exception as e:
+            raise HTTPException(502, f"Erro ao chamar Gemini: {e}")
+
+        srt_text = gemini_data["candidates"][0]["content"]["parts"][0]["text"].strip()
+        srt_text = re.sub(r"^```[a-z]*\n?", "", srt_text)
+        srt_text = re.sub(r"\n?```$", "", srt_text).strip()
+
+        return {"srt": srt_text, "segments": _parse_srt(srt_text), "language": language}
+
+
+@app.get("/captions/formats")
+def captions_formats():
+    return {"formats": [
+        {"id": "srt", "name": "SubRip (.srt)", "ext": ".srt"},
+        {"id": "vtt", "name": "WebVTT (.vtt)", "ext": ".vtt"},
+        {"id": "ass", "name": "Advanced SubStation (.ass)", "ext": ".ass"},
+        {"id": "json", "name": "JSON segments", "ext": ".json"},
+    ]}
 
 
 # ── Cleanup de arquivos antigos ──────────────────────────────────────────────

@@ -46,6 +46,197 @@ function buildAuthUrl(platform: SocialPlatform, redirectUri: string, state: stri
   return `${config.authUrl}?${params.toString()}`;
 }
 
+type TokenExchangeResult = {
+  accessToken: string;
+  refreshToken: string | null;
+  expiresIn: number;
+  accountId: string | null;
+  accountName: string | null;
+};
+
+async function exchangeCodeForToken(
+  platform: SocialPlatform,
+  code: string,
+  redirectUri: string
+): Promise<TokenExchangeResult> {
+  const config = getPlatformConfig(platform);
+
+  if (platform === 'instagram' || platform === 'facebook') {
+    const tokenRes = await fetch('https://graph.facebook.com/v21.0/oauth/access_token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        client_id: config.clientId,
+        client_secret: config.clientSecret,
+        redirect_uri: redirectUri,
+        code,
+      }),
+    });
+    if (!tokenRes.ok) {
+      const err = await tokenRes.json().catch(() => ({})) as { error?: { message?: string } };
+      throw new Error(err.error?.message || `Meta token exchange HTTP ${tokenRes.status}`);
+    }
+    const tokenData = await tokenRes.json() as { access_token: string; token_type: string; expires_in?: number };
+
+    const longRes = await fetch(
+      `https://graph.facebook.com/v21.0/oauth/access_token?grant_type=fb_exchange_token&client_id=${config.clientId}&client_secret=${config.clientSecret}&fb_exchange_token=${tokenData.access_token}`
+    );
+    let accessToken = tokenData.access_token;
+    let expiresIn = tokenData.expires_in || 3600;
+    if (longRes.ok) {
+      const longData = await longRes.json() as { access_token: string; expires_in?: number };
+      accessToken = longData.access_token;
+      expiresIn = longData.expires_in || 5184000;
+    }
+
+    let accountId: string | null = null;
+    let accountName: string | null = null;
+    try {
+      if (platform === 'instagram') {
+        const pagesRes = await fetch(`https://graph.facebook.com/v21.0/me/accounts?access_token=${accessToken}`);
+        if (pagesRes.ok) {
+          const pagesData = await pagesRes.json() as { data: Array<{ id: string; name: string; access_token: string }> };
+          const page = pagesData.data?.[0];
+          if (page) {
+            const igRes = await fetch(`https://graph.facebook.com/v21.0/${page.id}?fields=instagram_business_account&access_token=${accessToken}`);
+            if (igRes.ok) {
+              const igData = await igRes.json() as { instagram_business_account?: { id: string } };
+              if (igData.instagram_business_account) {
+                accountId = igData.instagram_business_account.id;
+                const profileRes = await fetch(`https://graph.facebook.com/v21.0/${accountId}?fields=username,name&access_token=${accessToken}`);
+                if (profileRes.ok) {
+                  const profile = await profileRes.json() as { username?: string; name?: string };
+                  accountName = profile.username || profile.name || null;
+                }
+              }
+            }
+          }
+        }
+      } else {
+        const meRes = await fetch(`https://graph.facebook.com/v21.0/me?fields=id,name&access_token=${accessToken}`);
+        if (meRes.ok) {
+          const meData = await meRes.json() as { id: string; name: string };
+          accountId = meData.id;
+          accountName = meData.name;
+        }
+      }
+    } catch { /* profile fetch is best-effort */ }
+
+    return { accessToken, refreshToken: null, expiresIn, accountId, accountName };
+  }
+
+  if (platform === 'youtube') {
+    const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        client_id: config.clientId,
+        client_secret: config.clientSecret,
+        redirect_uri: redirectUri,
+        code,
+        grant_type: 'authorization_code',
+      }),
+    });
+    if (!tokenRes.ok) {
+      const err = await tokenRes.json().catch(() => ({})) as { error_description?: string };
+      throw new Error(err.error_description || `Google token exchange HTTP ${tokenRes.status}`);
+    }
+    const tokenData = await tokenRes.json() as { access_token: string; refresh_token?: string; expires_in: number; id_token?: string };
+
+    let accountId: string | null = null;
+    let accountName: string | null = null;
+    try {
+      const profileRes = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
+        headers: { Authorization: `Bearer ${tokenData.access_token}` },
+      });
+      if (profileRes.ok) {
+        const profile = await profileRes.json() as { id: string; name?: string; email?: string };
+        accountId = profile.id;
+        accountName = profile.name || profile.email || null;
+      }
+    } catch { /* best-effort */ }
+
+    return {
+      accessToken: tokenData.access_token,
+      refreshToken: tokenData.refresh_token || null,
+      expiresIn: tokenData.expires_in || 3600,
+      accountId,
+      accountName,
+    };
+  }
+
+  if (platform === 'linkedin') {
+    const tokenRes = await fetch('https://www.linkedin.com/oauth/v2/accessToken', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        grant_type: 'authorization_code',
+        code,
+        redirect_uri: redirectUri,
+        client_id: config.clientId,
+        client_secret: config.clientSecret,
+      }),
+    });
+    if (!tokenRes.ok) {
+      const err = await tokenRes.json().catch(() => ({})) as { error_description?: string };
+      throw new Error(err.error_description || `LinkedIn token exchange HTTP ${tokenRes.status}`);
+    }
+    const tokenData = await tokenRes.json() as { access_token: string; refresh_token?: string; expires_in: number };
+
+    let accountId: string | null = null;
+    let accountName: string | null = null;
+    try {
+      const profileRes = await fetch('https://api.linkedin.com/v2/userinfo', {
+        headers: { Authorization: `Bearer ${tokenData.access_token}` },
+      });
+      if (profileRes.ok) {
+        const profile = await profileRes.json() as { sub: string; name?: string; email?: string };
+        accountId = profile.sub;
+        accountName = profile.name || profile.email || null;
+      }
+    } catch { /* best-effort */ }
+
+    return {
+      accessToken: tokenData.access_token,
+      refreshToken: tokenData.refresh_token || null,
+      expiresIn: tokenData.expires_in || 3600,
+      accountId,
+      accountName,
+    };
+  }
+
+  if (platform === 'tiktok') {
+    const tokenRes = await fetch('https://open.tiktokapis.com/v2/oauth/token/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        client_key: config.clientId,
+        client_secret: config.clientSecret,
+        code,
+        grant_type: 'authorization_code',
+        redirect_uri: redirectUri,
+      }),
+    });
+    if (!tokenRes.ok) {
+      const err = await tokenRes.json().catch(() => ({})) as { error?: { message?: string }; error_description?: string };
+      throw new Error(err.error?.message || err.error_description || `TikTok token exchange HTTP ${tokenRes.status}`);
+    }
+    const tokenData = await tokenRes.json() as { data?: { access_token: string; refresh_token?: string; expires_in: number; open_id?: string } };
+    const data = tokenData.data;
+    if (!data?.access_token) throw new Error('TikTok nao retornou access_token');
+
+    return {
+      accessToken: data.access_token,
+      refreshToken: data.refresh_token || null,
+      expiresIn: data.expires_in || 86400,
+      accountId: data.open_id || null,
+      accountName: null,
+    };
+  }
+
+  throw new Error(`Exchange nao implementado para ${platform}`);
+}
+
 socialRouter.post('/connect', verifyToken, (req, res) => {
   const { platform, frontendOrigin } = req.body as { platform?: SocialPlatform; frontendOrigin?: string };
   if (!platform || !SOCIAL_PLATFORMS.includes(platform)) {
@@ -79,60 +270,9 @@ socialRouter.get('/callback', async (req, res) => {
 
   try {
     const payload = verifyJwt<OAuthStatePayload>(state);
-    const exchangeResponse = await flowFetch('/social/oauth/exchange', {
-      method: 'POST',
-      body: JSON.stringify({
-        platform,
-        code,
-        redirect_uri: payload.redirectUri,
-      }),
-    });
+    const tokenResult = await exchangeCodeForToken(platform, code, payload.redirectUri);
 
-    if (!exchangeResponse.ok) {
-      const err = await exchangeResponse.json().catch(() => ({}));
-      throw new Error((err as { message?: string; error?: string }).message || (err as { error?: string }).error || `HTTP ${exchangeResponse.status}`);
-    }
-
-    const tokenData = await exchangeResponse.json() as {
-      access_token?: string;
-      refresh_token?: string;
-      expires_in?: number;
-      user_id?: string;
-      sub?: string;
-      page_id?: string;
-      token?: { accessToken?: string; refreshToken?: string; expiresAt?: number; userId?: string; handle?: string };
-    };
-
-    const accessToken = tokenData.access_token || tokenData.token?.accessToken;
-    const refreshToken = tokenData.refresh_token || tokenData.token?.refreshToken || null;
-    const accountId = tokenData.page_id || tokenData.user_id || tokenData.sub || tokenData.token?.userId || null;
-    const expiresAt = tokenData.token?.expiresAt
-      ? new Date(tokenData.token.expiresAt).toISOString()
-      : new Date(Date.now() + (tokenData.expires_in || 3600) * 1000).toISOString();
-
-    if (!accessToken) {
-      throw new Error('Token de acesso não retornado pelo Flow');
-    }
-
-    let accountName = tokenData.token?.handle || null;
-
-    try {
-      const profileResponse = await flowFetch('/social/profile', {
-        method: 'POST',
-        body: JSON.stringify({
-          platform,
-          access_token: accessToken,
-          page_id: tokenData.page_id,
-        }),
-      });
-
-      if (profileResponse.ok) {
-        const profile = await profileResponse.json() as { name?: string; username?: string; handle?: string };
-        accountName = profile.handle || profile.username || profile.name || accountName;
-      }
-    } catch {
-      // Busca de perfil é complementar.
-    }
+    const expiresAt = new Date(Date.now() + tokenResult.expiresIn * 1000).toISOString();
 
     db.prepare(`
       INSERT INTO social_connections (
@@ -150,27 +290,32 @@ socialRouter.get('/callback', async (req, res) => {
     `).run(
       payload.userId,
       platform,
-      encrypt(accessToken, env.jwtSecret),
-      refreshToken ? encrypt(refreshToken, env.jwtSecret) : null,
+      encrypt(tokenResult.accessToken, env.jwtSecret),
+      tokenResult.refreshToken ? encrypt(tokenResult.refreshToken, env.jwtSecret) : null,
       expiresAt,
-      accountName,
-      accountId,
+      tokenResult.accountName,
+      tokenResult.accountId,
       nowIso(),
     );
 
-    logAudit({ userId: payload.userId, action: 'social.callback', details: { platform, accountId }, ipAddress: req.ip });
+    logAudit({ userId: payload.userId, action: 'social.callback', details: { platform, accountId: tokenResult.accountId }, ipAddress: req.ip });
 
     return res.type('html').send(`
       <!doctype html>
       <html lang="pt-BR">
-        <head><meta charset="utf-8"><title>Conexão concluída</title></head>
-        <body style="font-family: sans-serif; padding: 32px;">
-          <h2>Conta conectada com sucesso</h2>
-          <p>Esta janela será fechada automaticamente.</p>
+        <head><meta charset="utf-8"><title>Conexao concluida</title></head>
+        <body style="font-family: sans-serif; padding: 32px; text-align: center;">
+          <h2 style="color: #10b981;">Conta conectada com sucesso!</h2>
+          <p>${tokenResult.accountName ? `<strong>${tokenResult.accountName}</strong> vinculada.` : 'Esta janela sera fechada automaticamente.'}</p>
           <script>
             if (window.opener) {
-              window.opener.postMessage({ type: 'oauth_callback', platform: ${JSON.stringify(platform)}, success: true }, ${JSON.stringify(payload.frontendOrigin)});
-              window.close();
+              window.opener.postMessage({
+                type: 'oauth_callback',
+                platform: ${JSON.stringify(platform)},
+                success: true,
+                accountName: ${JSON.stringify(null)}
+              }, ${JSON.stringify(payload.frontendOrigin)});
+              setTimeout(function() { window.close(); }, 1500);
             }
           </script>
         </body>
@@ -178,16 +323,22 @@ socialRouter.get('/callback', async (req, res) => {
     `);
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Erro no callback OAuth';
+    const safePlatform = SOCIAL_PLATFORMS.includes(platform) ? platform : null;
     return res.status(400).type('html').send(`
       <!doctype html>
       <html lang="pt-BR">
-        <head><meta charset="utf-8"><title>Erro na conexão</title></head>
-        <body style="font-family: sans-serif; padding: 32px;">
-          <h2>Falha ao conectar a conta</h2>
+        <head><meta charset="utf-8"><title>Erro na conexao</title></head>
+        <body style="font-family: sans-serif; padding: 32px; text-align: center;">
+          <h2 style="color: #ef4444;">Falha ao conectar a conta</h2>
           <p>${message}</p>
           <script>
             if (window.opener) {
-              window.opener.postMessage({ type: 'oauth_callback', platform: ${JSON.stringify(platform || null)}, success: false, error: ${JSON.stringify(message)} }, '*');
+              window.opener.postMessage({
+                type: 'oauth_callback',
+                platform: ${JSON.stringify(safePlatform)},
+                success: false,
+                error: ${JSON.stringify(message)}
+              }, '*');
             }
           </script>
         </body>
