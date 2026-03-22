@@ -14,7 +14,7 @@ interface VideoGeneratorProps {
 
 type Provider = 'auto' | 'veo' | 'kling';
 type Format = '9:16' | '16:9' | '1:1';
-type Duration = 5 | 8;
+type Duration = 6 | 8;
 
 interface JobStatus {
   id: string;
@@ -69,7 +69,7 @@ export default function VideoGenerator({ division: _division }: VideoGeneratorPr
   const [prompt, setPrompt] = useState('');
   const [provider, setProvider] = useState<Provider>('auto');
   const [format, setFormat] = useState<Format>('9:16');
-  const [duration, setDuration] = useState<Duration>(5);
+  const [duration, setDuration] = useState<Duration>(6);
 
   const [generating, setGenerating] = useState(false);
   const [job, setJob] = useState<JobStatus | null>(null);
@@ -264,7 +264,7 @@ export default function VideoGenerator({ division: _division }: VideoGeneratorPr
           <div className="mt-4">
             <label className="text-xs text-slate-400 uppercase tracking-wide mb-2 block">Duracao</label>
             <div className="flex gap-2">
-              {([5, 8] as Duration[]).map((d) => (
+              {([6, 8] as Duration[]).map((d) => (
                 <button
                   key={d}
                   onClick={() => setDuration(d)}
@@ -281,7 +281,7 @@ export default function VideoGenerator({ division: _division }: VideoGeneratorPr
             </div>
             <p className="text-[11px] text-slate-500 mt-1.5">
               <Clock size={11} className="inline mr-1" />
-              Kling suporta apenas 5s no plano gratuito
+              Veo 3: 6s ou 8s | Kling: 6s no plano gratuito
             </p>
           </div>
 

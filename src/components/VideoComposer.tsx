@@ -28,7 +28,7 @@ interface JobState {
 }
 
 const SCENE_DURATION = 6;
-const MARKS = [15, 30, 60, 90];
+const MARKS = [6, 12, 18, 30, 60, 90];
 
 export default function VideoComposer({ division }: VideoComposerProps) {
   const theme = DIVISIONS[division];
@@ -145,7 +145,7 @@ export default function VideoComposer({ division }: VideoComposerProps) {
               <span className="text-sm font-bold" style={{ color: theme.colors.primary }}>{duration}s</span>
             </div>
             <input
-              type="range" min={5} max={90} step={1} value={duration}
+              type="range" min={6} max={90} step={6} value={duration}
               onChange={e => setDuration(Number(e.target.value))}
               disabled={isGenerating}
               className="w-full h-2 rounded-full appearance-none cursor-pointer bg-white/10"
@@ -155,7 +155,7 @@ export default function VideoComposer({ division }: VideoComposerProps) {
               {MARKS.map(m => <span key={m}>{m}s</span>)}
             </div>
             <p className="text-xs text-white/40 mt-2">
-              {sceneCount} cenas de ~{SCENE_DURATION}s cada
+              {sceneCount} cena{sceneCount > 1 ? 's' : ''} de {SCENE_DURATION}s cada — tempo estimado: ~{sceneCount * 40}s ({Math.ceil(sceneCount * 40 / 60)}min)
             </p>
           </div>
 
@@ -241,14 +241,22 @@ export default function VideoComposer({ division }: VideoComposerProps) {
             </div>
 
             {!isDone && (
-              <div className="w-full h-2 bg-white/10 rounded-full overflow-hidden">
-                <div
-                  className="h-full rounded-full transition-all duration-500"
-                  style={{
-                    width: `${(doneScenesCount / totalScenes) * 100}%`,
-                    backgroundColor: status === 'error' ? '#ef4444' : '#25D366'
-                  }}
-                />
+              <div className="space-y-1">
+                <div className="flex justify-between text-[10px] font-bold">
+                  <span className="text-white/50">{Math.round((doneScenesCount / totalScenes) * 100)}%</span>
+                  <span className="text-white/30">{doneScenesCount}/{totalScenes} cenas</span>
+                </div>
+                <div className="w-full h-3 bg-white/10 rounded-full overflow-hidden">
+                  <div
+                    className="h-full rounded-full transition-all duration-700 ease-out relative overflow-hidden"
+                    style={{
+                      width: `${Math.max(2, (doneScenesCount / totalScenes) * 100)}%`,
+                      backgroundColor: status === 'error' ? '#ef4444' : '#25D366'
+                    }}
+                  >
+                    <div className="absolute inset-0 bg-[linear-gradient(45deg,rgba(255,255,255,0.15)25%,transparent_25%,transparent_50%,rgba(255,255,255,0.15)50%,rgba(255,255,255,0.15)75%,transparent_75%,transparent)] bg-[length:1rem_1rem] animate-[stripes_1s_linear_infinite]" />
+                  </div>
+                </div>
               </div>
             )}
 

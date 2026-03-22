@@ -26,7 +26,7 @@ export default function VideoHub({ division }: VideoHubProps) {
           }`}
         >
           <Film size={16} />
-          Clip Unico (5-8s)
+          Clip Unico (6s)
         </button>
         <button
           onClick={() => setMode('composer')}
@@ -37,7 +37,7 @@ export default function VideoHub({ division }: VideoHubProps) {
           }`}
         >
           <Clapperboard size={16} />
-          Video Composto (5-90s)
+          Video Composto (6-90s)
         </button>
       </div>
 

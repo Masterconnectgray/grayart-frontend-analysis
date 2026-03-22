@@ -62,7 +62,7 @@ function getJob(jobId: number, userId: number) {
 }
 
 async function callGeminiText(prompt: string): Promise<string> {
-  const res = await fetch(`${GEMINI_BASE}/models/gemini-2.0-flash:generateContent?key=${env.geminiApiKey}`, {
+  const res = await fetch(`${GEMINI_BASE}/models/gemini-2.5-flash:generateContent?key=${env.geminiApiKey}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
