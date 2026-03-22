@@ -166,7 +166,7 @@ const TIPS_DATA: Record<Division, { title: string; detail: string; status: 'opti
   ],
   'gray-art': [
     { title: 'Reels Criativos', detail: 'Processo criativo em time-lapse gera alto engajamento.', status: 'optimal' },
-    { title: 'Pinterest', detail: 'Portfolio no Pinterest para SEO visual - 40k buscas/mes.', status: 'warning' },
+    { title: 'X (Twitter)', detail: 'Presença no X para alcance orgânico e threads virais.', status: 'warning' },
     { title: 'Stories Diários', detail: 'Stories diarios aumentam visibilidade em 22% no feed.', status: 'optimal' },
   ],
 };

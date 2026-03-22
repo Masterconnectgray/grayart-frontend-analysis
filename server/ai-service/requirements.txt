@@ -3,6 +3,4 @@ uvicorn>=0.34.0
 kokoro>=0.9.4
 soundfile>=0.13.0
 moondream>=0.0.6
-google-genai>=1.0.0
 python-multipart>=0.0.18
-Pillow>=11.0.0

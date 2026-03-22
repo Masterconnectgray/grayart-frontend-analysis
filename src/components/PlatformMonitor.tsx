@@ -80,7 +80,7 @@ const DIVISION_METRICS: Record<Division, PlatformMetrics[]> = {
   'gray-art': [
     { platform: 'Instagram', platformId: 'instagram', color: '#E4405F', followers: '15.8k', reach: '62.8k', engagement: '5.2%', views: '120k', status: 'online' },
     { platform: 'TikTok', platformId: 'tiktok', color: '#000000', followers: '9.2k', reach: '85.4k', engagement: '7.1%', views: '210k', status: 'online' },
-    { platform: 'Pinterest', platformId: 'pinterest', color: '#E60023', followers: '6.7k', reach: '34.2k', engagement: '3.8%', views: '48k', status: 'sync' },
+    { platform: 'X', platformId: 'x', color: '#000000', followers: '6.7k', reach: '34.2k', engagement: '3.8%', views: '48k', status: 'sync' },
   ],
 };
 
