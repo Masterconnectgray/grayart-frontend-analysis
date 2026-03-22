@@ -110,7 +110,7 @@ export default function VideoGenerator({ division: _division }: VideoGeneratorPr
         const data: JobStatus = await res.json();
         setJob(data);
 
-        if (data.status === 'done' && data.videoUrl) {
+        if ((data.status === 'done' || data.status === 'completed') && data.videoUrl) {
           clearInterval(pollRef.current!);
           pollRef.current = null;
           setGenerating(false);
@@ -145,8 +145,8 @@ export default function VideoGenerator({ division: _division }: VideoGeneratorPr
         body: JSON.stringify({ prompt, format, duration, provider }),
       });
       const data = await res.json();
-      if (data.jobId || data.id) {
-        const id = data.jobId ?? data.id;
+      if (data.job_id || data.jobId || data.id) {
+        const id = data.job_id ?? data.jobId ?? data.id;
         setJob({ id, status: 'queued', progress: 0, step: 'Na fila...', provider: provider === 'auto' ? 'auto' : provider });
         pollStatus(id);
       } else {
