@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import type { Division } from '../constants/Themes';
-import { DIVISIONS } from '../constants/Themes';
 import { Card } from '../design-system';
 import { ExternalLink, Maximize2, ArrowLeft } from 'lucide-react';
 
@@ -58,7 +57,7 @@ const TOOLS = {
 };
 
 export default function ExternalTool({ division, tool }: ExternalToolProps) {
-  const _theme = DIVISIONS[division];
+  void division; // used by parent for theme
   const config = TOOLS[tool];
   const [showEmbed, setShowEmbed] = useState(false);
   const basePath = import.meta.env.DEV ? '' : '/grayart';
