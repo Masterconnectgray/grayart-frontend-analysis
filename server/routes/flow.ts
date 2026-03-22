@@ -4,6 +4,8 @@ import { verifyToken } from '../middleware/auth';
 import { flowFetch } from '../utils/flow';
 import { logAudit } from '../utils/audit';
 import { env } from '../config/env';
+import { clearOAuthCredential, listOAuthCredentialFlags, setOAuthCredential } from '../utils/oauthCredentials';
+import { SOCIAL_PLATFORMS, type SocialPlatform } from '../utils/social';
 
 const flowRouter = Router();
 
@@ -215,60 +217,30 @@ flowRouter.post('/social/credentials', (req, res) => {
     return res.status(400).json({ error: 'platform, appId e appSecret são obrigatórios' });
   }
 
-  // Salvar em env runtime (não persiste no .env por segurança)
-  const envMap: Record<string, { id: string; secret: string }> = {
-    instagram: { id: 'META_APP_ID', secret: 'META_APP_SECRET' },
-    facebook: { id: 'META_APP_ID', secret: 'META_APP_SECRET' },
-    linkedin: { id: 'LINKEDIN_CLIENT_ID', secret: 'LINKEDIN_CLIENT_SECRET' },
-    tiktok: { id: 'TIKTOK_CLIENT_KEY', secret: 'TIKTOK_CLIENT_SECRET' },
-    youtube: { id: 'GOOGLE_CLIENT_ID', secret: 'GOOGLE_CLIENT_SECRET' },
-  };
-
-  const mapping = envMap[platform];
-  if (!mapping) {
+  if (!SOCIAL_PLATFORMS.includes(platform as SocialPlatform)) {
     return res.status(400).json({ error: `Plataforma ${platform} não suportada` });
   }
 
-  process.env[mapping.id] = appId;
-  process.env[mapping.secret] = appSecret;
+  setOAuthCredential(platform as SocialPlatform, appId, appSecret);
 
   logAudit(req.user!.userId, 'flow.social_credentials_save', { platform }, req.ip || '');
   return res.json({ ok: true, platform });
 });
 
 flowRouter.get('/social/credentials', (_req, res) => {
-  const platforms = ['instagram', 'facebook', 'linkedin', 'tiktok', 'youtube'];
-  const envMap: Record<string, { id: string; secret: string }> = {
-    instagram: { id: 'META_APP_ID', secret: 'META_APP_SECRET' },
-    facebook: { id: 'META_APP_ID', secret: 'META_APP_SECRET' },
-    linkedin: { id: 'LINKEDIN_CLIENT_ID', secret: 'LINKEDIN_CLIENT_SECRET' },
-    tiktok: { id: 'TIKTOK_CLIENT_KEY', secret: 'TIKTOK_CLIENT_SECRET' },
-    youtube: { id: 'GOOGLE_CLIENT_ID', secret: 'GOOGLE_CLIENT_SECRET' },
-  };
-
   return res.json({
-    credentials: platforms.map(p => ({
-      platform: p,
-      hasAppId: !!process.env[envMap[p].id],
-      hasAppSecret: !!process.env[envMap[p].secret],
+    credentials: listOAuthCredentialFlags(SOCIAL_PLATFORMS).map((item) => ({
+      platform: item.platform,
+      hasAppId: item.hasAppId,
+      hasAppSecret: item.hasAppSecret,
     })),
   });
 });
 
 flowRouter.delete('/social/credentials/:platform', (req, res) => {
   const platform = req.params.platform;
-  const envMap: Record<string, { id: string; secret: string }> = {
-    instagram: { id: 'META_APP_ID', secret: 'META_APP_SECRET' },
-    facebook: { id: 'META_APP_ID', secret: 'META_APP_SECRET' },
-    linkedin: { id: 'LINKEDIN_CLIENT_ID', secret: 'LINKEDIN_CLIENT_SECRET' },
-    tiktok: { id: 'TIKTOK_CLIENT_KEY', secret: 'TIKTOK_CLIENT_SECRET' },
-    youtube: { id: 'GOOGLE_CLIENT_ID', secret: 'GOOGLE_CLIENT_SECRET' },
-  };
-
-  const mapping = envMap[platform];
-  if (mapping) {
-    delete process.env[mapping.id];
-    delete process.env[mapping.secret];
+  if (SOCIAL_PLATFORMS.includes(platform as SocialPlatform)) {
+    clearOAuthCredential(platform as SocialPlatform);
   }
 
   logAudit(req.user!.userId, 'flow.social_credentials_delete', { platform }, req.ip || '');
@@ -298,20 +270,14 @@ flowRouter.get('/social/status', (req, res) => {
 });
 
 flowRouter.get('/social/config', (_req, res) => {
-  const platforms = ['instagram', 'facebook', 'linkedin', 'tiktok', 'youtube', 'pinterest'];
-  const envMap: Record<string, string> = {
-    instagram: 'META_APP_ID',
-    facebook: 'META_APP_ID',
-    linkedin: 'LINKEDIN_CLIENT_ID',
-    tiktok: 'TIKTOK_CLIENT_KEY',
-    youtube: 'GOOGLE_CLIENT_ID',
-    pinterest: '',
-  };
+  const configuredPlatforms = new Map(
+    listOAuthCredentialFlags(SOCIAL_PLATFORMS).map((item) => [item.platform, item.configured])
+  );
 
   return res.json({
-    platforms: platforms.map(p => ({
+    platforms: ['instagram', 'facebook', 'linkedin', 'tiktok', 'youtube', 'pinterest'].map(p => ({
       platform: p,
-      configured: !!process.env[envMap[p]],
+      configured: configuredPlatforms.get(p as SocialPlatform) || false,
     })),
   });
 });

@@ -6,7 +6,7 @@ import { logAudit } from '../utils/audit';
 
 const videoV2Router = Router();
 const GEMINI_BASE = 'https://generativelanguage.googleapis.com/v1beta';
-const PIAPI_BASE = 'https://api.piapi.ai/api/kling/v1/video';
+const PIAPI_BASE = 'https://api.piapi.ai/api/v1/task';
 
 type VideoFormat = '9:16' | '16:9' | '1:1';
 type VideoDuration = 5 | 8;
@@ -130,20 +130,23 @@ videoV2Router.post('/generate', async (req, res) => {
         method: 'POST',
         headers: piApiHeaders(),
         body: JSON.stringify({
-          prompt,
-          aspect_ratio: format,
-          duration: '5',
+          model: 'kling',
+          task_type: 'video_generation',
+          input: {
+            prompt,
+            aspect_ratio: format,
+            duration: 5,
+            mode: 'std',
+          },
         }),
       });
 
-      if (!response.ok) {
-        const err = await response.json().catch(() => ({}));
-        const errMsg = (err as { error?: { message?: string } }).error?.message || `HTTP ${response.status}`;
-        throw new Error(errMsg);
+      const data = await response.json() as { code?: number; data?: { task_id?: string }; message?: string };
+      if (data.code !== 200 || !data.data?.task_id) {
+        throw new Error(data.message || `Kling erro: ${JSON.stringify(data)}`);
       }
 
-      const data = await response.json() as { data?: { task_id?: string } };
-      const taskId = data.data?.task_id;
+      const taskId = data.data.task_id;
 
       updateJob(jobId, {
         status: 'processing',
@@ -256,27 +259,26 @@ videoV2Router.get('/status/:jobId', async (req, res) => {
         throw new Error((err as { error?: { message?: string } }).error?.message || `HTTP ${response.status}`);
       }
 
-      const data = await response.json() as {
-        data?: {
-          task_id?: string;
-          status?: 'processing' | 'completed' | 'failed';
-          output?: { video_url?: string };
-        };
-      };
-
+      const data = await response.json() as { code?: number; data?: any };
       const klingStatus = data.data?.status || 'processing';
 
-      if (klingStatus === 'processing') {
+      if (klingStatus === 'pending' || klingStatus === 'processing') {
         return res.json({ job_id: jobId, status: 'processing', provider: 'kling', done: false });
       }
 
       if (klingStatus === 'failed') {
-        updateJob(jobId, { status: 'failed', result: { ...parsed, error: 'Kling generation failed' } });
+        const errMsg = data.data?.error?.message || 'Kling generation failed';
+        updateJob(jobId, { status: 'failed', result: { ...parsed, error: errMsg } });
         logAudit({ userId: req.user!.userId, action: 'video_v2.failed', details: { jobId, provider: 'kling' }, ipAddress: req.ip });
-        return res.json({ job_id: jobId, status: 'failed', provider: 'kling', error: 'Kling generation failed', done: true });
+        return res.json({ job_id: jobId, status: 'failed', provider: 'kling', error: errMsg, done: true });
       }
 
-      const videoUrl = data.data?.output?.video_url || null;
+      // Kling retorna video em output.works[0].video.resource
+      const works = data.data?.output?.works || [];
+      const videoUrl = works[0]?.video?.resource
+        || works[0]?.video?.resource_without_watermark
+        || works[0]?.video?.url
+        || null;
       updateJob(jobId, { status: 'completed', result: { ...parsed, videoUrl } });
       logAudit({ userId: req.user!.userId, action: 'video_v2.completed', details: { jobId, provider: 'kling' }, ipAddress: req.ip });
       return res.json({ job_id: jobId, status: 'completed', provider: 'kling', videoUrl, done: true });

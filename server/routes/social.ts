@@ -5,7 +5,7 @@ import { decrypt, encrypt } from '../utils/crypto';
 import { env } from '../config/env';
 import { flowFetch } from '../utils/flow';
 import { logAudit } from '../utils/audit';
-import { PLATFORM_CONFIGS, getOAuthRedirectUri, type SocialPlatform } from '../utils/social';
+import { SOCIAL_PLATFORMS, getOAuthRedirectUri, getPlatformConfig, type SocialPlatform } from '../utils/social';
 import { signToken, verifyJwt } from '../utils/auth';
 
 const socialRouter = Router();
@@ -20,8 +20,8 @@ type OAuthStatePayload = {
 };
 
 function buildAuthUrl(platform: SocialPlatform, redirectUri: string, state: string) {
-  const config = PLATFORM_CONFIGS[platform];
-  if (!config?.clientId) {
+  const config = getPlatformConfig(platform);
+  if (!config.clientId || !config.clientSecret) {
     throw new Error(`OAuth não configurado para ${platform}`);
   }
 
@@ -48,7 +48,7 @@ function buildAuthUrl(platform: SocialPlatform, redirectUri: string, state: stri
 
 socialRouter.post('/connect', verifyToken, (req, res) => {
   const { platform, frontendOrigin } = req.body as { platform?: SocialPlatform; frontendOrigin?: string };
-  if (!platform || !(platform in PLATFORM_CONFIGS)) {
+  if (!platform || !SOCIAL_PLATFORMS.includes(platform)) {
     return res.status(400).json({ error: 'platform inválida' });
   }
 

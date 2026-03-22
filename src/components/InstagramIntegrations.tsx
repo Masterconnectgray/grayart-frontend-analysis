@@ -8,6 +8,7 @@ import {
   saveSocialCredential,
   listSocialCredentials,
   deleteSocialCredential,
+  getSocialConfig,
 } from '../services/FlowAPIService';
 import {
   disconnectPlatform,
@@ -30,7 +31,7 @@ const PLATFORM_INFO: Record<ManageablePlatformKey, { label: string; color: strin
   instagram: { label: 'Instagram', color: '#E4405F', supportsOAuth: true },
   tiktok: { label: 'TikTok', color: '#010101', supportsOAuth: true },
   youtube: { label: 'YouTube', color: '#FF0000', supportsOAuth: true },
-  facebook: { label: 'Facebook', color: '#1877F2', supportsOAuth: false },
+  facebook: { label: 'Facebook', color: '#1877F2', supportsOAuth: true },
   linkedin: { label: 'LinkedIn', color: '#0A66C2', supportsOAuth: true },
   x: { label: 'X (Twitter)', color: '#000000', supportsOAuth: false },
 };
@@ -54,6 +55,7 @@ const InstagramIntegrations: React.FC<InstagramIntegrationsProps> = ({ division 
   const [credAppId, setCredAppId] = useState('');
   const [credAppSecret, setCredAppSecret] = useState('');
   const [savedCreds, setSavedCreds] = useState<{ platform: string; hasAppId: boolean; hasAppSecret: boolean }[]>([]);
+  const [platformConfig, setPlatformConfig] = useState<Record<string, boolean>>({});
   const [savingCred, setSavingCred] = useState(false);
   const [loadingAccounts, setLoadingAccounts] = useState(true);
   const [connectingPlatform, setConnectingPlatform] = useState<ManageablePlatformKey | null>(null);
@@ -61,6 +63,13 @@ const InstagramIntegrations: React.FC<InstagramIntegrationsProps> = ({ division 
 
   const loadSavedCreds = useCallback(async () => {
     setSavedCreds(await listSocialCredentials());
+  }, []);
+
+  const loadPlatformConfig = useCallback(async () => {
+    const config = await getSocialConfig();
+    setPlatformConfig(
+      Object.fromEntries(config.map((item) => [item.platform, item.configured]))
+    );
   }, []);
 
   const loadAccounts = useCallback(async () => {
@@ -80,14 +89,22 @@ const InstagramIntegrations: React.FC<InstagramIntegrationsProps> = ({ division 
     loadSavedCreds().catch((error) => {
       console.error('Erro ao carregar credenciais:', error);
     });
+    loadPlatformConfig().catch((error) => {
+      console.error('Erro ao carregar configuração OAuth:', error);
+    });
     loadAccounts().catch((error) => {
       console.error('Erro ao carregar contas:', error);
     });
-  }, [loadAccounts, loadSavedCreds]);
+  }, [loadAccounts, loadPlatformConfig, loadSavedCreds]);
 
   const handleConnect = useCallback(async (platform: ManageablePlatformKey) => {
     if (!OAUTH_PLATFORMS.has(platform as PlatformKey)) {
       addNotification(`OAuth para ${PLATFORM_INFO[platform].label} ainda não está habilitado no backend.`, 'info');
+      return;
+    }
+
+    if (!platformConfig[platform]) {
+      addNotification(`Falta configurar OAuth de ${PLATFORM_INFO[platform].label} no backend antes de conectar.`, 'error');
       return;
     }
 
@@ -102,7 +119,7 @@ const InstagramIntegrations: React.FC<InstagramIntegrationsProps> = ({ division 
     } finally {
       setConnectingPlatform(null);
     }
-  }, [addNotification, loadAccounts]);
+  }, [addNotification, loadAccounts, platformConfig]);
 
   const handleDisconnect = useCallback(async (platform: ManageablePlatformKey) => {
     if (!OAUTH_PLATFORMS.has(platform as PlatformKey)) {
@@ -136,6 +153,7 @@ const InstagramIntegrations: React.FC<InstagramIntegrationsProps> = ({ division 
         setCredAppId('');
         setCredAppSecret('');
         await loadSavedCreds();
+        await loadPlatformConfig();
       } else {
         addNotification('Erro ao salvar credenciais. Verifique o backend.', 'error');
       }
@@ -145,7 +163,7 @@ const InstagramIntegrations: React.FC<InstagramIntegrationsProps> = ({ division 
     } finally {
       setSavingCred(false);
     }
-  }, [credPlatform, credAppId, credAppSecret, addNotification, loadSavedCreds]);
+  }, [credPlatform, credAppId, credAppSecret, addNotification, loadPlatformConfig, loadSavedCreds]);
 
   const getAccountsByPlatform = (platform: ManageablePlatformKey) => {
     return accounts.filter((account) => account.platform === platform);
@@ -180,6 +198,7 @@ const InstagramIntegrations: React.FC<InstagramIntegrationsProps> = ({ division 
             const isConnecting = connectingPlatform === platform;
             const isDisconnecting = disconnectingPlatform === platform;
             const hasActiveAccount = platformAccounts.some((account) => account.status === 'active');
+            const isConfigured = !!platformConfig[platform];
 
             return (
               <Card key={platform}>
@@ -194,8 +213,10 @@ const InstagramIntegrations: React.FC<InstagramIntegrationsProps> = ({ division 
                         <span className="text-[10px] opacity-40 font-bold">
                           {platformAccounts.length} conta{platformAccounts.length !== 1 ? 's' : ''}
                         </span>
-                        <span className={`text-[10px] font-bold ${hasActiveAccount ? 'text-emerald-500' : 'text-amber-500'}`}>
-                          {hasActiveAccount ? 'CONECTADA' : (info.supportsOAuth ? 'DESCONECTADA' : 'INDISPONÍVEL')}
+                        <span className={`text-[10px] font-bold ${
+                          hasActiveAccount ? 'text-emerald-500' : info.supportsOAuth && isConfigured ? 'text-amber-500' : 'text-slate-400'
+                        }`}>
+                          {hasActiveAccount ? 'CONECTADA' : (info.supportsOAuth ? (isConfigured ? 'DESCONECTADA' : 'NÃO CONFIGURADA') : 'INDISPONÍVEL')}
                         </span>
                       </div>
                     </div>
@@ -209,7 +230,7 @@ const InstagramIntegrations: React.FC<InstagramIntegrationsProps> = ({ division 
                           variant={hasActiveAccount ? 'secondary' : 'primary'}
                           onClick={() => handleConnect(platform)}
                           loading={isConnecting}
-                          disabled={isDisconnecting}
+                          disabled={isDisconnecting || !isConfigured}
                           icon={isConnecting ? undefined : Link2}
                         >
                           {hasActiveAccount ? 'Reconectar' : 'Conectar'}
@@ -233,6 +254,13 @@ const InstagramIntegrations: React.FC<InstagramIntegrationsProps> = ({ division 
                     )}
                   </div>
                 </div>
+
+                {info.supportsOAuth && !isConfigured && (
+                  <div className="mb-4 text-[11px] font-bold text-amber-500 flex items-center gap-2">
+                    <AlertTriangle className="w-3.5 h-3.5" />
+                    OAuth ainda não configurado para {info.label}. Salve as credenciais na área administrativa.
+                  </div>
+                )}
 
                 {loadingAccounts ? (
                   <div className="text-[11px] opacity-40 font-bold py-2 flex items-center gap-2">
@@ -328,7 +356,10 @@ const InstagramIntegrations: React.FC<InstagramIntegrationsProps> = ({ division 
                       </div>
                       <button
                         onClick={() => {
-                          deleteSocialCredential(cred.platform).then(loadSavedCreds);
+                          deleteSocialCredential(cred.platform).then(async () => {
+                            await loadSavedCreds();
+                            await loadPlatformConfig();
+                          });
                         }}
                         className="w-8 h-8 rounded-lg bg-red-500/10 text-red-500 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-500 hover:text-white"
                       >

@@ -187,6 +187,7 @@ async function processScenes(jobId: number, scenes: SceneDesc[], format: VideoFo
         success = true;
       } catch (err) {
         retries++;
+        console.error(`[VideoComposer] Scene ${i + 1} attempt ${retries} failed:`, err instanceof Error ? err.message : err);
         if (retries >= 2) {
           scene.status = 'failed';
           scene.videoUrl = undefined;
