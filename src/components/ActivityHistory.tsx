@@ -85,7 +85,7 @@ const ActivityHistory: React.FC<ActivityHistoryProps> = ({ division }) => {
       const resp = await bffFetch('/ai/jobs');
       if (resp.ok) {
         const data = await resp.json() as { jobs: HistoryItem[] };
-        setItems(data.jobs.filter(j => j.status === 'completed'));
+        setItems(data.jobs.filter(j => j.status === 'completed' || j.status === 'failed' || j.status === 'processing'));
       }
     } catch { /* silencioso */ }
     finally { setLoading(false); }
@@ -191,6 +191,12 @@ const ActivityHistory: React.FC<ActivityHistoryProps> = ({ division }) => {
                   <div className={`px-2 py-1 rounded-lg text-[10px] font-bold flex items-center gap-1 ${typeConfig.color}`}>
                     {typeConfig.icon} {typeConfig.label}
                   </div>
+                  {item.status === 'failed' && (
+                    <span className="px-2 py-0.5 rounded text-[9px] font-bold bg-red-500/15 text-red-400">FALHOU</span>
+                  )}
+                  {item.status === 'processing' && (
+                    <span className="px-2 py-0.5 rounded text-[9px] font-bold bg-amber-500/15 text-amber-400 animate-pulse">PROCESSANDO</span>
+                  )}
                   <div className="flex-1 min-w-0">
                     <p className="text-xs font-bold truncate">
                       {item.type === 'copy' ? (item.result?.hook || 'Copy') :
@@ -251,6 +257,20 @@ const ActivityHistory: React.FC<ActivityHistoryProps> = ({ division }) => {
                     {item.type === 'video' && item.result.videoUrl && (
                       <div>
                         <video src={item.result.videoUrl} controls className="w-full max-h-64 rounded-xl" />
+                      </div>
+                    )}
+                    {item.type === 'video' && item.result.error && (
+                      <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/20">
+                        <p className="text-xs font-bold text-red-400">
+                          {item.result.error === 'QUOTA_EXCEEDED'
+                            ? 'Quota do Veo 3 esgotada — ative billing no Google Cloud ou aguarde reset da quota gratuita'
+                            : `Erro: ${item.result.error}`}
+                        </p>
+                      </div>
+                    )}
+                    {item.type === 'video' && !item.result.videoUrl && !item.result.error && (
+                      <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20">
+                        <p className="text-xs font-bold text-amber-400">Video em processamento ou sem resultado disponivel</p>
                       </div>
                     )}
 
