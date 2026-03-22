@@ -47,7 +47,7 @@ interface Tool {
 
 const TOOLS: Tool[] = [
   { id: 'v-veo3', name: 'Veo 3 — Geração IA', description: 'Cria vídeo real com Google Veo 3', category: 'create', provider: 'Veo 3', icon: <Film size={24} /> },
-  { id: 'v- kenburns', name: 'Movimento Ken Burns', description: 'Transições suaves em fotos estáticas', category: 'create', provider: 'Adobe', icon: <MonitorPlay size={24} /> },
+  { id: 'v-kenburns', name: 'Movimento Ken Burns', description: 'Transições suaves em fotos estáticas', category: 'create', provider: 'Adobe', icon: <MonitorPlay size={24} /> },
   { id: 'v-slideshow', name: 'Slideshow Inteligente', description: 'Montagem rítmica de fotos', category: 'create', provider: 'InShot', icon: <FileVideo size={24} /> },
   { id: 'v-animate', name: 'Animação IA', description: 'IA anima rostos e fundos de fotos', category: 'create', provider: 'Canva', icon: <Sparkles size={24} /> },
   { id: 'e-autocut', name: 'Corte Dinâmico IA', description: 'Remove silêncios e otimiza retenção', category: 'enhance', provider: 'CapCut', icon: <Scissors size={24} /> },
@@ -308,7 +308,9 @@ const AIVideoLab: React.FC<AIVideoLabProps> = ({ division }) => {
         setProjects(prev => [tempProject, ...prev]);
 
         let attempt = 0;
+        let pollErrors = 0;
         const maxAttempts = 36;
+        const maxPollErrors = 5;
 
         pollingRef.current = setInterval(async () => {
           attempt++;
@@ -320,6 +322,7 @@ const AIVideoLab: React.FC<AIVideoLabProps> = ({ division }) => {
 
           try {
             const result = await pollVideoStatus(operationName);
+            pollErrors = 0;
             if (result.done) {
               if (pollingRef.current) clearInterval(pollingRef.current);
               setGeneratingProgress(100);
@@ -332,24 +335,33 @@ const AIVideoLab: React.FC<AIVideoLabProps> = ({ division }) => {
                 ));
                 incrementVideos();
                 setGeneratedCopy(null);
-                addNotification('🎉 Vídeo gerado pelo Veo 3! Clique para assistir.', 'success');
+                addNotification('Video gerado pelo Veo 3! Clique para assistir.', 'success');
               } else if (result.error) {
                 setProjects(prev => prev.map(p =>
                   p.id === tempProject.id ? { ...p, status: 'failed' } : p
                 ));
-                addNotification(`❌ Erro na geração: ${result.error}`, 'error');
+                addNotification(`Erro na geracao: ${result.error}`, 'error');
               }
 
               setIsGenerating(false);
             }
-          } catch {
-             // Silently ignore polling errors
+          } catch (pollErr) {
+            pollErrors++;
+            console.warn(`Polling error ${pollErrors}/${maxPollErrors}:`, pollErr);
+            if (pollErrors >= maxPollErrors) {
+              if (pollingRef.current) clearInterval(pollingRef.current);
+              setIsGenerating(false);
+              setProjects(prev => prev.map(p =>
+                p.id === tempProject.id ? { ...p, status: 'failed' } : p
+              ));
+              addNotification('Erro de conexao ao verificar status do video. Tente novamente.', 'error');
+            }
           }
 
           if (attempt >= maxAttempts) {
             if (pollingRef.current) clearInterval(pollingRef.current);
             setIsGenerating(false);
-            addNotification('⏱️ Timeout. Verifique a fila de projetos.', 'error');
+            addNotification('Timeout. Verifique a fila de projetos.', 'error');
           }
         }, 5000);
 

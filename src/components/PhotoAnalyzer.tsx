@@ -100,11 +100,13 @@ const PhotoAnalyzer: React.FC<PhotoAnalyzerProps> = ({ division }) => {
       formData.append('image', imageFile);
 
       const response = await bffUpload('/ai-service/analyze-photo', formData);
-      const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || 'Erro na análise');
+        const err = await response.json().catch(() => ({}));
+        throw new Error((err as { error?: string }).error || `Erro HTTP ${response.status}`);
       }
+
+      const data = await response.json();
 
       setResult(data as AnalysisResult);
     } catch (err) {

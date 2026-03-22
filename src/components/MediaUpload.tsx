@@ -150,9 +150,9 @@ const MediaUpload: React.FC<MediaUploadProps> = ({ division }) => {
       <div className="flex gap-2 flex-wrap">
         {[
           { id: 'all' as const, label: 'Todos', color: theme.colors.primary, logo: <Upload className="w-4 h-4" /> },
-          { id: 'capcut' as const, label: 'CapCut Pro', color: '#000000', logo: <svg width="16" height="16" viewBox="0 0 48 48"><rect width="48" height="48" rx="12" fill="#000"/><path d="M20 14v14.5c0 2.5-2 4.5-4.5 4.5S11 31 11 28.5s2-4.5 4.5-4.5c.9 0 1.7.3 2.5.7V14h2z" fill="#fff"/><path d="M28 14c3.3 0 6 2.7 6 6h-4c0-1.1-.9-2-2-2v-4z" fill="#fff"/></svg> },
-          { id: 'inshot' as const, label: 'InShot Pro', color: '#F6416C', logo: <svg width="16" height="16" viewBox="0 0 48 48"><defs><linearGradient id="ig2" x1="0" y1="0" x2="48" y2="48"><stop offset="0%" stopColor="#F6416C"/><stop offset="100%" stopColor="#F97B4B"/></linearGradient></defs><rect width="48" height="48" rx="12" fill="url(#ig2)"/><rect x="12" y="12" width="24" height="24" rx="3" stroke="#fff" strokeWidth="2.8" fill="none"/><circle cx="24" cy="24" r="5" stroke="#fff" strokeWidth="2" fill="none"/><circle cx="24" cy="24" r="2" fill="#fff"/></svg> },
-          { id: 'canva' as const, label: 'Canva Pro', color: '#7B2FF7', logo: <svg width="16" height="16" viewBox="0 0 48 48"><defs><linearGradient id="cg2" x1="0" y1="0" x2="48" y2="48"><stop offset="0%" stopColor="#23C6C8"/><stop offset="50%" stopColor="#6B3FA0"/><stop offset="100%" stopColor="#8B2FC0"/></linearGradient></defs><rect width="48" height="48" rx="12" fill="url(#cg2)"/><text x="24" y="30" textAnchor="middle" fill="#fff" fontSize="16" fontWeight="bold" fontStyle="italic" fontFamily="Georgia,serif">C</text></svg> },
+          { id: 'capcut' as const, label: 'CapCut Pro', color: '#000000', logo: <img src={`${import.meta.env.DEV ? '' : '/grayart'}/logos/capcut_symbol.png`} alt="CapCut" className="w-4 h-4 rounded object-contain" /> },
+          { id: 'inshot' as const, label: 'InShot Pro', color: '#F6416C', logo: <img src={`${import.meta.env.DEV ? '' : '/grayart'}/logos/inshot_logo.png`} alt="InShot" className="w-4 h-4 rounded object-contain" /> },
+          { id: 'canva' as const, label: 'Canva Pro', color: '#7B2FF7', logo: <img src={`${import.meta.env.DEV ? '' : '/grayart'}/logos/canva_icon_c.png`} alt="Canva" className="w-4 h-4 rounded object-contain" /> },
         ].map(src => (
           <button
             key={src.id}
@@ -205,11 +205,11 @@ const MediaUpload: React.FC<MediaUploadProps> = ({ division }) => {
                     backgroundColor: activeSource === 'capcut' ? '#00000015' : activeSource === 'inshot' ? '#FF2D5515' : activeSource === 'canva' ? '#00C4CC15' : `${theme.colors.primary}15`
                   }}>
                     {activeSource === 'capcut' ? (
-                      <svg width="32" height="32" viewBox="0 0 48 48"><rect width="48" height="48" rx="12" fill="#000"/><path d="M20 14v14.5c0 2.5-2 4.5-4.5 4.5S11 31 11 28.5s2-4.5 4.5-4.5c.9 0 1.7.3 2.5.7V14h2z" fill="#fff"/><path d="M28 14c3.3 0 6 2.7 6 6h-4c0-1.1-.9-2-2-2v-4z" fill="#fff"/><path d="M28 24c-3.3 0-6-2.7-6-6h4c0 1.1.9 2 2 2v4z" fill="#25F4EE"/></svg>
+                      <img src={`${import.meta.env.DEV ? '' : '/grayart'}/logos/capcut_symbol.png`} alt="CapCut" className="w-8 h-8 rounded-lg object-contain" />
                     ) : activeSource === 'inshot' ? (
-                      <svg width="32" height="32" viewBox="0 0 48 48"><defs><linearGradient id="ig3" x1="0" y1="0" x2="48" y2="48"><stop offset="0%" stopColor="#F6416C"/><stop offset="100%" stopColor="#F97B4B"/></linearGradient></defs><rect width="48" height="48" rx="12" fill="url(#ig3)"/><rect x="12" y="12" width="24" height="24" rx="3" stroke="#fff" strokeWidth="2.8" fill="none"/><line x1="20" y1="6" x2="20" y2="12" stroke="#fff" strokeWidth="2.8" strokeLinecap="round"/><line x1="28" y1="36" x2="28" y2="42" stroke="#fff" strokeWidth="2.8" strokeLinecap="round"/><line x1="6" y1="28" x2="12" y2="28" stroke="#fff" strokeWidth="2.8" strokeLinecap="round"/><line x1="36" y1="20" x2="42" y2="20" stroke="#fff" strokeWidth="2.8" strokeLinecap="round"/><circle cx="24" cy="24" r="6" stroke="#fff" strokeWidth="2.5" fill="none"/><circle cx="24" cy="24" r="2.5" fill="#fff"/></svg>
+                      <img src={`${import.meta.env.DEV ? '' : '/grayart'}/logos/inshot_logo.png`} alt="InShot" className="w-8 h-8 rounded-lg object-contain" />
                     ) : activeSource === 'canva' ? (
-                      <svg width="32" height="32" viewBox="0 0 48 48"><defs><linearGradient id="cg3" x1="0" y1="0" x2="48" y2="48"><stop offset="0%" stopColor="#23C6C8"/><stop offset="50%" stopColor="#6B3FA0"/><stop offset="100%" stopColor="#8B2FC0"/></linearGradient></defs><rect width="48" height="48" rx="12" fill="url(#cg3)"/><text x="24" y="31" textAnchor="middle" fill="#fff" fontSize="18" fontWeight="bold" fontStyle="italic" fontFamily="Georgia,serif">Canva</text></svg>
+                      <img src={`${import.meta.env.DEV ? '' : '/grayart'}/logos/canva_icon_c.png`} alt="Canva" className="w-8 h-8 rounded-lg object-contain" />
                     ) : (
                       <Upload className="w-7 h-7" style={{ color: theme.colors.primary }} />
                     )}

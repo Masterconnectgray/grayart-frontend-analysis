@@ -12,6 +12,10 @@ dist
 dist-ssr
 *.local
 .env
+server/.env
+server/ai-service/.env
+server/ai-service/venv/
+server/ai-service/outputs/
 server/database.sqlite
 server/database.sqlite-shm
 server/database.sqlite-wal

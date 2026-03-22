@@ -35,11 +35,10 @@ authRouter.post('/login', async (req, res) => {
 });
 
 authRouter.post('/register', async (req, res) => {
-  const { email, password, name, role } = req.body as {
+  const { email, password, name } = req.body as {
     email?: string;
     password?: string;
     name?: string;
-    role?: string;
   };
 
   if (!email || !password || !name) {
@@ -55,15 +54,15 @@ authRouter.post('/register', async (req, res) => {
   const result = db.prepare(`
     INSERT INTO users (email, password_hash, name, role)
     VALUES (?, ?, ?, ?)
-  `).run(email, passwordHash, name, role || 'user');
+  `).run(email, passwordHash, name, 'user');
 
   const userId = Number(result.lastInsertRowid);
-  const token = signToken({ userId, email, role: role || 'user' });
+  const token = signToken({ userId, email, role: 'user' });
   logAudit({ userId, action: 'auth.register', details: { email }, ipAddress: req.ip });
 
   return res.status(201).json({
     token,
-    user: { id: userId, email, name, role: role || 'user' },
+    user: { id: userId, email, name, role: 'user' },
   });
 });
 
