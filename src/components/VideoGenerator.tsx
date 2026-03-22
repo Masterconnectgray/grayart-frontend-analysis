@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import type { Division } from '../constants/Themes';
+import { useAppContext } from '../context/AppContext';
 import { Card, Button } from '../design-system';
 import { bffFetch } from '../services/BFFClient';
 import {
@@ -64,6 +65,7 @@ function ProviderBadge({ provider }: { provider: string }) {
 }
 
 export default function VideoGenerator({ division: _division }: VideoGeneratorProps) {
+  const { addNotification } = useAppContext();
   const [prompt, setPrompt] = useState('');
   const [provider, setProvider] = useState<Provider>('auto');
   const [format, setFormat] = useState<Format>('9:16');
@@ -84,7 +86,15 @@ export default function VideoGenerator({ division: _division }: VideoGeneratorPr
       setHistoryLoading(true);
       const res = await bffFetch('/video-v2/history');
       const data = await res.json();
-      setHistory(Array.isArray(data) ? data : data.items ?? []);
+      const items = Array.isArray(data) ? data : data.jobs ?? data.items ?? [];
+      setHistory(items.map((item: any) => ({
+        id: item.id,
+        prompt: item.prompt || '',
+        status: item.status === 'completed' ? 'done' : item.status,
+        provider: item.model?.includes('kling') ? 'kling' : 'veo',
+        videoUrl: item.result?.videoUrl || null,
+        createdAt: item.created_at || item.createdAt,
+      })));
     } catch {
       /* silently ignore history fetch errors */
     } finally {
@@ -108,7 +118,21 @@ export default function VideoGenerator({ division: _division }: VideoGeneratorPr
       try {
         const res = await bffFetch(`/video-v2/status/${jobId}`);
         const data: JobStatus = await res.json();
-        setJob(data);
+        
+        setJob(prev => {
+          // If backend doesn't provide progress, simulate a small increment up to 95%
+          const currentProgress = prev?.progress ?? 0;
+          const backendProgress = typeof data.progress === 'number' ? data.progress : undefined;
+          
+          let nextProgress = backendProgress ?? (currentProgress + (95 - currentProgress) * 0.1);
+          if (data.status === 'done') nextProgress = 100;
+          if (data.status === 'failed') nextProgress = currentProgress;
+
+          return {
+            ...data,
+            progress: nextProgress
+          };
+        });
 
         if ((data.status === 'done' || data.status === 'completed') && data.videoUrl) {
           clearInterval(pollRef.current!);
@@ -116,6 +140,7 @@ export default function VideoGenerator({ division: _division }: VideoGeneratorPr
           setGenerating(false);
           setCurrentVideo({ url: data.videoUrl, provider: data.provider });
           fetchHistory();
+          addNotification(`Video gerado com ${data.provider === 'kling' ? 'Kling 3.0' : 'Veo 3.1'}! Salvo no historico.`, 'success');
         } else if (data.status === 'failed') {
           clearInterval(pollRef.current!);
           pollRef.current = null;

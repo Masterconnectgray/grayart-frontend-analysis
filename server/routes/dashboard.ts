@@ -34,23 +34,10 @@ dashboardRouter.get('/stats', (req, res) => {
     try { return sum + (JSON.parse(c.contacts_json) as unknown[]).length; } catch { return sum; }
   }, 0);
 
-  // Fallback global: se user nao tem dados, mostrar totais do sistema
-  const globalCopies = userCopies || (db.prepare(`
-    SELECT COUNT(*) as count FROM ai_jobs WHERE type = 'copy' AND status = 'completed'
-  `).get() as { count: number }).count;
-
-  const globalVideos = userVideos || (db.prepare(`
-    SELECT COUNT(*) as count FROM ai_jobs WHERE type = 'video' AND status IN ('completed', 'processing')
-  `).get() as { count: number }).count;
-
-  const globalPublished = userPublished || (db.prepare(`
-    SELECT COUNT(*) as count FROM publish_jobs WHERE status = 'published'
-  `).get() as { count: number }).count;
-
   return res.json({
-    totalCopies: globalCopies,
-    totalVideos: globalVideos,
-    postsPublished: globalPublished,
+    totalCopies: userCopies,
+    totalVideos: userVideos,
+    postsPublished: userPublished,
     connectedAccounts,
     whatsappContacts,
   });

@@ -133,18 +133,18 @@ const ActivityHistory: React.FC<ActivityHistoryProps> = ({ division }) => {
   return (
     <div className="animate-in fade-in duration-300 space-y-6">
       {/* Stats resumo */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
         {[
-          { label: 'Copies', value: stats.copies, color: 'text-purple-400' },
-          { label: 'Videos', value: stats.videos, color: 'text-emerald-400' },
-          { label: 'Prompts', value: stats.prompts, color: 'text-blue-400' },
-          { label: 'Tokens', value: stats.totalTokens > 1000 ? `${(stats.totalTokens / 1000).toFixed(1)}k` : stats.totalTokens, color: 'text-amber-400' },
-          { label: 'Custo', value: `$${stats.totalCost.toFixed(3)}`, color: 'text-red-400' },
+          { label: 'Copies IA', value: stats.copies, color: 'text-purple-400', border: 'border-purple-400/30' },
+          { label: 'Videos IA', value: stats.videos, color: 'text-emerald-400', border: 'border-emerald-400/30' },
+          { label: 'Prompts IA', value: stats.prompts, color: 'text-blue-400', border: 'border-blue-400/30' },
+          { label: 'Tokens IA', value: stats.totalTokens > 1000 ? `${(stats.totalTokens / 1000).toFixed(1)}k` : stats.totalTokens, color: 'text-amber-400', border: 'border-amber-400/30' },
+          { label: 'Investimento', value: `$${stats.totalCost.toFixed(3)}`, color: 'text-red-400', border: 'border-red-400/30' },
         ].map((s, i) => (
-          <Card key={i} padding="p-4">
-            <div className={`text-2xl font-black ${s.color}`}>{s.value}</div>
-            <div className="text-[10px] opacity-40 font-bold uppercase tracking-wider">{s.label}</div>
-          </Card>
+          <div key={i} className={`p-6 rounded-2xl bg-black/5 dark:bg-black/40 border-2 ${s.border} shadow-inner flex flex-col justify-center transition-all hover:-translate-y-1 hover:bg-black/10`}>
+            <div className={`text-4xl font-black drop-shadow-md ${s.color}`}>{s.value}</div>
+            <div className="text-[10px] opacity-70 font-black uppercase tracking-widest mt-2 text-[var(--card-text)]">{s.label}</div>
+          </div>
         ))}
       </div>
 
@@ -192,10 +192,12 @@ const ActivityHistory: React.FC<ActivityHistoryProps> = ({ division }) => {
                 className={`cursor-pointer transition-all hover:border-[var(--primary-color)]/30 ${isExpanded ? 'border-[var(--primary-color)]/30' : ''}`}
               >
                 <div
-                  className="p-4 flex items-center gap-3"
+                  className="p-5 flex items-center gap-4"
                   onClick={() => setExpandedId(isExpanded ? null : item.id)}
                 >
-                  <PlatformIcon platformId={platform} size={24} />
+                  <div className="shrink-0 p-1.5 bg-black/5 dark:bg-white/5 rounded-xl">
+                    <PlatformIcon platformId={platform} size={28} />
+                  </div>
                   <div className={`px-2 py-1 rounded-lg text-[10px] font-bold flex items-center gap-1 ${typeConfig.color}`}>
                     {typeConfig.icon} {typeConfig.label}
                   </div>
@@ -213,9 +215,10 @@ const ActivityHistory: React.FC<ActivityHistoryProps> = ({ division }) => {
                        'Registro'}
                     </p>
                   </div>
-                  <div className="text-right shrink-0">
-                    <div className="text-[10px] font-bold opacity-60">{relative}</div>
-                    <div className="text-[9px] opacity-30">{date} {time}</div>
+                  <div className="shrink-0 flex flex-col items-center justify-center pl-4 border-l-2 border-black/5 dark:border-white/5 ml-2 min-w-[80px]">
+                    <div className="text-[11px] font-black opacity-80 uppercase tracking-widest text-[var(--primary-color)] mb-1">{relative}</div>
+                    <div className="text-[10px] font-bold opacity-60 whitespace-nowrap bg-black/5 dark:bg-white/5 px-2 py-0.5 rounded text-[var(--card-text)]">{date}</div>
+                    <div className="text-[9px] font-black opacity-40 mt-1 tracking-widest uppercase">{time}</div>
                   </div>
                 </div>
 

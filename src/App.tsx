@@ -50,19 +50,19 @@ const StatsBar: React.FC = () => {
         <button
           key={item.label}
           onClick={() => handleClick(item.filter)}
-          className={`flex items-center gap-2 shrink-0 transition-all ${item.filter ? 'cursor-pointer hover:opacity-80 active:scale-95' : ''}`}
+          className={`flex items-center gap-3 shrink-0 px-4 py-2 rounded-2xl transition-all ${item.filter ? 'cursor-pointer hover:bg-black/5 dark:hover:bg-white/5 active:scale-95' : ''}`}
         >
           <div
-            className="w-8 h-8 rounded-lg flex items-center justify-center"
+            className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 shadow-sm"
             style={{ backgroundColor: `${theme.colors.primary}15` }}
           >
-            <item.icon className="w-4 h-4" style={{ color: theme.colors.primary }} />
+            <item.icon className="w-5 h-5" style={{ color: theme.colors.primary }} />
           </div>
           <div className="leading-tight text-left">
-            <div className={`text-base font-bold ${loading ? 'animate-pulse' : ''}`}>
+            <div className={`text-lg font-black ${loading ? 'animate-pulse' : ''}`}>
               {loading ? '—' : item.value}
             </div>
-            <div className="text-[10px] font-semibold opacity-40 uppercase tracking-wider">{item.label}</div>
+            <div className="text-[10px] font-black opacity-50 uppercase tracking-widest">{item.label}</div>
           </div>
         </button>
       ))}
