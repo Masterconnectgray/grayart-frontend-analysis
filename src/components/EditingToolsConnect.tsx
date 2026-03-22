@@ -185,7 +185,7 @@ const EditingToolsConnect: React.FC<EditingToolsConnectProps> = ({ division }) =
                 <h3 className="font-bold text-lg">
                   Conectar {tools.find(t => t.id === loginModal)?.name}
                 </h3>
-                <p className="text-xs opacity-40">
+                <p className="text-xs opacity-70">
                   Informe o e-mail da sua conta.
                 </p>
               </div>
@@ -195,7 +195,7 @@ const EditingToolsConnect: React.FC<EditingToolsConnectProps> = ({ division }) =
               value={emailInput}
               onChange={e => setEmailInput(e.target.value)}
               placeholder="seu@email.com"
-              className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-sm font-medium focus:outline-none focus:border-[var(--primary-color)] transition-colors"
+              className="w-full px-4 py-3 rounded-xl bg-white/10 border border-white/20 text-sm font-medium focus:outline-none focus:border-[var(--primary-color)] transition-colors placeholder:text-white/30"
               autoFocus
               onKeyDown={e => e.key === 'Enter' && handleSaveLogin()}
             />
@@ -219,7 +219,7 @@ const EditingToolsConnect: React.FC<EditingToolsConnectProps> = ({ division }) =
               href={tools.find(t => t.id === loginModal)?.loginUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center justify-center gap-1 mt-3 text-[11px] font-bold opacity-40 hover:opacity-70 transition-opacity"
+              className="flex items-center justify-center gap-1 mt-3 text-[11px] font-bold opacity-60 hover:opacity-100 transition-opacity"
             >
               <ExternalLink className="w-3 h-3" />
               Abrir {tools.find(t => t.id === loginModal)?.name} no navegador

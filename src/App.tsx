@@ -15,10 +15,11 @@ const PublishJourney = lazy(() => import('./components/journeys/PublishJourney')
 const MonitorJourney = lazy(() => import('./components/journeys/MonitorJourney'));
 const PhotoAnalyzer = lazy(() => import('./components/PhotoAnalyzer'));
 const ActivityHistory = lazy(() => import('./components/ActivityHistory'));
+const VideoEditor = lazy(() => import('./components/VideoEditor'));
 const VideoHub = lazy(() => import('./components/VideoHub'));
 const OAuthCallback = lazy(() => import('./components/OAuthCallback'));
 import { DIVISION_LOGOS, GrupoGrayLogo } from './constants/DivisionLogos';
-import { PenTool, Video, Link2, Send, BarChart3, Sparkles, FileText, Users, Clock } from 'lucide-react';
+import { PenTool, Video, Link2, Send, BarChart3, Sparkles, FileText, Users, Clock, Film } from 'lucide-react';
 import { useDashboardStats } from './hooks/useDashboardStats';
 import './index.css';
 
@@ -218,6 +219,7 @@ const App: React.FC = () => {
           {[
             { id: 'create', label: 'Criar Conteúdo', icon: PenTool },
             { id: 'video', label: 'Videos IA', icon: Video },
+            { id: 'editor', label: 'Editor', icon: Film },
             { id: 'connect', label: 'Conectar Contas', icon: Link2 },
             { id: 'publish', label: 'Publicar', icon: Send },
             { id: 'history', label: 'Historico', icon: Clock },
@@ -258,6 +260,7 @@ const App: React.FC = () => {
                     {marketingView === 'create' && <ReelsGenerator division={activeDivision} />}
                     {marketingView === 'media' && <MediaUpload division={activeDivision} />}
                     {marketingView === 'video' && <VideoHub division={activeDivision} />}
+                    {marketingView === 'editor' && <VideoEditor division={activeDivision} />}
                     {marketingView === 'photo' && <PhotoAnalyzer division={activeDivision} />}
                     {marketingView === 'connect' && <ConnectJourney division={activeDivision} />}
                     {marketingView === 'publish' && <PublishJourney division={activeDivision} />}
