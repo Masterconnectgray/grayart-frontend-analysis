@@ -72,11 +72,19 @@ const TYPE_CONFIG: Record<string, { label: string; icon: React.ReactNode; color:
 };
 
 const ActivityHistory: React.FC<ActivityHistoryProps> = ({ division }) => {
-  const { addNotification, sendCopyToVideoLab } = useAppContext();
+  const { addNotification, sendCopyToVideoLab, historyFilter, setHistoryFilter } = useAppContext();
   const theme = DIVISIONS[division];
   const [items, setItems] = useState<HistoryItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState<HistoryFilter>('all');
+  const [filter, setFilter] = useState<HistoryFilter>(
+    (historyFilter === 'copy' || historyFilter === 'video' || historyFilter === 'video_prompt') ? historyFilter : 'all'
+  );
+
+  useEffect(() => {
+    if (historyFilter === 'copy' || historyFilter === 'video' || historyFilter === 'video_prompt') {
+      setFilter(historyFilter as HistoryFilter);
+    }
+  }, [historyFilter]);
   const [expandedId, setExpandedId] = useState<number | null>(null);
 
   const loadItems = useCallback(async () => {

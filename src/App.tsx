@@ -24,37 +24,47 @@ import './index.css';
 
 // ─── Stats Bar com dados reais do BFF ─────────────────────────────────────────
 const StatsBar: React.FC = () => {
-  const { activeDivision } = useAppContext();
+  const { activeDivision, setMarketingView, setHistoryFilter } = useAppContext();
   const { stats, loading } = useDashboardStats();
   const theme = DIVISIONS[activeDivision];
   const isDark = activeDivision !== 'gray-art';
 
   const items = [
-    { icon: Sparkles, label: 'Copies IA', value: stats?.totalCopies ?? 0 },
-    { icon: Video, label: 'Vídeos', value: stats?.totalVideos ?? 0 },
-    { icon: FileText, label: 'Publicados', value: stats?.postsPublished ?? 0 },
-    { icon: Link2, label: 'Contas', value: stats?.connectedAccounts ?? 0 },
-    { icon: Users, label: 'WhatsApp', value: stats?.whatsappContacts ?? 0 },
+    { icon: Sparkles, label: 'COPIES IA', value: stats?.totalCopies ?? 0, filter: 'copy' },
+    { icon: Video, label: 'VIDEOS', value: stats?.totalVideos ?? 0, filter: 'video' },
+    { icon: FileText, label: 'PUBLICADOS', value: stats?.postsPublished ?? 0, filter: 'all' },
+    { icon: Link2, label: 'CONTAS', value: stats?.connectedAccounts ?? 0, filter: '' },
+    { icon: Users, label: 'WHATSAPP', value: stats?.whatsappContacts ?? 0, filter: '' },
   ];
+
+  const handleClick = (filter: string) => {
+    if (!filter) return;
+    setHistoryFilter(filter);
+    setMarketingView('history');
+  };
 
   return (
     <div className={`px-6 md:px-8 py-3 flex gap-4 overflow-x-auto scrollbar-none border-b transition-colors duration-300
       ${isDark ? 'bg-[#1a1a1a]/50 border-white/5' : 'bg-white/50 border-black/5'}`}>
       {items.map(item => (
-        <div key={item.label} className="flex items-center gap-2 shrink-0">
+        <button
+          key={item.label}
+          onClick={() => handleClick(item.filter)}
+          className={`flex items-center gap-2 shrink-0 transition-all ${item.filter ? 'cursor-pointer hover:opacity-80 active:scale-95' : ''}`}
+        >
           <div
             className="w-8 h-8 rounded-lg flex items-center justify-center"
             style={{ backgroundColor: `${theme.colors.primary}15` }}
           >
             <item.icon className="w-4 h-4" style={{ color: theme.colors.primary }} />
           </div>
-          <div className="leading-tight">
+          <div className="leading-tight text-left">
             <div className={`text-base font-bold ${loading ? 'animate-pulse' : ''}`}>
               {loading ? '—' : item.value}
             </div>
             <div className="text-[10px] font-semibold opacity-40 uppercase tracking-wider">{item.label}</div>
           </div>
-        </div>
+        </button>
       ))}
     </div>
   );

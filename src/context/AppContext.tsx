@@ -55,6 +55,8 @@ interface AppContextType {
     generatedCopy: GeneratedCopy | null;
     setGeneratedCopy: (copy: GeneratedCopy | null) => void;
     sendCopyToVideoLab: (copy: GeneratedCopy) => void;
+    historyFilter: string;
+    setHistoryFilter: (filter: string) => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -134,6 +136,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         setMarketingView('video');
     }, []);
 
+    const [historyFilter, setHistoryFilter] = useState('all');
+
     return (
         <AppContext.Provider value={{
             activeDivision, setActiveDivision,
@@ -143,6 +147,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
             stats, incrementVideos, incrementTasks, incrementPosts,
             generatedCopy, setGeneratedCopy, sendCopyToVideoLab,
             activityLogs, addActivityLog, clearActivityLogs,
+            historyFilter, setHistoryFilter,
         }}>
             {children}
         </AppContext.Provider>
