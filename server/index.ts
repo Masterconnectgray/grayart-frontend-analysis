@@ -13,6 +13,7 @@ import { flowRouter } from './routes/flow';
 import { socialRouter } from './routes/social';
 import { whatsappRouter } from './routes/whatsapp';
 import { mediaRouter } from './routes/media';
+import { aiServiceRouter } from './routes/ai-service';
 import { processScheduledPosts } from './utils/scheduler';
 
 const app = express();
@@ -57,6 +58,7 @@ app.use('/api/flow', flowRouter);
 app.use('/api/social', socialRouter);
 app.use('/api/whatsapp', whatsappRouter);
 app.use('/api/media', mediaRouter);
+app.use('/api/ai-service', aiServiceRouter);
 
 app.use((error: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
   res.status(500).json({ error: error.message || 'Erro interno do servidor' });

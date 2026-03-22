@@ -10,7 +10,8 @@ import {
   pollVideoStatus,
   checkApiAccess,
 } from '../services/GeminiService';
-import { FileVideo, Upload, Check, AlertTriangle, Download, X, Film, Scissors, Type, Sparkles, Youtube, Instagram, MonitorPlay, Zap, RefreshCw } from 'lucide-react';
+import { bffFetch } from '../services/BFFClient';
+import { FileVideo, Upload, Check, AlertTriangle, Download, X, Film, Scissors, Type, Sparkles, Youtube, Instagram, MonitorPlay, Zap, RefreshCw, Mic, Volume2, Loader2 } from 'lucide-react';
 
 interface AIVideoLabProps {
   division: Division;
@@ -141,6 +142,12 @@ const AIVideoLab: React.FC<AIVideoLabProps> = ({ division }) => {
   // Player de vídeo
   const [, setActiveVideo] = useState<VideoProject | null>(null);
 
+  // TTS Kokoro
+  const [ttsGenerating, setTtsGenerating] = useState(false);
+  const [ttsAudioUrl, setTtsAudioUrl] = useState<string | null>(null);
+  const [ttsVoice, setTtsVoice] = useState('af_heart');
+  const ttsAudioRef = useRef<HTMLAudioElement | null>(null);
+
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
@@ -188,6 +195,37 @@ const AIVideoLab: React.FC<AIVideoLabProps> = ({ division }) => {
     setGeneratedPrompt('');
     setShowGeneratedPrompt(false);
   };
+
+  const generateTTS = useCallback(async () => {
+    if (!scriptText.trim()) {
+      addNotification('Escreva um script antes de gerar narração.', 'error');
+      return;
+    }
+
+    setTtsGenerating(true);
+    try {
+      const response = await bffFetch('/ai-service/tts', {
+        method: 'POST',
+        body: JSON.stringify({ text: scriptText, voice: ttsVoice, speed: 1.0 }),
+      });
+
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        throw new Error((err as { error?: string }).error || 'Erro ao gerar narração');
+      }
+
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+
+      if (ttsAudioUrl) URL.revokeObjectURL(ttsAudioUrl);
+      setTtsAudioUrl(url);
+      addNotification('Narração gerada com Kokoro TTS (custo zero)', 'success');
+    } catch (err) {
+      addNotification(`Erro TTS: ${err instanceof Error ? err.message : String(err)}`, 'error');
+    } finally {
+      setTtsGenerating(false);
+    }
+  }, [scriptText, ttsVoice, ttsAudioUrl, addNotification]);
 
   const runAIGeneration = useCallback(async () => {
     if (!scriptText.trim()) {
@@ -674,6 +712,57 @@ const AIVideoLab: React.FC<AIVideoLabProps> = ({ division }) => {
                 <><Sparkles size={18}/> Gerar com Veo 3</>
               )}
             </button>
+
+            {/* Narração TTS — Kokoro */}
+            {scriptText.trim() && (
+              <div className="mt-4 p-4 rounded-xl bg-[var(--sub-bg)] border border-white/5">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <Mic size={14} className="text-emerald-400" />
+                    <span className="text-[10px] font-black uppercase tracking-widest text-emerald-400">Narração Kokoro TTS</span>
+                    <span className="text-[9px] bg-emerald-500/20 text-emerald-400 px-1.5 py-0.5 rounded font-bold">GRÁTIS</span>
+                  </div>
+                  <select
+                    value={ttsVoice}
+                    onChange={e => setTtsVoice(e.target.value)}
+                    className="text-[10px] bg-black/20 border border-white/10 rounded-lg px-2 py-1 outline-none"
+                  >
+                    <option value="af_heart">Heart (feminina)</option>
+                    <option value="af_bella">Bella (feminina)</option>
+                    <option value="af_sarah">Sarah (feminina)</option>
+                    <option value="am_adam">Adam (masculina)</option>
+                    <option value="am_michael">Michael (masculina)</option>
+                    <option value="bf_emma">Emma (BR feminina)</option>
+                    <option value="bm_george">George (BR masculina)</option>
+                  </select>
+                </div>
+
+                <button
+                  onClick={generateTTS}
+                  disabled={ttsGenerating}
+                  className={`w-full py-2.5 rounded-lg font-bold text-xs flex items-center justify-center gap-2 transition-all ${ttsGenerating ? 'bg-emerald-500/10 text-emerald-400/50 cursor-not-allowed' : 'bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30'}`}
+                >
+                  {ttsGenerating ? (
+                    <><Loader2 size={14} className="animate-spin" /> Gerando narração...</>
+                  ) : (
+                    <><Volume2 size={14} /> Gerar Narração PT-BR</>
+                  )}
+                </button>
+
+                {ttsAudioUrl && (
+                  <div className="mt-3">
+                    <audio ref={ttsAudioRef} controls className="w-full h-8" src={ttsAudioUrl} />
+                    <a
+                      href={ttsAudioUrl}
+                      download="narracao-grayart.wav"
+                      className="mt-2 flex items-center justify-center gap-1.5 text-[10px] font-bold text-emerald-400 opacity-60 hover:opacity-100 transition-opacity"
+                    >
+                      <Download size={12} /> Baixar WAV
+                    </a>
+                  </div>
+                )}
+              </div>
+            )}
           </Card>
 
           {isGenerating && (

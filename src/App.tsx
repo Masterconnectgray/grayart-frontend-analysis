@@ -11,9 +11,10 @@ const MediaUpload = lazy(() => import('./components/MediaUpload'));
 const ConnectJourney = lazy(() => import('./components/journeys/ConnectJourney'));
 const PublishJourney = lazy(() => import('./components/journeys/PublishJourney'));
 const MonitorJourney = lazy(() => import('./components/journeys/MonitorJourney'));
+const PhotoAnalyzer = lazy(() => import('./components/PhotoAnalyzer'));
 const OAuthCallback = lazy(() => import('./components/OAuthCallback'));
 import { DIVISION_LOGOS, GrupoGrayLogo } from './constants/DivisionLogos';
-import { PenTool, Video, Link2, Send, BarChart3, Sparkles, FileText, Users, Upload } from 'lucide-react';
+import { PenTool, Video, Link2, Send, BarChart3, Sparkles, FileText, Users, Upload, Camera } from 'lucide-react';
 import { useDashboardStats } from './hooks/useDashboardStats';
 import './index.css';
 
@@ -204,6 +205,7 @@ const App: React.FC = () => {
             { id: 'create', label: 'Criar Conteúdo', icon: PenTool },
             { id: 'media', label: 'Mídia + IA', icon: Upload },
             { id: 'video', label: 'Vídeo IA', icon: Video },
+            { id: 'photo', label: 'Análise Foto', icon: Camera },
             { id: 'connect', label: 'Conectar Contas', icon: Link2 },
             { id: 'publish', label: 'Publicar', icon: Send },
             { id: 'monitor', label: 'Monitorar', icon: BarChart3 }
@@ -242,6 +244,7 @@ const App: React.FC = () => {
                   {marketingView === 'create' && <ReelsGenerator division={activeDivision} />}
                   {marketingView === 'media' && <MediaUpload division={activeDivision} />}
                   {marketingView === 'video' && <AIVideoLab division={activeDivision} />}
+                  {marketingView === 'photo' && <PhotoAnalyzer division={activeDivision} />}
                   {marketingView === 'connect' && <ConnectJourney division={activeDivision} />}
                   {marketingView === 'publish' && <PublishJourney division={activeDivision} />}
                   {marketingView === 'monitor' && <MonitorJourney division={activeDivision} />}
