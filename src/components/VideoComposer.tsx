@@ -89,10 +89,12 @@ export default function VideoComposer({ division }: VideoComposerProps) {
       const res = await bffFetch(`/video-composer/status/${jobId}`);
       const data = await res.json();
       const scenes: Scene[] = (data.scenes || []).map((s: any, i: number) => ({
-        index: i + 1, prompt: s.prompt || '', status: s.status || 'pending'
+        index: i + 1,
+        prompt: s.prompt || '',
+        status: s.status === 'completed' ? 'done' : s.status || 'pending',
       }));
       const jStatus: JobStatus = data.status === 'stitching' ? 'stitching'
-        : data.status === 'done' ? 'done'
+        : (data.status === 'done' || data.status === 'completed') ? 'done'
         : data.status === 'error' ? 'error' : 'generating';
 
       setJob({ id: jobId, status: jStatus, scenes, videoUrl: data.videoUrl, error: data.error, provider: data.provider });
@@ -221,9 +223,16 @@ export default function VideoComposer({ division }: VideoComposerProps) {
         <Card variant="elevated" padding="p-5">
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <span className="text-sm font-medium text-white">
-                {status === 'stitching' ? 'Montando video final...' : status === 'done' ? 'Video pronto' : status === 'error' ? 'Erro na composicao' : `Gerando cenas...`}
-              </span>
+              <div>
+                <span className="text-sm font-bold text-white">
+                  {status === 'stitching' ? 'Montando video final...' : status === 'done' ? 'Video pronto!' : status === 'error' ? 'Erro na composicao' : `Gerando cenas — ${doneScenesCount}/${totalScenes}`}
+                </span>
+                <p className="text-[10px] text-white/40 mt-0.5">
+                  {status === 'generating' && `Cada cena leva ~40s. Estimativa: ${Math.max(0, (totalScenes - doneScenesCount) * 40)}s restantes`}
+                  {status === 'stitching' && 'FFmpeg unindo os clips no servidor...'}
+                  {status === 'done' && 'Pronto para download e publicacao'}
+                </p>
+              </div>
               {job.provider && (
                 <span className="text-[10px] px-2 py-0.5 rounded-full bg-white/5 text-white/40">
                   Gerado com {job.provider || 'Veo 3.1'}
