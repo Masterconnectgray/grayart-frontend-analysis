@@ -132,7 +132,7 @@ export default function VideoComposer({ division }: VideoComposerProps) {
             placeholder="Descreva o conceito do video..."
             rows={4}
             disabled={isGenerating}
-            className="w-full bg-white/5 border border-white/10 rounded-xl p-4 text-white placeholder-white/30 resize-none focus:outline-none focus:border-[var(--primary-color)] transition-colors"
+            className="w-full p-4 rounded-xl bg-black/5 dark:bg-black/40 text-[var(--card-text)] text-sm font-bold border-2 border-[var(--primary-color)]/20 shadow-inner focus:outline-none focus:border-[var(--primary-color)] focus:ring-4 focus:ring-[var(--primary-color)]/20 transition-all resize-none min-h-[120px] placeholder:opacity-40"
           />
 
           <div>

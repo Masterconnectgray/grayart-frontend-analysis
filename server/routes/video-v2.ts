@@ -12,7 +12,17 @@ type VideoFormat = '9:16' | '16:9' | '1:1';
 type VideoDuration = 5 | 8;
 type VideoProvider = 'veo' | 'kling' | 'auto';
 
+function ensureUser(userId: number) {
+  const exists = db.prepare('SELECT id FROM users WHERE id = ?').get(userId);
+  if (!exists) {
+    db.prepare('INSERT OR IGNORE INTO users (id, email, password_hash, name, role) VALUES (?, ?, ?, ?, ?)').run(
+      userId, `auto-${userId}@grayart.local`, 'auto', 'GrayArt User', 'user'
+    );
+  }
+}
+
 function createJob(userId: number, prompt: string, model: string) {
+  ensureUser(userId);
   const result = db.prepare(`
     INSERT INTO ai_jobs (user_id, type, prompt, model, status)
     VALUES (?, 'video_v2', ?, ?, 'processing')

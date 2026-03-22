@@ -184,7 +184,7 @@ export default function VideoGenerator({ division: _division }: VideoGeneratorPr
         <Card title="Gerar Video" subtitle="Multi-provider: Veo 3.1 + Kling 3.0">
           {/* Prompt */}
           <textarea
-            className="w-full bg-white/5 border border-white/10 rounded-xl p-4 text-white placeholder-slate-500 resize-none focus:outline-none focus:ring-2 focus:ring-[var(--primary-color)] min-h-[120px]"
+            className="w-full p-4 rounded-xl bg-black/5 dark:bg-black/40 text-[var(--card-text)] text-sm font-bold border-2 border-[var(--primary-color)]/20 shadow-inner focus:outline-none focus:border-[var(--primary-color)] focus:ring-4 focus:ring-[var(--primary-color)]/20 transition-all resize-none min-h-[120px] placeholder:opacity-40"
             placeholder="Descreva o video que voce quer gerar..."
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}
