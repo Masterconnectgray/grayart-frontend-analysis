@@ -178,7 +178,7 @@ export default function VideoHub({ division }: VideoHubProps) {
                     <div className="flex-1 space-y-3">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
-                          <span className="font-bold text-base">{p.name}</span>
+                          <span className="font-bold text-base text-white">{p.name}</span>
                           {p.url && (
                             <a href={p.url} target="_blank" rel="noopener noreferrer" className="opacity-30 hover:opacity-70 transition">
                               <ExternalLink size={12} />
@@ -197,9 +197,9 @@ export default function VideoHub({ division }: VideoHubProps) {
                         <Stars count={p.quality} />
                       </div>
 
-                      <div className="space-y-1">
-                        <p className="text-sm opacity-80">{p.tier}</p>
-                        <p className="text-xs opacity-40">{p.bestFor}</p>
+                      <div className="space-y-1.5">
+                        <p className="text-sm font-medium text-white">{p.tier}</p>
+                        <p className="text-xs text-white/60">{p.bestFor}</p>
                       </div>
                     </div>
                   </div>
@@ -225,21 +225,21 @@ export default function VideoHub({ division }: VideoHubProps) {
                 <Check size={14} className="text-emerald-400" />
                 <span className="text-xs font-bold">Integrados no GrayArt</span>
               </div>
-              <p className="text-[11px] opacity-40">Veo 3.1 + Kling 3.0 funcionam automaticamente. Selecione "Automatico" pra fallback inteligente.</p>
+              <p className="text-[11px] text-white/60">Veo 3.1 + Kling 3.0 funcionam automaticamente. Selecione "Automatico" pra fallback inteligente.</p>
             </Card>
             <Card padding="p-4">
               <div className="flex items-center gap-2 mb-2">
                 <Clock size={14} className="text-amber-400" />
                 <span className="text-xs font-bold">Proximos a integrar</span>
               </div>
-              <p className="text-[11px] opacity-40">Seedance 2.0 e Wan 2.1 estao na fila. Self-host no VPS quando necessario.</p>
+              <p className="text-[11px] text-white/60">Seedance 2.0 e Wan 2.1 estao na fila. Self-host no VPS quando necessario.</p>
             </Card>
             <Card padding="p-4">
               <div className="flex items-center gap-2 mb-2">
                 <XIcon size={14} className="text-slate-400" />
                 <span className="text-xs font-bold">Acesso manual</span>
               </div>
-              <p className="text-[11px] opacity-40">Luma e Google AI Studio: use direto no site deles pra testes rapidos sem API.</p>
+              <p className="text-[11px] text-white/60">Luma e Google AI Studio: use direto no site deles pra testes rapidos sem API.</p>
             </Card>
           </div>
         </div>

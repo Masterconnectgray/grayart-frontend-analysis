@@ -15,6 +15,13 @@ const ENV_FALLBACKS: Record<SocialPlatform, CredentialRecord> = {
   youtube: { clientId: env.googleClientId, clientSecret: env.googleClientSecret },
 };
 
+function storageKey(platform: SocialPlatform): string {
+  if (platform === 'instagram' || platform === 'facebook') {
+    return 'meta';
+  }
+  return platform;
+}
+
 export function getOAuthCredential(platform: SocialPlatform): CredentialRecord {
   const row = db.prepare(`
     SELECT client_id, client_secret
@@ -25,10 +32,20 @@ export function getOAuthCredential(platform: SocialPlatform): CredentialRecord {
     | { client_id: string; client_secret: string }
     | undefined;
 
-  if (row) {
+  const normalizedRow = db.prepare(`
+    SELECT client_id, client_secret
+    FROM oauth_credentials
+    WHERE platform = ?
+    LIMIT 1
+  `).get(storageKey(platform)) as
+    | { client_id: string; client_secret: string }
+    | undefined;
+
+  if (normalizedRow || row) {
+    const credential = normalizedRow || row!;
     return {
-      clientId: row.client_id,
-      clientSecret: row.client_secret,
+      clientId: credential.client_id,
+      clientSecret: credential.client_secret,
     };
   }
 
@@ -43,14 +60,14 @@ export function setOAuthCredential(platform: SocialPlatform, clientId: string, c
       client_id = excluded.client_id,
       client_secret = excluded.client_secret,
       updated_at = excluded.updated_at
-  `).run(platform, clientId, clientSecret, nowIso());
+  `).run(storageKey(platform), clientId, clientSecret, nowIso());
 }
 
 export function clearOAuthCredential(platform: SocialPlatform) {
   db.prepare(`
     DELETE FROM oauth_credentials
     WHERE platform = ?
-  `).run(platform);
+  `).run(storageKey(platform));
 }
 
 export function listOAuthCredentialFlags(platforms: SocialPlatform[]) {

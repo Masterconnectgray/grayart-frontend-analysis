@@ -47,7 +47,21 @@ function updateJob(id: number, params: { status: string; result?: unknown; token
 
 function isQuotaError(msg: string): boolean {
   const lower = msg.toLowerCase();
-  return lower.includes('quota') || msg.includes('429') || msg.includes('RESOURCE_EXHAUSTED');
+  return lower.includes('quota') || msg.includes('429') || msg.includes('RESOURCE_EXHAUSTED') || lower.includes('credit') || lower.includes('not enough');
+}
+
+// Cache de quota — evita tentativas repetidas quando ja sabe que esgotou
+const quotaCache: Record<string, number> = {};
+const QUOTA_COOLDOWN = 10 * 60 * 1000; // 10 minutos
+
+function isProviderCoolingDown(provider: string): boolean {
+  const lastFail = quotaCache[provider];
+  if (!lastFail) return false;
+  return Date.now() - lastFail < QUOTA_COOLDOWN;
+}
+
+function markProviderQuotaFail(provider: string) {
+  quotaCache[provider] = Date.now();
 }
 
 function piApiHeaders() {
@@ -102,8 +116,8 @@ videoV2Router.post('/generate', async (req, res) => {
   let usedProvider: 'veo' | 'kling' | 'seedance' | null = null;
   let jobId: number | null = null;
 
-  // Try Veo 3.1
-  if (provider === 'auto' || provider === 'veo') {
+  // Try Veo 3.1 (skip if quota recently failed)
+  if ((provider === 'auto' || provider === 'veo') && !isProviderCoolingDown('veo')) {
     jobId = createJob(userId, prompt, 'veo-3.1');
     try {
       const response = await fetch(
@@ -139,6 +153,7 @@ videoV2Router.post('/generate', async (req, res) => {
     } catch (error) {
       const errMsg = error instanceof Error ? error.message : 'Erro interno';
       if (isQuotaError(errMsg) && provider === 'auto') {
+        markProviderQuotaFail('veo');
         updateJob(jobId, { status: 'failed', result: { error: 'QUOTA_EXCEEDED', provider: 'veo' } });
         jobId = null; // will create new job for kling
       } else {
@@ -149,7 +164,7 @@ videoV2Router.post('/generate', async (req, res) => {
   }
 
   // Try Kling 3.0 (explicit or fallback)
-  if (!usedProvider && (provider === 'kling' || provider === 'auto')) {
+  if (!usedProvider && (provider === 'kling' || provider === 'auto') && !isProviderCoolingDown('kling')) {
     jobId = createJob(userId, prompt, 'kling-3.0');
     try {
       const response = await fetch(PIAPI_BASE, {
@@ -184,6 +199,7 @@ videoV2Router.post('/generate', async (req, res) => {
     } catch (error) {
       const errMsg = error instanceof Error ? error.message : 'Erro interno';
       if (isQuotaError(errMsg) && provider === 'auto') {
+        markProviderQuotaFail('kling');
         updateJob(jobId!, { status: 'failed', result: { error: 'QUOTA_EXCEEDED', provider: 'kling' } });
         jobId = null; // will create new job for seedance
       } else {
@@ -194,7 +210,7 @@ videoV2Router.post('/generate', async (req, res) => {
   }
 
   // Try Seedance 2.0 (explicit or fallback)
-  if (!usedProvider && (provider === 'seedance' || provider === 'auto')) {
+  if (!usedProvider && (provider === 'seedance' || provider === 'auto') && !isProviderCoolingDown('seedance')) {
     jobId = createJob(userId, prompt, 'seedance-2.0');
     try {
       const response = await fetch(PIAPI_BASE, {
@@ -234,7 +250,11 @@ videoV2Router.post('/generate', async (req, res) => {
   }
 
   if (!usedProvider || !jobId) {
-    return res.status(500).json({ error: 'Nenhum provider disponivel' });
+    const coolingDown = ['veo', 'kling', 'seedance'].filter(p => isProviderCoolingDown(p));
+    const msg = coolingDown.length > 0
+      ? `Quotas esgotadas (${coolingDown.join(', ')}). Aguarde 10min ou tente outro provider.`
+      : 'Nenhum provider disponivel';
+    return res.status(429).json({ error: msg });
   }
 
   return res.json({ job_id: jobId, provider: usedProvider, status: 'processing' });
