@@ -1,10 +1,13 @@
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, lazy, Suspense } from 'react';
 import QRCode from 'qrcode';
 import type { Division } from '../constants/Themes';
 import { DIVISIONS } from '../constants/Themes';
 import { useAppContext } from '../context/AppContext';
 import * as xlsx from 'xlsx';
+
+const WhatsAppChat = lazy(() => import('./WhatsAppChat'));
+const WhatsAppBroadcast = lazy(() => import('./WhatsAppBroadcast'));
 
 interface WhatsAppConnectProps { division: Division; }
 
@@ -193,10 +196,10 @@ const WhatsAppConnect: React.FC<WhatsAppConnectProps> = ({ division }) => {
   const [pairingCode, setPairingCode] = useState<string | null>(null);
   const [sendingGroup, setSendingGroup] = useState<number | null>(null);
   const [sentGroups, setSentGroups] = useState<number[]>([]);
-  const [broadcastTemplate, setBroadcastTemplate] = useState(0);
-  const [customMessage, setCustomMessage] = useState('');
+  const [broadcastTemplate] = useState(0);
+  const [customMessage] = useState('');
   const [pollingAttempts, setPollingAttempts] = useState(0);
-  const [activePanel, setActivePanel] = useState<'qr' | 'groups' | 'broadcast' | 'status'>('qr');
+  const [activePanel, setActivePanel] = useState<'qr' | 'chat' | 'groups' | 'broadcast' | 'status'>('qr');
   const [qrExpiry, setQrExpiry] = useState(0);
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const qrTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -660,9 +663,10 @@ const WhatsAppConnect: React.FC<WhatsAppConnectProps> = ({ division }) => {
           {/* Tab navigation */}
           <div className="flex gap-1.5 p-1 rounded-xl w-fit" style={{ background: subBg }}>
             {([
-              { id: 'groups', label: '👥 Grupos' },
-              { id: 'broadcast', label: '📡 Broadcast' },
-              { id: 'status', label: '📊 Status API' },
+              { id: 'chat', label: 'Conversas' },
+              { id: 'groups', label: 'Grupos' },
+              { id: 'broadcast', label: 'Broadcast' },
+              { id: 'status', label: 'Status API' },
             ] as const).map(tab => (
               <button
                 key={tab.id}
@@ -677,6 +681,18 @@ const WhatsAppConnect: React.FC<WhatsAppConnectProps> = ({ division }) => {
               </button>
             ))}
           </div>
+
+          {/* ── CHAT (WhatsApp Web) ──────────────────────────────────────────── */}
+          {activePanel === 'chat' && isConnected && (
+            <Suspense fallback={<div className="text-center py-8 text-sm opacity-40">Carregando conversas...</div>}>
+              <WhatsAppChat instanceName={instance.name} division={division} />
+            </Suspense>
+          )}
+          {activePanel === 'chat' && !isConnected && (
+            <div className="premium-card text-center py-12" style={{ backgroundColor: cardBg }}>
+              <p className="text-sm opacity-40">Conecte o WhatsApp primeiro para ver as conversas.</p>
+            </div>
+          )}
 
           {/* ── GRUPOS ───────────────────────────────────────────────────────── */}
           {activePanel === 'groups' && (
@@ -753,74 +769,24 @@ const WhatsAppConnect: React.FC<WhatsAppConnectProps> = ({ division }) => {
             </div>
           )}
 
-          {/* ── BROADCAST ─────────────────────────────────────────────────────── */}
-          {activePanel === 'broadcast' && (
-            <div className="animate-fade-in grid grid-cols-2 gap-6">
-              <div className="premium-card" style={{ backgroundColor: cardBg }}>
-                <h3 className="text-[0.9rem] font-extrabold mb-4">📝 MENSAGEM</h3>
-                <div className="mb-3">
-                  <div className="text-[11px] opacity-50 mb-2">Templates prontos</div>
-                  <div className="flex flex-col gap-1.5">
-                    {BROADCAST_TEMPLATES.map((t, i) => (
-                      <button
-                        key={i}
-                        onClick={() => { setBroadcastTemplate(i); setCustomMessage(''); }}
-                        className="px-3 py-2 rounded-lg text-left cursor-pointer text-[11px] font-bold"
-                        style={{
-                          background: broadcastTemplate === i && !customMessage ? `${theme.colors.primary}22` : subBg,
-                          border: broadcastTemplate === i && !customMessage ? `1px solid ${theme.colors.primary}44` : '1px solid transparent',
-                          color: broadcastTemplate === i && !customMessage ? theme.colors.primary : 'inherit',
-                        }}
-                      >
-                        {t.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                <textarea
-                  value={customMessage || BROADCAST_TEMPLATES[broadcastTemplate].text}
-                  onChange={e => setCustomMessage(e.target.value)}
-                  rows={8}
-                  className="w-full p-3 rounded-xl border-none text-xs resize-none leading-relaxed"
-                  style={{ background: subBg, color: isDark ? '#fff' : '#1a1a1a' }}
-                  placeholder="Personalize a mensagem... Use {nome} para incluir o nome da sua lista Excel."
-                />
-                <div className="text-[10px] opacity-30 mt-1.5">
-                  {(customMessage || BROADCAST_TEMPLATES[broadcastTemplate].text).length} chars
-                </div>
-              </div>
-
-              <div className="premium-card" style={{ backgroundColor: cardBg }}>
-                <h3 className="text-[0.9rem] font-extrabold mb-4">🎯 DESTINOS</h3>
-                <div className="flex flex-col gap-2.5 mb-6">
-                  {groups.map((g, i) => (
-                    <div key={i} className="flex justify-between items-center p-3 rounded-xl" style={{ background: subBg }}>
-                      <div>
-                        <div className="font-bold text-xs">{g.name}</div>
-                        <div className="text-[10px] opacity-35">{g.members} membros</div>
-                      </div>
-                      <button
-                        onClick={() => sendToGroup(i)}
-                        disabled={!isConnected || sentGroups.includes(i) || sendingGroup === i}
-                        className={`px-3 py-1.5 rounded-lg text-[10px] font-extrabold cursor-pointer text-white ${
-                          sentGroups.includes(i) ? 'bg-[#25D366]' : sendingGroup === i ? 'bg-amber-500' : (isConnected ? 'bg-[#25D366]' : 'bg-[#333]')
-                        }`}
-                      >
-                        {sentGroups.includes(i) ? '✓' : sendingGroup === i ? '...' : '▶'}
-                      </button>
-                    </div>
-                  ))}
-                </div>
-                <button
-                  onClick={sendToAll}
-                  disabled={!isConnected || sentGroups.length >= groups.length}
-                  className={`w-full p-4 rounded-xl font-black text-sm cursor-pointer transition-all duration-300 ${
-                    isConnected ? 'bg-[#25D366] text-white hover:shadow-[0_6px_20px_rgba(37,211,102,0.4)]' : 'bg-[#333] text-[#666]'
-                  }`}
-                >
-                  {!isConnected ? '🔗 Conecte o WhatsApp primeiro' : sentGroups.length >= groups.length ? '✅ DISPARADO PARA TODOS' : `📡 BROADCAST PARA ${groups.length} GRUPOS`}
-                </button>
-              </div>
+          {/* ── BROADCAST (novo componente com automacao) ──────────────────── */}
+          {activePanel === 'broadcast' && isConnected && (
+            <Suspense fallback={<div className="text-center py-8 text-sm opacity-40">Carregando broadcast...</div>}>
+              <WhatsAppBroadcast
+                instanceName={instance.name}
+                division={division}
+                groups={groups.map((g, i) => ({
+                  id: g.phone || `group-${i}`,
+                  subject: g.name,
+                  size: g.members,
+                  lastActivity: g.lastMessage,
+                }))}
+              />
+            </Suspense>
+          )}
+          {activePanel === 'broadcast' && !isConnected && (
+            <div className="premium-card text-center py-12" style={{ backgroundColor: cardBg }}>
+              <p className="text-sm opacity-40">Conecte o WhatsApp primeiro para usar o broadcast.</p>
             </div>
           )}
 
