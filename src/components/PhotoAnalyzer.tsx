@@ -4,7 +4,6 @@ import { DIVISIONS } from '../constants/Themes';
 import { Card } from '../design-system';
 import { bffUpload } from '../services/BFFClient';
 import {
-  Upload,
   Camera,
   CheckCircle,
   AlertTriangle,
@@ -174,7 +173,7 @@ const PhotoAnalyzer: React.FC<PhotoAnalyzerProps> = ({ division }) => {
               type="button"
               onClick={handleAnalyze}
               className="w-full py-3 rounded-xl font-semibold text-white flex items-center justify-center gap-2 transition-all hover:brightness-110"
-              style={{ background: theme.primary }}
+              style={{ background: theme.colors.primary }}
             >
               <Sparkles size={18} />
               Analisar Foto
@@ -183,7 +182,7 @@ const PhotoAnalyzer: React.FC<PhotoAnalyzerProps> = ({ division }) => {
 
           {analyzing && (
             <div className="flex items-center justify-center gap-3 py-4">
-              <Loader2 size={24} className="animate-spin" style={{ color: theme.primary }} />
+              <Loader2 size={24} className="animate-spin" style={{ color: theme.colors.primary }} />
               <div>
                 <p className="text-sm font-medium">Analisando com MoonDream3 + Gemini...</p>
                 <p className="text-xs text-white/40">Detectando pontos e gerando laudo</p>
@@ -231,7 +230,6 @@ const PhotoAnalyzer: React.FC<PhotoAnalyzerProps> = ({ division }) => {
           <div className="space-y-3">
             {result.report.items.map((item, idx) => {
               const config = PRIORITY_CONFIG[item.priority] || PRIORITY_CONFIG.opcional;
-              const Icon = config.icon;
               return (
                 <Card key={idx} variant="default" padding="p-4">
                   <div className="space-y-2">
