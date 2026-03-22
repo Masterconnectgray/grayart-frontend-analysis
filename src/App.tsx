@@ -15,7 +15,7 @@ const PublishJourney = lazy(() => import('./components/journeys/PublishJourney')
 const MonitorJourney = lazy(() => import('./components/journeys/MonitorJourney'));
 const PhotoAnalyzer = lazy(() => import('./components/PhotoAnalyzer'));
 const ActivityHistory = lazy(() => import('./components/ActivityHistory'));
-const VideoGenerator = lazy(() => import('./components/VideoGenerator'));
+const VideoHub = lazy(() => import('./components/VideoHub'));
 const OAuthCallback = lazy(() => import('./components/OAuthCallback'));
 import { DIVISION_LOGOS, GrupoGrayLogo } from './constants/DivisionLogos';
 import { PenTool, Video, Link2, Send, BarChart3, Sparkles, FileText, Users, Clock } from 'lucide-react';
@@ -247,7 +247,7 @@ const App: React.FC = () => {
                   <div>
                     {marketingView === 'create' && <ReelsGenerator division={activeDivision} />}
                     {marketingView === 'media' && <MediaUpload division={activeDivision} />}
-                    {marketingView === 'video' && <VideoGenerator division={activeDivision} />}
+                    {marketingView === 'video' && <VideoHub division={activeDivision} />}
                     {marketingView === 'photo' && <PhotoAnalyzer division={activeDivision} />}
                     {marketingView === 'connect' && <ConnectJourney division={activeDivision} />}
                     {marketingView === 'publish' && <PublishJourney division={activeDivision} />}

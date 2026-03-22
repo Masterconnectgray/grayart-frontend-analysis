@@ -79,7 +79,7 @@ videoV2Router.post('/generate', async (req, res) => {
             instances: [{ prompt }],
             parameters: {
               aspectRatio: format,
-              durationSeconds: Math.min(8, duration),
+              durationSeconds: Math.min(8, Math.max(4, duration)),
               sampleCount: 1,
             },
           }),

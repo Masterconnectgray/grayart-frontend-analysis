@@ -15,6 +15,7 @@ import { whatsappRouter } from './routes/whatsapp';
 import { mediaRouter } from './routes/media';
 import { aiServiceRouter } from './routes/ai-service';
 import { videoV2Router } from './routes/video-v2';
+import { videoComposerRouter } from './routes/video-composer';
 import { processScheduledPosts } from './utils/scheduler';
 
 const app = express();
@@ -61,6 +62,7 @@ app.use('/api/whatsapp', whatsappRouter);
 app.use('/api/media', mediaRouter);
 app.use('/api/ai-service', aiServiceRouter);
 app.use('/api/video-v2', videoV2Router);
+app.use('/api/video-composer', videoComposerRouter);
 
 app.use((error: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
   res.status(500).json({ error: error.message || 'Erro interno do servidor' });
