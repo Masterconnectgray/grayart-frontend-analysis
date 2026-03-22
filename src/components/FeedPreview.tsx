@@ -22,6 +22,7 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { useAppContext } from '../context/AppContext';
+import { Card } from '../design-system';
 
 interface FeedPreviewProps { division: Division; }
 
@@ -89,7 +90,6 @@ const DIVISION_FEED: Record<Division, FeedPost[]> = {
   ],
 };
 
-// ── localStorage helpers ───────────────────────────────────────────────────────
 const STORAGE_KEY = 'grayart_feed_layout';
 
 function loadLayout(division: Division): FeedPost[] | null {
@@ -120,7 +120,6 @@ function clearLayout(division: Division) {
   } catch { /* silently fail */ }
 }
 
-// ── Item Sortavel ──────────────────────────────────────────────────────────────
 interface SortableItemProps {
   post: FeedPost;
   index: number;
@@ -138,7 +137,6 @@ const SortableItem: React.FC<SortableItemProps> = ({ post, index, isDark, primar
     transform: CSS.Transform.toString(transform),
     transition: isSorting ? transition : undefined,
     opacity: isDragging ? 0.25 : 1,
-    position: 'relative',
   };
 
   const catColor = CATEGORY_COLORS[post.category] || primaryColor;
@@ -149,109 +147,45 @@ const SortableItem: React.FC<SortableItemProps> = ({ post, index, isDark, primar
       : `linear-gradient(135deg, ${primaryColor}18, ${primaryColor}30, ${primaryColor}12)`;
 
   return (
-    <div
-      ref={setNodeRef}
-      style={style}
-      {...attributes}
-      {...listeners}
-    >
-      <div style={{
-        aspectRatio: '1 / 1',
-        borderRadius: '4px',
-        background: typeGradient,
-        border: `1px solid ${catColor}28`,
-        display: 'flex', flexDirection: 'column',
-        alignItems: 'center', justifyContent: 'center',
-        position: 'relative', overflow: 'hidden',
-        cursor: 'grab', userSelect: 'none',
-        transition: 'box-shadow 0.2s, transform 0.15s',
-      }}>
-        {/* Overlay gradiente simulando foto */}
-        <div style={{
-          position: 'absolute', inset: 0,
-          background: `linear-gradient(180deg, transparent 40%, ${isDark ? 'rgba(0,0,0,0.6)' : 'rgba(0,0,0,0.25)'} 100%)`,
-          pointerEvents: 'none',
-        }} />
+    <div ref={setNodeRef} {...attributes} {...listeners} className="relative group/item aspect-square rounded overflow-hidden cursor-grab active:cursor-grabbing select-none transition-shadow hover:shadow-lg" style={{ background: typeGradient, border: `1px solid ${catColor}28`, ...style }}>
+      <div className={`absolute inset-0 pointer-events-none bg-gradient-to-b from-transparent to-[rgba(0,0,0,0.6)] ${isDark ? '' : 'opacity-40'}`} />
 
-        {/* Numeracao de posicao */}
-        {showPosition && (
-          <div style={{
-            position: 'absolute', top: '3px', left: '3px',
-            width: '18px', height: '18px', borderRadius: '50%',
-            background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(4px)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: '0.5rem', fontWeight: 900, color: '#fff',
-            zIndex: 3,
-          }}>
-            {index + 1}
-          </div>
-        )}
-
-        {/* Type badge */}
-        <div style={{
-          position: 'absolute', top: '3px', right: '3px',
-          background: post.type === 'Reels' ? '#ef4444' : post.type === 'Carrossel' ? '#3b82f6' : primaryColor,
-          color: '#fff', fontSize: '0.4rem', fontWeight: 900,
-          padding: '1.5px 4px', borderRadius: '3px', letterSpacing: '0.5px',
-          zIndex: 3,
-        }}>
-          {post.type === 'Reels' ? '▶' : post.type === 'Carrossel' ? '◼◼' : '◼'} {post.type.toUpperCase()}
+      {showPosition && (
+        <div className="absolute top-[3px] left-[3px] w-[18px] h-[18px] rounded-full bg-black/65 backdrop-blur-sm flex items-center justify-center text-[0.5rem] font-black text-white z-10">
+          {index + 1}
         </div>
+      )}
 
-        {/* Category dot */}
-        <div style={{
-          position: 'absolute', bottom: '22px', right: '4px',
-          width: '7px', height: '7px', borderRadius: '50%',
-          background: catColor, border: '1px solid rgba(255,255,255,0.3)',
-          zIndex: 3,
-        }} />
-
-        {/* Emoji */}
-        <div style={{ fontSize: '1.4rem', marginBottom: '0.15rem', zIndex: 2 }}>{post.emoji}</div>
-
-        {/* Title bar (bottom overlay) */}
-        <div style={{
-          position: 'absolute', bottom: 0, left: 0, right: 0,
-          padding: '3px 5px', zIndex: 2,
-          background: isDark ? 'rgba(0,0,0,0.55)' : 'rgba(0,0,0,0.2)',
-          backdropFilter: 'blur(2px)',
-        }}>
-          <div style={{
-            fontSize: '0.48rem', fontWeight: 800, textAlign: 'center',
-            color: '#fff', lineHeight: 1.2,
-            textShadow: '0 1px 2px rgba(0,0,0,0.5)',
-            whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-          }}>
-            {post.title}
-          </div>
-        </div>
-
-        {/* Botao remover */}
-        <div
-          onClick={(e) => { e.stopPropagation(); e.preventDefault(); onRemove(post.id); }}
-          onPointerDown={(e) => e.stopPropagation()}
-          style={{
-            position: 'absolute', top: '3px', left: showPosition ? '23px' : '3px',
-            width: '14px', height: '14px', borderRadius: '50%',
-            background: 'rgba(239,68,68,0.8)', color: '#fff',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: '0.5rem', fontWeight: 900, cursor: 'pointer',
-            zIndex: 4, opacity: 0, transition: 'opacity 0.2s',
-          }}
-          onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.opacity = '1'; }}
-          onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.opacity = '0'; }}
-        >
-          X
-        </div>
-
-        {/* Drag handle indicator */}
-        <div style={{ position: 'absolute', bottom: '14px', left: '4px', opacity: 0.2, fontSize: '0.45rem', color: '#fff', zIndex: 3 }}>⠿</div>
+      <div className="absolute top-[3px] right-[3px] text-white text-[0.4rem] font-black px-1 py-[1.5px] rounded-[3px] tracking-wider z-10" style={{ backgroundColor: post.type === 'Reels' ? '#ef4444' : post.type === 'Carrossel' ? '#3b82f6' : primaryColor }}>
+        {post.type === 'Reels' ? '▶' : post.type === 'Carrossel' ? '◼◼' : '◼'} {post.type.toUpperCase()}
       </div>
+
+      <div className="absolute bottom-[22px] right-[4px] w-[7px] h-[7px] rounded-full border border-white/30 z-10" style={{ backgroundColor: catColor }} />
+
+      <div className="absolute inset-0 flex items-center justify-center z-[5]">
+        <div className="text-[1.4rem] pb-2">{post.emoji}</div>
+      </div>
+
+      <div className={`absolute bottom-0 left-0 right-0 p-1 z-[5] backdrop-blur-[2px] ${isDark ? 'bg-black/50' : 'bg-black/20'}`}>
+        <div className="text-[0.48rem] font-black text-center text-white leading-[1.2] drop-shadow-md truncate">
+          {post.title}
+        </div>
+      </div>
+
+      <div
+        onClick={(e) => { e.stopPropagation(); e.preventDefault(); onRemove(post.id); }}
+        onPointerDown={(e) => e.stopPropagation()}
+        className="absolute top-[3px] w-[14px] h-[14px] rounded-full bg-red-500/80 text-white flex items-center justify-center text-[0.5rem] font-black cursor-pointer z-20 opacity-0 group-hover/item:opacity-100 transition-opacity hover:!bg-red-500"
+        style={{ left: showPosition ? '23px' : '3px' }}
+      >
+        X
+      </div>
+
+      <div className="absolute bottom-[14px] left-[4px] opacity-20 text-[0.45rem] text-white z-10">⠿</div>
     </div>
   );
 };
 
-// ── Componente Principal ─────────────────────────────────────────────────────
 const FeedPreview: React.FC<FeedPreviewProps> = ({ division }) => {
   const { addNotification } = useAppContext();
   const isDark = division !== 'gray-art';
@@ -266,7 +200,6 @@ const FeedPreview: React.FC<FeedPreviewProps> = ({ division }) => {
   const [showPositions, setShowPositions] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
 
-  // Novo post form
   const [newTitle, setNewTitle] = useState('');
   const [newType, setNewType] = useState<FeedPost['type']>('Post');
   const [newCategory, setNewCategory] = useState('Educacional');
@@ -283,9 +216,7 @@ const FeedPreview: React.FC<FeedPreviewProps> = ({ division }) => {
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   );
 
-  const handleDragStart = (event: DragStartEvent) => {
-    setActiveDragId(event.active.id);
-  };
+  const handleDragStart = (event: DragStartEvent) => setActiveDragId(event.active.id);
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
@@ -293,8 +224,7 @@ const FeedPreview: React.FC<FeedPreviewProps> = ({ division }) => {
     if (!over || active.id === over.id) return;
     const oldIdx = posts.findIndex(p => p.id === active.id);
     const newIdx = posts.findIndex(p => p.id === over.id);
-    const newPosts = arrayMove(posts, oldIdx, newIdx);
-    setPosts(newPosts);
+    setPosts(arrayMove(posts, oldIdx, newIdx));
     setHasReordered(true);
   };
 
@@ -317,9 +247,8 @@ const FeedPreview: React.FC<FeedPreviewProps> = ({ division }) => {
         addNotification('O grid precisa de pelo menos 3 itens.', 'error');
         return prev;
       }
-      const next = prev.filter(p => p.id !== id);
       setHasReordered(true);
-      return next;
+      return prev.filter(p => p.id !== id);
     });
   }, [addNotification]);
 
@@ -349,86 +278,52 @@ const FeedPreview: React.FC<FeedPreviewProps> = ({ division }) => {
 
   const activeDragPost = activeDragId ? posts.find(p => p.id === activeDragId) : null;
 
-  const cardBg = isDark ? '#1e1e1e' : '#fff';
-  const subBg = isDark ? '#2d2d2d' : '#f0f2f5';
-
-  // Stats por tipo
   const reelsCount = posts.filter(p => p.type === 'Reels').length;
   const postCount = posts.filter(p => p.type === 'Post').length;
   const carrosselCount = posts.filter(p => p.type === 'Carrossel').length;
 
-  // Analise de sequencia (detectar tipos consecutivos)
   const sequenceWarnings: number[] = [];
   for (let i = 1; i < posts.length; i++) {
-    if (posts[i].type === posts[i - 1].type) {
-      sequenceWarnings.push(i);
-    }
+    if (posts[i].type === posts[i - 1].type) sequenceWarnings.push(i);
   }
 
   return (
-    <div className="animate-fade-in">
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: '2rem' }}>
-
-        {/* ── Grid Principal ──────────────────────────────────────────────── */}
+    <div className="animate-in fade-in duration-300">
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-8">
         <div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
+          <div className="flex justify-between items-center mb-6 flex-wrap gap-4">
             <div>
-              <h2 style={{ fontSize: '1.5rem', fontWeight: 800 }}>
-                Grid <span style={{ color: theme.colors.primary }}>Feed</span>
-                <span style={{ marginLeft: '0.8rem', fontSize: '0.65rem', background: `${theme.colors.primary}22`, color: theme.colors.primary, padding: '0.2rem 0.6rem', borderRadius: '6px', fontWeight: 900 }}>
+              <h2 className="text-2xl font-black">
+                Grid <span className="text-[var(--primary-color)]">Feed</span>
+                <span className="ml-3 text-[10px] bg-[var(--primary-color)]/20 text-[var(--primary-color)] px-2 py-1 rounded-md font-black tracking-widest uppercase align-middle relative -top-1">
                   DRAG & DROP
                 </span>
               </h2>
-              <p style={{ fontSize: '0.8rem', opacity: 0.4, marginTop: '0.2rem' }}>Arraste os posts para reordenar o planejamento visual do {theme.name}.</p>
+              <p className="text-xs opacity-50 mt-1 font-bold">Arraste os posts para reordenar o planejamento visual do {theme.name}.</p>
             </div>
-            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-              {/* Toggle numeracao */}
+            <div className="flex gap-2 flex-wrap">
               <button
                 onClick={() => setShowPositions(v => !v)}
-                style={{
-                  padding: '0.5rem 0.8rem', borderRadius: '10px',
-                  background: showPositions ? `${theme.colors.primary}22` : (isDark ? '#2d2d2d' : '#eee'),
-                  color: showPositions ? theme.colors.primary : (isDark ? '#888' : '#666'),
-                  fontWeight: 700, fontSize: '0.7rem', cursor: 'pointer',
-                  border: showPositions ? `1px solid ${theme.colors.primary}44` : '1px solid transparent',
-                }}
+                className={`px-3 py-2 rounded-xl text-xs font-black transition-colors ${showPositions ? 'bg-[var(--primary-color)]/20 text-[var(--primary-color)] border border-[var(--primary-color)]/40' : 'bg-[var(--sub-bg)] text-slate-400 border border-transparent hover:text-white'}`}
               >
                 #123
               </button>
-              {/* Adicionar */}
               <button
                 onClick={() => setShowAddModal(true)}
-                style={{
-                  padding: '0.5rem 0.8rem', borderRadius: '10px',
-                  background: `${theme.colors.primary}22`, color: theme.colors.primary,
-                  fontWeight: 700, fontSize: '0.7rem', cursor: 'pointer',
-                  border: `1px solid ${theme.colors.primary}44`,
-                }}
+                className="px-4 py-2 rounded-xl bg-[var(--primary-color)]/20 text-[var(--primary-color)] text-xs font-black border border-[var(--primary-color)]/40 hover:bg-[var(--primary-color)] hover:text-[var(--card-bg)] transition-colors"
               >
                 + ADICIONAR
               </button>
-              {/* Resetar */}
               <button
                 onClick={resetOrder}
-                style={{
-                  padding: '0.5rem 0.8rem', borderRadius: '10px',
-                  background: isDark ? '#2d2d2d' : '#eee',
-                  fontWeight: 700, fontSize: '0.7rem', cursor: 'pointer',
-                  color: isDark ? '#aaa' : '#666',
-                }}
+                className="px-4 py-2 rounded-xl bg-[var(--sub-bg)] text-slate-400 text-xs font-black hover:text-[var(--card-text)] transition-colors"
               >
                 RESETAR
               </button>
-              {/* Salvar */}
               {hasReordered && (
                 <button
                   onClick={saveOrder}
-                  style={{
-                    padding: '0.5rem 1rem', borderRadius: '10px',
-                    background: theme.colors.primary, color: isDark ? '#fff' : '#000',
-                    fontWeight: 800, fontSize: '0.7rem', cursor: 'pointer',
-                    boxShadow: `0 2px 12px ${theme.colors.primary}44`,
-                  }}
+                  className="px-4 py-2 rounded-xl bg-[var(--primary-color)] text-[var(--card-bg)] text-xs font-black shadow-lg shadow-[var(--primary-color)]/30 animate-in zoom-in-95 hover:scale-105 transition-transform"
                 >
                   SALVAR ORDEM
                 </button>
@@ -436,60 +331,38 @@ const FeedPreview: React.FC<FeedPreviewProps> = ({ division }) => {
             </div>
           </div>
 
-          {/* ── Modal Adicionar Post ───────────────────────────────────────── */}
           {showAddModal && (
-            <div style={{
-              marginBottom: '1.5rem', padding: '1.2rem', borderRadius: '16px',
-              background: cardBg, border: `1px solid ${theme.colors.primary}44`,
-              boxShadow: `0 4px 20px ${theme.colors.primary}15`,
-            }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                <h3 style={{ fontSize: '0.9rem', fontWeight: 800 }}>Adicionar Post ao Grid</h3>
-                <button
-                  onClick={() => setShowAddModal(false)}
-                  style={{ background: 'none', fontSize: '1.2rem', cursor: 'pointer', opacity: 0.5, color: isDark ? '#fff' : '#000' }}
-                >
-                  X
-                </button>
+            <Card className="mb-6 !p-5 border border-[var(--primary-color)]/40 shadow-lg shadow-[var(--primary-color)]/10 animate-in slide-in-from-top-4">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-sm font-black">Adicionar Post ao Grid</h3>
+                <button onClick={() => setShowAddModal(false)} className="opacity-50 hover:opacity-100 font-bold p-1">X</button>
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.8rem' }}>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label style={{ fontSize: '0.65rem', opacity: 0.5, display: 'block', marginBottom: '0.3rem' }}>TITULO</label>
+                  <label className="text-[10px] opacity-50 font-black tracking-widest uppercase block mb-1">Título</label>
                   <input
                     value={newTitle}
                     onChange={e => setNewTitle(e.target.value)}
                     placeholder="Ex: Nova campanha..."
                     maxLength={40}
-                    style={{
-                      width: '100%', padding: '0.6rem', borderRadius: '8px',
-                      background: subBg, border: 'none', color: isDark ? '#fff' : '#000',
-                      fontSize: '0.8rem',
-                    }}
+                    className="w-full p-2.5 rounded-lg bg-[var(--sub-bg)] border-none text-sm font-bold focus:ring-2 ring-[var(--primary-color)] outline-none"
                   />
                 </div>
                 <div>
-                  <label style={{ fontSize: '0.65rem', opacity: 0.5, display: 'block', marginBottom: '0.3rem' }}>EMOJI</label>
+                  <label className="text-[10px] opacity-50 font-black tracking-widest uppercase block mb-1">Emoji</label>
                   <input
                     value={newEmoji}
                     onChange={e => setNewEmoji(e.target.value)}
                     maxLength={4}
-                    style={{
-                      width: '100%', padding: '0.6rem', borderRadius: '8px',
-                      background: subBg, border: 'none', color: isDark ? '#fff' : '#000',
-                      fontSize: '0.8rem',
-                    }}
+                    className="w-full p-2.5 rounded-lg bg-[var(--sub-bg)] border-none text-sm font-bold focus:ring-2 ring-[var(--primary-color)] outline-none"
                   />
                 </div>
                 <div>
-                  <label style={{ fontSize: '0.65rem', opacity: 0.5, display: 'block', marginBottom: '0.3rem' }}>TIPO</label>
+                  <label className="text-[10px] opacity-50 font-black tracking-widest uppercase block mb-1">Tipo</label>
                   <select
                     value={newType}
                     onChange={e => setNewType(e.target.value as FeedPost['type'])}
-                    style={{
-                      width: '100%', padding: '0.6rem', borderRadius: '8px',
-                      background: subBg, border: 'none', color: isDark ? '#fff' : '#000',
-                      fontSize: '0.8rem',
-                    }}
+                    className="w-full p-2.5 rounded-lg bg-[var(--sub-bg)] border-none text-sm font-bold focus:ring-2 ring-[var(--primary-color)] outline-none"
                   >
                     <option value="Post">Post</option>
                     <option value="Reels">Reels</option>
@@ -497,15 +370,11 @@ const FeedPreview: React.FC<FeedPreviewProps> = ({ division }) => {
                   </select>
                 </div>
                 <div>
-                  <label style={{ fontSize: '0.65rem', opacity: 0.5, display: 'block', marginBottom: '0.3rem' }}>CATEGORIA</label>
+                  <label className="text-[10px] opacity-50 font-black tracking-widest uppercase block mb-1">Categoria</label>
                   <select
                     value={newCategory}
                     onChange={e => setNewCategory(e.target.value)}
-                    style={{
-                      width: '100%', padding: '0.6rem', borderRadius: '8px',
-                      background: subBg, border: 'none', color: isDark ? '#fff' : '#000',
-                      fontSize: '0.8rem',
-                    }}
+                    className="w-full p-2.5 rounded-lg bg-[var(--sub-bg)] border-none text-sm font-bold focus:ring-2 ring-[var(--primary-color)] outline-none"
                   >
                     {Object.keys(CATEGORY_COLORS).map(cat => (
                       <option key={cat} value={cat}>{cat}</option>
@@ -515,109 +384,58 @@ const FeedPreview: React.FC<FeedPreviewProps> = ({ division }) => {
               </div>
               <button
                 onClick={addPost}
-                style={{
-                  marginTop: '1rem', width: '100%', padding: '0.7rem',
-                  borderRadius: '10px', background: theme.colors.primary,
-                  color: isDark ? '#fff' : '#000', fontWeight: 800,
-                  fontSize: '0.8rem', cursor: 'pointer',
-                }}
+                className="mt-4 w-full p-3 rounded-xl bg-[var(--primary-color)] text-[var(--card-bg)] font-black text-sm hover:brightness-110 transition-all shadow-md shadow-[var(--primary-color)]/20"
               >
                 ADICIONAR AO GRID
               </button>
-            </div>
+            </Card>
           )}
 
-          {/* ── Mockup do celular com o grid ─────────────────────────────── */}
-          <div style={{ display: 'flex', justifyContent: 'center' }}>
-            <div style={{
-              width: '360px',
-              background: isDark ? '#0d0d0d' : '#fff',
-              borderRadius: '40px',
-              border: `8px solid ${isDark ? '#2a2a2a' : '#ddd'}`,
-              boxShadow: `0 30px 80px rgba(0,0,0,0.5), 0 0 0 1px ${isDark ? '#333' : '#ccc'}`,
-              overflow: 'hidden',
-            }}>
-              {/* Notch */}
-              <div style={{
-                display: 'flex', justifyContent: 'center', paddingTop: '8px',
-                background: isDark ? '#111' : '#f8f8f8',
-              }}>
-                <div style={{
-                  width: '80px', height: '24px', borderRadius: '0 0 14px 14px',
-                  background: isDark ? '#000' : '#1a1a1a',
-                }} />
+          <div className="flex justify-center">
+            <div className={`w-[360px] rounded-[40px] overflow-hidden border-8 shadow-2xl relative ${isDark ? 'bg-[#0d0d0d] border-[#2a2a2a] shadow-black/50' : 'bg-white border-gray-200 shadow-gray-400'}`}>
+              <div className={`flex justify-center pt-2 ${isDark ? 'bg-[#111]' : 'bg-gray-50'}`}>
+                <div className={`w-20 h-6 rounded-b-[14px] ${isDark ? 'bg-black' : 'bg-[#1a1a1a]'}`} />
               </div>
 
-              {/* Phone header */}
-              <div style={{
-                background: isDark ? '#111' : '#f8f8f8', padding: '0.6rem 1rem',
-                display: 'flex', alignItems: 'center', gap: '0.6rem',
-                borderBottom: `1px solid ${isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)'}`,
-              }}>
-                <div style={{
-                  width: '32px', height: '32px', borderRadius: '50%',
-                  background: `linear-gradient(135deg, ${theme.colors.primary}, ${theme.colors.primary}88)`,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: '0.8rem', fontWeight: 900, color: '#fff',
-                  border: `2px solid ${theme.colors.primary}`,
-                  boxShadow: `0 0 8px ${theme.colors.primary}44`,
-                }}>G</div>
+              <div className={`p-3 sm:px-4 sm:py-3 flex items-center gap-3 border-b ${isDark ? 'bg-[#111] border-white/5' : 'bg-gray-50 border-black/5'}`}>
+                <div className="w-8 h-8 rounded-full flex items-center justify-center font-black text-white text-sm border-2 shadow-sm" style={{ background: `linear-gradient(135deg, ${theme.colors.primary}, ${theme.colors.primary}88)`, borderColor: theme.colors.primary, boxShadow: `0 0 8px ${theme.colors.primary}44` }}>
+                  G
+                </div>
                 <div>
-                  <div style={{ fontWeight: 800, fontSize: '0.8rem', color: isDark ? '#fff' : '#000' }}>
-                    {theme.name.toLowerCase().replace(/\s/g, '_')}
-                  </div>
-                  <div style={{ fontSize: '0.55rem', opacity: 0.4, color: isDark ? '#fff' : '#000' }}>
-                    {posts.length} publicacoes
-                  </div>
+                  <div className="font-black text-sm">{theme.name.toLowerCase().replace(/\s/g, '_')}</div>
+                  <div className="text-[10px] font-bold opacity-50">{posts.length} publicações</div>
                 </div>
-                <div style={{ marginLeft: 'auto', display: 'flex', gap: '0.8rem', color: isDark ? '#fff' : '#000' }}>
-                  <span style={{ fontSize: '1.1rem' }}>+</span>
-                  <span style={{ fontSize: '1.1rem' }}>&#9776;</span>
+                <div className="ml-auto flex gap-3 text-lg font-bold">
+                  <span>+</span>
+                  <span>☰</span>
                 </div>
               </div>
 
-              {/* Stats row */}
-              <div style={{
-                display: 'grid', gridTemplateColumns: '1fr 1fr 1fr',
-                padding: '0.7rem', gap: '0', textAlign: 'center',
-                borderBottom: `1px solid ${isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)'}`,
-              }}>
-                {([['Posts', posts.length], ['Seguindo', '142'], ['Seguidores', '3.8k']] as const).map(([label, val], i) => (
+              <div className={`grid grid-cols-3 p-3 text-center border-b ${isDark ? 'border-white/5' : 'border-black/5'}`}>
+                {[
+                  { label: 'Posts', val: posts.length },
+                  { label: 'Seguindo', val: '142' },
+                  { label: 'Seguidores', val: '3.8k' },
+                ].map((item, i) => (
                   <div key={i}>
-                    <div style={{ fontWeight: 900, fontSize: '1rem', color: isDark ? '#fff' : '#000' }}>{val}</div>
-                    <div style={{ fontSize: '0.6rem', opacity: 0.4, color: isDark ? '#fff' : '#000' }}>{label}</div>
+                    <div className="font-black text-base">{item.val}</div>
+                    <div className="text-[10px] opacity-60 font-bold">{item.label}</div>
                   </div>
                 ))}
               </div>
 
-              {/* Bio mini */}
-              <div style={{
-                padding: '0.5rem 1rem', fontSize: '0.6rem', opacity: 0.5,
-                borderBottom: `1px solid ${isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)'}`,
-                color: isDark ? '#fff' : '#000',
-              }}>
+              <div className={`px-4 py-2 text-[10px] font-bold opacity-60 border-b ${isDark ? 'border-white/5' : 'border-black/5'}`}>
                 {theme.tagline} | Grupo Gray
               </div>
 
-              {/* Tab bar (Grid / Reels / Tagged) */}
-              <div style={{
-                display: 'grid', gridTemplateColumns: '1fr 1fr 1fr',
-                borderBottom: `1px solid ${isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)'}`,
-              }}>
+              <div className={`grid grid-cols-3 border-b ${isDark ? 'border-white/5' : 'border-black/5'}`}>
                 {['Grid', 'Reels', 'Tags'].map((tab, i) => (
-                  <div key={tab} style={{
-                    padding: '0.5rem', textAlign: 'center', fontSize: '0.6rem',
-                    fontWeight: i === 0 ? 800 : 600,
-                    opacity: i === 0 ? 1 : 0.3,
-                    borderBottom: i === 0 ? `2px solid ${theme.colors.primary}` : '2px solid transparent',
-                    color: isDark ? '#fff' : '#000',
-                  }}>
+                  <div key={tab} className={`p-2 text-center text-[10px] font-bold border-b-2 ${i === 0 ? 'opacity-100' : 'opacity-30 border-transparent'}`} style={{ borderBottomColor: i === 0 ? theme.colors.primary : 'transparent' }}>
                     {tab === 'Grid' ? '▦' : tab === 'Reels' ? '▶' : '◉'} {tab}
                   </div>
                 ))}
               </div>
 
-              {/* DnD Grid */}
               <DndContext
                 sensors={sensors}
                 collisionDetection={closestCenter}
@@ -625,17 +443,11 @@ const FeedPreview: React.FC<FeedPreviewProps> = ({ division }) => {
                 onDragEnd={handleDragEnd}
               >
                 <SortableContext items={posts.map(p => p.id)} strategy={rectSortingStrategy}>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '2px', padding: '2px' }}>
+                  <div className="grid grid-cols-3 gap-[2px] p-[2px] bg-black/10">
                     {posts.map((post, idx) => (
                       <SortableItem
-                        key={post.id}
-                        post={post}
-                        index={idx}
-                        isDark={isDark}
-                        primaryColor={theme.colors.primary}
-                        isDragging={activeDragId === post.id}
-                        onRemove={removePost}
-                        showPosition={showPositions}
+                        key={post.id} post={post} index={idx} isDark={isDark} primaryColor={theme.colors.primary}
+                        isDragging={activeDragId === post.id} onRemove={removePost} showPosition={showPositions}
                       />
                     ))}
                   </div>
@@ -643,23 +455,9 @@ const FeedPreview: React.FC<FeedPreviewProps> = ({ division }) => {
 
                 <DragOverlay>
                   {activeDragPost && (
-                    <div style={{
-                      aspectRatio: '1/1', width: '100px', borderRadius: '6px',
-                      background: `linear-gradient(135deg, ${theme.colors.primary}55, ${theme.colors.primary}aa)`,
-                      border: `2px solid ${theme.colors.primary}`,
-                      display: 'flex', flexDirection: 'column',
-                      alignItems: 'center', justifyContent: 'center',
-                      boxShadow: `0 15px 40px rgba(0,0,0,0.6), 0 0 20px ${theme.colors.primary}33`,
-                      cursor: 'grabbing', transform: 'rotate(2deg) scale(1.08)',
-                    }}>
-                      <span style={{ fontSize: '1.6rem', marginBottom: '0.2rem' }}>{activeDragPost.emoji}</span>
-                      <span style={{
-                        fontSize: '0.5rem', fontWeight: 800, color: '#fff',
-                        textShadow: '0 1px 3px rgba(0,0,0,0.5)',
-                        textAlign: 'center', padding: '0 6px',
-                      }}>
-                        {activeDragPost.title}
-                      </span>
+                    <div className="aspect-square w-[100px] rounded-md flex flex-col items-center justify-center border-2 border-dashed shadow-2xl rotate-3 scale-110" style={{ background: `linear-gradient(135deg, ${theme.colors.primary}55, ${theme.colors.primary}aa)`, borderColor: theme.colors.primary }}>
+                      <span className="text-2xl mb-1">{activeDragPost.emoji}</span>
+                      <span className="text-[10px] font-black text-white text-center px-1 truncate w-full drop-shadow-md">{activeDragPost.title}</span>
                     </div>
                   )}
                 </DragOverlay>
@@ -668,95 +466,74 @@ const FeedPreview: React.FC<FeedPreviewProps> = ({ division }) => {
           </div>
         </div>
 
-        {/* ── Painel lateral ────────────────────────────────────────────── */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-          {/* Instrucao */}
-          <div style={{ padding: '1rem', borderRadius: '16px', background: `${theme.colors.primary}15`, border: `1px solid ${theme.colors.primary}33` }}>
-            <div style={{ fontSize: '0.75rem', fontWeight: 800, color: theme.colors.primary, marginBottom: '0.5rem' }}>COMO USAR</div>
-            <ul style={{ fontSize: '0.72rem', opacity: 0.7, lineHeight: 1.8, marginLeft: '1rem' }}>
+        <div className="flex flex-col gap-6">
+          <Card className="!p-4 bg-[var(--primary-color)]/10 border border-[var(--primary-color)]/30">
+            <div className="text-xs font-black tracking-widest text-[var(--primary-color)] mb-2 uppercase">Como Usar</div>
+            <ul className="text-[11px] opacity-70 font-bold space-y-1.5 list-disc pl-4">
               <li>Segure e arraste qualquer post</li>
-              <li>Solte na posicao desejada</li>
+              <li>Solte na posição desejada</li>
               <li>O grid atualiza em tempo real</li>
               <li>Clique em "Salvar Ordem" para persistir</li>
               <li>Passe o mouse sobre um post para remover</li>
               <li>"+ Adicionar" para novos itens no grid</li>
             </ul>
-          </div>
+          </Card>
 
-          {/* Alerta de sequencia */}
           {sequenceWarnings.length > 0 && (
-            <div style={{
-              padding: '0.8rem 1rem', borderRadius: '12px',
-              background: '#f59e0b15', border: '1px solid #f59e0b33',
-            }}>
-              <div style={{ fontSize: '0.7rem', fontWeight: 800, color: '#f59e0b', marginBottom: '0.3rem' }}>
-                ALERTA DE SEQUENCIA
-              </div>
-              <div style={{ fontSize: '0.68rem', opacity: 0.7, lineHeight: 1.5 }}>
-                {sequenceWarnings.length} par(es) de tipos consecutivos detectados.
-                Para melhor alcance, intercale os formatos.
+            <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-500 animate-in fade-in slide-in-from-top-2">
+              <div className="text-xs font-black mb-1 uppercase tracking-widest">Alerta de Sequência</div>
+              <div className="text-[11px] font-medium opacity-80 leading-relaxed">
+                {sequenceWarnings.length} par(es) de tipos consecutivos detectados. Para melhor alcance, intercale os formatos.
               </div>
             </div>
           )}
 
-          {/* Composicao do Grid */}
-          <div className="premium-card" style={{ backgroundColor: cardBg }}>
-            <h3 style={{ fontSize: '0.9rem', fontWeight: 800, marginBottom: '1rem', opacity: 0.7 }}>COMPOSICAO DO GRID</h3>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
+          <Card>
+            <h3 className="text-xs font-black tracking-widest uppercase opacity-70 mb-4">Composição do Grid</h3>
+            <div className="flex flex-col gap-4">
               {[
                 { label: 'Reels', count: reelsCount, color: '#ef4444', pct: posts.length > 0 ? Math.round((reelsCount / posts.length) * 100) : 0 },
                 { label: 'Carrossel', count: carrosselCount, color: '#3b82f6', pct: posts.length > 0 ? Math.round((carrosselCount / posts.length) * 100) : 0 },
-                { label: 'Post Estatico', count: postCount, color: theme.colors.primary, pct: posts.length > 0 ? Math.round((postCount / posts.length) * 100) : 0 },
+                { label: 'Post Estático', count: postCount, color: theme.colors.primary, pct: posts.length > 0 ? Math.round((postCount / posts.length) * 100) : 0 },
               ].map((item, i) => (
                 <div key={i}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.3rem' }}>
-                    <span style={{ fontSize: '0.75rem', fontWeight: 700 }}>{item.label}</span>
-                    <span style={{ fontSize: '0.7rem', fontWeight: 900, color: item.color }}>{item.count} ({item.pct}%)</span>
+                  <div className="flex justify-between items-end mb-1.5">
+                    <span className="text-xs font-bold">{item.label}</span>
+                    <span className="text-[11px] font-black" style={{ color: item.color }}>{item.count} ({item.pct}%)</span>
                   </div>
-                  <div style={{ height: '6px', borderRadius: '3px', background: isDark ? '#333' : '#eee', overflow: 'hidden' }}>
-                    <div style={{ width: `${item.pct}%`, height: '100%', background: item.color, borderRadius: '3px', transition: 'width 0.3s ease' }} />
+                  <div className="h-1.5 rounded-full bg-[var(--sub-bg)] overflow-hidden">
+                    <div className="h-full rounded-full transition-all duration-300" style={{ width: `${item.pct}%`, backgroundColor: item.color }} />
                   </div>
                 </div>
               ))}
             </div>
-            <div style={{ marginTop: '1rem', fontSize: '0.65rem', opacity: 0.4, textAlign: 'center' }}>
+            <div className="mt-4 text-[10px] font-bold opacity-50 text-center uppercase tracking-widest">
               {posts.length} itens no grid | {Math.ceil(posts.length / 3)} linha(s)
             </div>
-          </div>
+          </Card>
 
-          {/* Legenda de Categorias */}
-          <div className="premium-card" style={{ backgroundColor: cardBg }}>
-            <h3 style={{ fontSize: '0.9rem', fontWeight: 800, marginBottom: '1rem', opacity: 0.7 }}>CATEGORIAS</h3>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+          <Card>
+            <h3 className="text-xs font-black tracking-widest uppercase opacity-70 mb-4">Categorias</h3>
+            <div className="flex flex-wrap gap-2">
               {Object.entries(CATEGORY_COLORS).map(([cat, color]) => {
                 const countInGrid = posts.filter(p => p.category === cat).length;
                 return (
-                  <div key={cat} style={{
-                    display: 'flex', alignItems: 'center', gap: '0.3rem',
-                    padding: '0.25rem 0.5rem', borderRadius: '6px',
-                    background: countInGrid > 0 ? `${color}20` : `${color}08`,
-                    border: `1px solid ${countInGrid > 0 ? `${color}44` : `${color}18`}`,
-                    opacity: countInGrid > 0 ? 1 : 0.4,
-                  }}>
-                    <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: color, flexShrink: 0 }} />
-                    <span style={{ fontSize: '0.6rem', fontWeight: 700, color }}>{cat}</span>
-                    {countInGrid > 0 && (
-                      <span style={{ fontSize: '0.5rem', fontWeight: 900, color, marginLeft: '2px' }}>({countInGrid})</span>
-                    )}
+                  <div key={cat} className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md border text-[10px] font-black transition-all ${countInGrid > 0 ? 'opacity-100' : 'opacity-40'}`} style={{ backgroundColor: countInGrid > 0 ? `${color}20` : `${color}08`, borderColor: countInGrid > 0 ? `${color}44` : `${color}18`, color }}>
+                    <div className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: color }} />
+                    <span className="uppercase">{cat}</span>
+                    {countInGrid > 0 && <span className="opacity-80 ml-0.5">({countInGrid})</span>}
                   </div>
                 );
               })}
             </div>
-          </div>
+          </Card>
 
-          {/* Dica de Algoritmo */}
-          <div style={{ padding: '1rem', borderRadius: '16px', background: subBg }}>
-            <div style={{ fontSize: '0.7rem', fontWeight: 800, opacity: 0.5, marginBottom: '0.5rem' }}>DICA DE ALGORITMO</div>
-            <div style={{ fontSize: '0.72rem', opacity: 0.65, lineHeight: 1.5 }}>
-              Para maximo alcance, intercale Reels - Carrossel - Post. Nunca poste 2 conteudos do mesmo tipo consecutivamente.
-              O layout ideal e 3x3 com variedade de formatos e categorias.
+          <Card className="bg-[var(--sub-bg)] !border-none">
+            <div className="text-xs font-black tracking-widest uppercase opacity-50 mb-2">Dica de Algoritmo</div>
+            <div className="text-[11px] font-medium opacity-70 leading-relaxed">
+              Para máximo alcance, intercale Reels - Carrossel - Post. Nunca poste 2 conteúdos do mesmo tipo consecutivamente. O layout ideal é 3x3 com variedade de formatos e categorias.
             </div>
-          </div>
+          </Card>
         </div>
       </div>
     </div>

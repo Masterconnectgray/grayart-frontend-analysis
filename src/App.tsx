@@ -1,20 +1,59 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, lazy, Suspense } from 'react';
 import { useAppContext, type MarketingView } from './context/AppContext';
 import { DIVISIONS, type Division } from './constants/Themes';
-import ReelsGenerator from './components/ReelsGenerator';
-import OperationsDashboard from './components/OperationsDashboard';
-import ContentCalendar from './components/ContentCalendar';
-import FeedPreview from './components/FeedPreview';
-import SocialAnalytics from './components/SocialAnalytics';
-import InstagramIntegrations from './components/InstagramIntegrations';
-import AIVideoLab from './components/AIVideoLab';
-import MultiChannelPublisher from './components/MultiChannelPublisher';
-import WhatsAppConnect from './components/WhatsAppConnect';
-import PlatformMonitor from './components/PlatformMonitor';
-import OAuthCallback from './components/OAuthCallback';
 import { ModuleSkeleton, AnalyticsSkeleton, FeedSkeleton } from './components/SkeletonLoader';
+
+// ─── Lazy Loading: reduz bundle inicial de 1.25MB ─────────────────────────────
+const ReelsGenerator = lazy(() => import('./components/ReelsGenerator'));
+const OperationsDashboard = lazy(() => import('./components/OperationsDashboard'));
+const AIVideoLab = lazy(() => import('./components/AIVideoLab'));
+const MediaUpload = lazy(() => import('./components/MediaUpload'));
+const ConnectJourney = lazy(() => import('./components/journeys/ConnectJourney'));
+const PublishJourney = lazy(() => import('./components/journeys/PublishJourney'));
+const MonitorJourney = lazy(() => import('./components/journeys/MonitorJourney'));
+const OAuthCallback = lazy(() => import('./components/OAuthCallback'));
 import { DIVISION_LOGOS, GrupoGrayLogo } from './constants/DivisionLogos';
+import { PenTool, Video, Link2, Send, BarChart3, Sparkles, FileText, Users, Upload } from 'lucide-react';
+import { useDashboardStats } from './hooks/useDashboardStats';
 import './index.css';
+
+// ─── Stats Bar com dados reais do BFF ─────────────────────────────────────────
+const StatsBar: React.FC = () => {
+  const { activeDivision } = useAppContext();
+  const { stats, loading } = useDashboardStats();
+  const theme = DIVISIONS[activeDivision];
+  const isDark = activeDivision !== 'gray-art';
+
+  const items = [
+    { icon: Sparkles, label: 'Copies IA', value: stats?.totalCopies ?? 0 },
+    { icon: Video, label: 'Vídeos', value: stats?.totalVideos ?? 0 },
+    { icon: FileText, label: 'Publicados', value: stats?.postsPublished ?? 0 },
+    { icon: Link2, label: 'Contas', value: stats?.connectedAccounts ?? 0 },
+    { icon: Users, label: 'WhatsApp', value: stats?.whatsappContacts ?? 0 },
+  ];
+
+  return (
+    <div className={`px-6 md:px-8 py-3 flex gap-4 overflow-x-auto scrollbar-none border-b transition-colors duration-300
+      ${isDark ? 'bg-[#1a1a1a]/50 border-white/5' : 'bg-white/50 border-black/5'}`}>
+      {items.map(item => (
+        <div key={item.label} className="flex items-center gap-2 shrink-0">
+          <div
+            className="w-8 h-8 rounded-lg flex items-center justify-center"
+            style={{ backgroundColor: `${theme.colors.primary}15` }}
+          >
+            <item.icon className="w-4 h-4" style={{ color: theme.colors.primary }} />
+          </div>
+          <div className="leading-tight">
+            <div className={`text-base font-bold ${loading ? 'animate-pulse' : ''}`}>
+              {loading ? '—' : item.value}
+            </div>
+            <div className="text-[10px] font-semibold opacity-40 uppercase tracking-wider">{item.label}</div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+};
 
 // ─── Roteamento simples para OAuth callback ──────────────────────────────────
 const isOAuthCallback = window.location.pathname.includes('/oauth/callback');
@@ -24,54 +63,27 @@ const ToastContainer: React.FC = () => {
   const theme = DIVISIONS[activeDivision];
 
   return (
-    <div style={{
-      position: 'fixed',
-      bottom: '2rem',
-      right: '2rem',
-      zIndex: 1000,
-      display: 'flex',
-      flexDirection: 'column',
-      gap: '0.8rem',
-      maxWidth: '350px'
-    }}>
+    <div className="fixed bottom-8 right-8 z-[1000] flex flex-col gap-3 max-w-[350px]">
       {notifications.map(n => (
         <div
           key={n.id}
           onClick={() => removeNotification(n.id)}
-          style={{
-            background: activeDivision === 'gray-art' ? '#fff' : '#222',
-            color: activeDivision === 'gray-art' ? '#1a1a1a' : '#fff',
-            padding: '1rem 1.2rem',
-            borderRadius: '16px',
-            boxShadow: '0 10px 30px rgba(0,0,0,0.2)',
-            borderLeft: `5px solid ${n.type === 'error' ? '#ef4444' : n.type === 'info' ? '#3b82f6' : theme.colors.primary}`,
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.8rem',
-            cursor: 'pointer',
-            animation: 'slideIn 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55)',
-            fontWeight: 600,
-            fontSize: '0.9rem'
-          }}
+          className={`px-5 py-4 rounded-2xl shadow-xl flex items-center gap-3 cursor-pointer font-semibold text-sm animate-in slide-in-from-right-8 duration-300
+            ${activeDivision === 'gray-art' ? 'bg-white text-[#1a1a1a]' : 'bg-[#222] text-white'}`}
+          style={{ borderLeft: `5px solid ${n.type === 'error' ? '#ef4444' : n.type === 'info' ? '#3b82f6' : theme.colors.primary}` }}
         >
-          <div style={{
-            width: '24px', height: '24px', borderRadius: '50%',
-            background: n.type === 'error' ? '#ef444422' : n.type === 'info' ? '#3b82f622' : `${theme.colors.primary}22`,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            color: n.type === 'error' ? '#ef4444' : n.type === 'info' ? '#3b82f6' : theme.colors.primary,
-            fontSize: '0.8rem'
-          }}>
+          <div 
+            className="w-6 h-6 rounded-full flex items-center justify-center text-xs shrink-0"
+            style={{ 
+              backgroundColor: n.type === 'error' ? '#ef444422' : n.type === 'info' ? '#3b82f622' : `${theme.colors.primary}22`,
+              color: n.type === 'error' ? '#ef4444' : n.type === 'info' ? '#3b82f6' : theme.colors.primary
+            }}
+          >
             {n.type === 'error' ? '!' : n.type === 'info' ? 'i' : '✓'}
           </div>
           {n.message}
         </div>
       ))}
-      <style>{`
-        @keyframes slideIn {
-          from { transform: translateX(100%); opacity: 0; }
-          to { transform: translateX(0); opacity: 1; }
-        }
-      `}</style>
     </div>
   );
 };
@@ -122,80 +134,46 @@ const App: React.FC = () => {
   }, [theme]);
 
   // ── OAuth callback: renderiza só a página de retorno ────────────────────
-  if (isOAuthCallback) return <OAuthCallback />;
-
-  const appBackground = activeDivision === 'gray-art' ? '#f5f7fa' : '#121212';
-  const textColor = activeDivision === 'gray-art' ? '#1a1a1a' : '#ffffff';
+  if (isOAuthCallback) return <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><ModuleSkeleton isDark={false} primary="#00C896" /></div>}><OAuthCallback /></Suspense>;
 
   return (
-    <div style={{ backgroundColor: appBackground, color: textColor, minHeight: '100vh', transition: 'all 0.5s ease' }}>
+    <div className={`min-h-screen transition-colors duration-500 ease-in-out ${activeDivision === 'gray-art' ? 'bg-[#f5f7fa] text-[#1a1a1a]' : 'bg-[#121212] text-white'}`}>
       <ToastContainer />
 
       {/* Header / Nav */}
-      <header style={{
-        background: activeDivision === 'gray-art' ? 'rgba(255, 255, 255, 0.9)' : 'rgba(18, 18, 18, 0.9)',
-        backdropFilter: 'blur(10px)',
-        padding: '1rem 2rem',
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        position: 'sticky',
-        top: 0,
-        zIndex: 100,
-        boxShadow: '0 2px 10px rgba(0,0,0,0.1)',
-        flexWrap: 'wrap',
-        gap: '1rem'
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.8rem' }}>
-          <div style={{ color: 'var(--primary-color)', transition: 'color 0.3s', display: 'flex', alignItems: 'center' }}>
+      <header className={`px-6 md:px-8 py-4 flex flex-col md:flex-row justify-between items-center sticky top-0 z-50 shadow-sm gap-4 border-b transition-colors duration-300
+        ${activeDivision === 'gray-art' ? 'bg-white/90 border-black/5' : 'bg-[#121212]/90 border-white/5'} backdrop-blur-md`}>
+        
+        <div className="flex items-center gap-3">
+          <div className="text-[var(--primary-color)] transition-colors duration-300 flex items-center">
             <GrupoGrayLogo size={36} />
           </div>
           <div>
-            <h1 style={{
-              fontSize: 'max(1rem, 1.3vw)',
-              fontWeight: 800,
-              color: 'var(--primary-color)',
-              transition: 'color 0.3s',
-              lineHeight: 1.1,
-            }}>
+            <h1 className="text-xl md:text-2xl font-extrabold text-[var(--primary-color)] transition-colors duration-300 leading-tight">
               GRUPO GRAY
             </h1>
-            <span style={{ fontSize: '0.65rem', fontWeight: 600, opacity: 0.5, letterSpacing: '1px' }}>{theme.name}</span>
+            <span className="text-xs font-semibold opacity-50 tracking-wider uppercase block">{theme.name}</span>
           </div>
         </div>
 
-        <nav style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+        <nav className="flex gap-2 flex-wrap justify-center">
           <button
             onClick={() => setActiveTab('marketing')}
-            style={{
-              padding: '0.6rem 1.2rem',
-              borderRadius: '12px',
-              backgroundColor: activeTab === 'marketing' ? 'var(--primary-color)' : 'transparent',
-              color: activeTab === 'marketing' ? (activeDivision === 'gray-art' ? '#000' : '#fff') : (activeDivision === 'gray-art' ? '#666' : '#aaa'),
-              fontWeight: 600,
-              fontSize: '0.9rem',
-              transition: 'all 0.3s'
-            }}
+            className={`px-5 py-2.5 rounded-xl font-semibold text-sm transition-all
+              ${activeTab === 'marketing' ? 'bg-[var(--primary-color)] text-[#1a1a1a]' : `bg-transparent ${isDark ? 'text-slate-400 hover:text-white hover:bg-white/5' : 'text-slate-600 hover:text-black hover:bg-black/5'}`}`}
           >
             Marketing
           </button>
           <button
             onClick={() => setActiveTab('operations')}
-            style={{
-              padding: '0.6rem 1.2rem',
-              borderRadius: '12px',
-              backgroundColor: activeTab === 'operations' ? 'var(--primary-color)' : 'transparent',
-              color: activeTab === 'operations' ? (activeDivision === 'gray-art' ? '#000' : '#fff') : (activeDivision === 'gray-art' ? '#666' : '#aaa'),
-              fontWeight: 600,
-              fontSize: '0.9rem',
-              transition: 'all 0.3s'
-            }}
+            className={`px-5 py-2.5 rounded-xl font-semibold text-sm transition-all
+              ${activeTab === 'operations' ? 'bg-[var(--primary-color)] text-[#1a1a1a]' : `bg-transparent ${isDark ? 'text-slate-400 hover:text-white hover:bg-white/5' : 'text-slate-600 hover:text-black hover:bg-black/5'}`}`}
           >
             Operações
           </button>
         </nav>
 
-        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+        <div className="flex gap-2 items-center justify-center">
           {(Object.keys(DIVISIONS) as Division[]).map((divId) => {
             const DivLogo = DIVISION_LOGOS[divId];
             const isActive = activeDivision === divId;
@@ -203,23 +181,16 @@ const App: React.FC = () => {
               <button
                 key={divId}
                 onClick={() => setActiveDivision(divId)}
+                className={`w-10 h-10 rounded-xl flex items-center justify-center p-1 transition-all duration-300
+                  ${isActive ? 'scale-105 border-2 shadow-lg' : 'border-2 border-transparent scale-100 opacity-60 hover:opacity-100 hover:bg-white/5'}`}
                 style={{
-                  width: '40px',
-                  height: '40px',
-                  borderRadius: '10px',
-                  border: isActive ? `2px solid ${DIVISIONS[divId].colors.primary}` : '2px solid transparent',
+                  borderColor: isActive ? DIVISIONS[divId].colors.primary : 'transparent',
                   backgroundColor: isActive ? `${DIVISIONS[divId].colors.primary}15` : 'transparent',
-                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                   boxShadow: isActive ? `0 0 12px ${DIVISIONS[divId].colors.primary}44` : 'none',
-                  transform: isActive ? 'scale(1.05)' : 'scale(1)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  padding: '4px',
                 }}
                 title={DIVISIONS[divId].name}
               >
-                <DivLogo size={28} color={DIVISIONS[divId].colors.primary} />
+                <DivLogo size={24} color={isActive ? DIVISIONS[divId].colors.primary : '#888'} />
               </button>
             );
           })}
@@ -227,95 +198,69 @@ const App: React.FC = () => {
       </header>
 
       {activeTab === 'marketing' && (
-        <div style={{
-          background: activeDivision === 'gray-art' ? '#fff' : '#1e1e1e',
-          padding: '0.6rem 2rem',
-          display: 'flex',
-          gap: '0.5rem',
-          borderBottom: '1px solid rgba(128,128,128,0.1)',
-          overflowX: 'auto',
-          scrollbarWidth: 'none'
-        }}>
+        <div className={`px-6 md:px-8 py-3 flex gap-2 border-b overflow-x-auto scrollbar-none transition-colors duration-300
+          ${activeDivision === 'gray-art' ? 'bg-white border-black/5' : 'bg-[#1a1a1a] border-white/5'}`}>
           {[
-            { id: 'generator', label: '🎬 Gerador' },
-            { id: 'video-lab', label: '🎞️ Vídeo IA' },
-            { id: 'whatsapp', label: '🟢 WhatsApp' },
-            { id: 'publisher', label: '🚀 Publicador' },
-            { id: 'calendar', label: '📅 Calendário' },
-            { id: 'feed', label: '📱 Grid Feed' },
-            { id: 'analytics', label: '📊 Analytics' },
-            { id: 'monitor', label: '📡 Monitor' },
-            { id: 'accounts', label: '🔗 Contas' }
+            { id: 'create', label: 'Criar Conteúdo', icon: PenTool },
+            { id: 'media', label: 'Mídia + IA', icon: Upload },
+            { id: 'video', label: 'Vídeo IA', icon: Video },
+            { id: 'connect', label: 'Conectar Contas', icon: Link2 },
+            { id: 'publish', label: 'Publicar', icon: Send },
+            { id: 'monitor', label: 'Monitorar', icon: BarChart3 }
           ].map(v => (
             <button
               key={v.id}
               onClick={() => setMarketingView(v.id as MarketingView)}
-              style={{
-                padding: '0.5rem 1rem',
-                borderRadius: '10px',
-                fontSize: '0.8rem',
-                fontWeight: 700,
-                backgroundColor: marketingView === v.id ? 'var(--primary-color)' : 'transparent',
-                color: marketingView === v.id ? (activeDivision === 'gray-art' ? '#000' : '#fff') : (activeDivision === 'gray-art' ? '#666' : '#999'),
-                whiteSpace: 'nowrap',
-                transition: 'all 0.2s'
-              }}
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold whitespace-nowrap transition-all duration-200
+                ${marketingView === v.id ? 'bg-[var(--primary-color)] text-[#1a1a1a] shadow-sm' : `bg-transparent ${isDark ? 'text-slate-400 hover:bg-white/5 hover:text-white' : 'text-slate-600 hover:bg-black/5 hover:text-black'}`}`}
             >
+              <v.icon className="w-4 h-4" />
               {v.label}
             </button>
           ))}
         </div>
       )}
 
-      <main style={{
-        padding: '2rem 1.5rem',
-        maxWidth: '1240px',
-        margin: '0 auto',
-        minHeight: 'calc(100vh - 250px)'
-      }}>
+      <StatsBar />
+
+      <main className="py-8 px-4 md:px-8 max-w-[1440px] mx-auto min-h-[calc(100vh-250px)]">
         {isTransitioning ? (
-          // Skeleton de transição
-          <div className="animate-fade-in">
-            {marketingView === 'feed' ? (
+          <div className="animate-in fade-in duration-300">
+            {marketingView === 'publish' ? (
               <FeedSkeleton isDark={isDark} />
-            ) : marketingView === 'analytics' ? (
+            ) : marketingView === 'monitor' ? (
               <AnalyticsSkeleton isDark={isDark} primary={DIVISIONS[activeDivision].colors.primary} />
             ) : (
               <ModuleSkeleton isDark={isDark} primary={DIVISIONS[activeDivision].colors.primary} />
             )}
           </div>
         ) : (
-          <div className="animate-fade-in">
-            {activeTab === 'marketing' ? (
-              <div style={{ transition: 'all 0.3s' }}>
-                {marketingView === 'generator' && <ReelsGenerator division={activeDivision} />}
-                {marketingView === 'video-lab' && <AIVideoLab division={activeDivision} />}
-                {marketingView === 'publisher' && <MultiChannelPublisher division={activeDivision} />}
-                {marketingView === 'calendar' && <ContentCalendar division={activeDivision} />}
-                {marketingView === 'feed' && <FeedPreview division={activeDivision} />}
-                {marketingView === 'analytics' && <SocialAnalytics division={activeDivision} />}
-                {marketingView === 'accounts' && <InstagramIntegrations division={activeDivision} />}
-                {marketingView === 'whatsapp' && <WhatsAppConnect division={activeDivision} />}
-                {marketingView === 'monitor' && <PlatformMonitor division={activeDivision} />}
-              </div>
-            ) : (
-              <OperationsDashboard division={activeDivision} />
-            )}
+          <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <Suspense fallback={<ModuleSkeleton isDark={isDark} primary={DIVISIONS[activeDivision].colors.primary} />}>
+              {activeTab === 'marketing' ? (
+                <div>
+                  {marketingView === 'create' && <ReelsGenerator division={activeDivision} />}
+                  {marketingView === 'media' && <MediaUpload division={activeDivision} />}
+                  {marketingView === 'video' && <AIVideoLab division={activeDivision} />}
+                  {marketingView === 'connect' && <ConnectJourney division={activeDivision} />}
+                  {marketingView === 'publish' && <PublishJourney division={activeDivision} />}
+                  {marketingView === 'monitor' && <MonitorJourney division={activeDivision} />}
+                </div>
+              ) : (
+                <OperationsDashboard division={activeDivision} />
+              )}
+            </Suspense>
           </div>
         )}
       </main>
 
-      <footer style={{
-        textAlign: 'center',
-        padding: '2rem',
-        borderTop: `1px solid ${isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)'}`,
-        marginTop: '2rem',
-      }}>
-        <div style={{ opacity: 0.35, fontSize: '0.75rem', fontWeight: 600 }}>
-          {theme.name} <span style={{ opacity: 0.5 }}>|</span> {theme.tagline}
+      <footer className={`text-center py-8 mt-8 border-t transition-colors duration-300
+        ${isDark ? 'border-white/5' : 'border-black/5'}`}>
+        <div className="opacity-40 text-xs font-bold uppercase tracking-widest">
+          {theme.name} <span className="opacity-50 mx-2">|</span> {theme.tagline}
         </div>
-        <div style={{ opacity: 0.2, fontSize: '0.65rem', marginTop: '0.3rem' }}>
-          Grupo Gray 2026 — Central de Marketing e Operacao
+        <div className="opacity-20 text-[10px] mt-2 font-medium tracking-wide">
+          Grupo Gray 2026 — Central de Marketing e Operação
         </div>
       </footer>
     </div>

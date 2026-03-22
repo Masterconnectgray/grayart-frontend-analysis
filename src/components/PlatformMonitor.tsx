@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import type { Division } from '../constants/Themes';
-import { DIVISIONS } from '../constants/Themes';
 import { PlatformIcon } from '../constants/SocialIcons';
 import { isFlowConfigured, getStats } from '../services/FlowAPIService';
+import { Card } from '../design-system';
+import { RefreshCcw, AlertTriangle } from 'lucide-react';
+import { bffFetch } from '../services/BFFClient';
 
 interface PlatformMonitorProps {
   division: Division;
@@ -82,22 +84,26 @@ const DIVISION_METRICS: Record<Division, PlatformMetrics[]> = {
   ],
 };
 
-// Services to monitor
 const MONITORED_SERVICES: Omit<ServiceHealth, 'status' | 'latency' | 'lastCheck'>[] = [
-  { name: 'Flow API', url: '/flow', description: 'Backend principal - agendamento, publicacao, stats', icon: '🔗' },
+  { name: 'Flow API', url: '/flow', description: 'Backend principal - agendamento, publicação, stats', icon: '🔗' },
   { name: 'Evolution API', url: '/evolution', description: 'WhatsApp Business - mensagens e broadcasts', icon: '📱' },
-  { name: 'Gemini API', url: '/gemini', description: 'Google Gemini - geracao de texto IA', icon: '✨' },
-  { name: 'Veo 3', url: '/veo', description: 'Google Veo 3 - geracao de video IA', icon: '🎬' },
+  { name: 'Gemini API', url: '/gemini', description: 'Google Gemini - geração de texto IA', icon: '✨' },
+  { name: 'Veo 3', url: '/veo', description: 'Google Veo 3 - geração de vídeo IA', icon: '🎬' },
 ];
 
+const STATUS_VARIANTS = {
+  online: { bg: 'bg-emerald-500/10', text: 'text-emerald-500', border: 'border-emerald-500/30', hex: '#22c55e', label: 'ONLINE' },
+  degraded: { bg: 'bg-amber-500/10', text: 'text-amber-500', border: 'border-amber-500/30', hex: '#f59e0b', label: 'DEGRADADO' },
+  offline: { bg: 'bg-red-500/10', text: 'text-red-500', border: 'border-red-500/30', hex: '#ef4444', label: 'OFFLINE' },
+  checking: { bg: 'bg-blue-500/10', text: 'text-blue-500', border: 'border-blue-500/30', hex: '#3b82f6', label: 'VERIFICANDO' },
+};
+
 const PlatformMonitor: React.FC<PlatformMonitorProps> = ({ division }) => {
-  const isDark = division !== 'gray-art';
-  const theme = DIVISIONS[division];
   const metrics = DIVISION_METRICS[division];
 
   const [activeSection, setActiveSection] = useState<'status' | 'metrics' | 'logs' | 'alerts'>('status');
   const [services, setServices] = useState<ServiceHealth[]>(
-    MONITORED_SERVICES.map(s => ({ ...s, status: 'checking' as ServiceStatus, latency: null, lastCheck: null }))
+    MONITORED_SERVICES.map(s => ({ ...s, status: 'checking', latency: null, lastCheck: null }))
   );
   const [logs, setLogs] = useState<ActivityLog[]>([]);
   const [usageMetrics, setUsageMetrics] = useState<UsageMetrics>({
@@ -111,10 +117,6 @@ const PlatformMonitor: React.FC<PlatformMonitorProps> = ({ division }) => {
   const refreshTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const cardBg = isDark ? '#1e1e1e' : '#fff';
-  const cardText = isDark ? '#fff' : '#1a1a1a';
-  const subBg = isDark ? '#2d2d2d' : '#f0f2f5';
-
   const addLog = useCallback((service: string, action: string, detail: string, type: ActivityLog['type']) => {
     setLogs(prev => [{
       id: Date.now() + Math.random(),
@@ -126,41 +128,18 @@ const PlatformMonitor: React.FC<PlatformMonitorProps> = ({ division }) => {
     }, ...prev].slice(0, 50));
   }, []);
 
-  // Check a single service health
   const checkService = useCallback(async (service: Omit<ServiceHealth, 'status' | 'latency' | 'lastCheck'>): Promise<ServiceHealth> => {
     const start = performance.now();
     try {
-      const flowUrl = import.meta.env.VITE_FLOW_API_URL || '';
-      if (!flowUrl) {
-        return { ...service, status: 'offline', latency: null, lastCheck: new Date() };
-      }
-
-      let endpoint = '';
-      if (service.name === 'Flow API') {
-        endpoint = `${flowUrl}/flow/grayart/stats`;
-      } else if (service.name === 'Evolution API') {
-        endpoint = `${flowUrl}/flow/grayart/health/evolution`;
-      } else if (service.name === 'Gemini API') {
-        endpoint = `${flowUrl}/flow/grayart/health/gemini`;
-      } else if (service.name === 'Veo 3') {
-        endpoint = `${flowUrl}/flow/grayart/health/veo`;
-      }
-
-      if (!endpoint) {
-        return { ...service, status: 'offline', latency: null, lastCheck: new Date() };
-      }
-
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 5000);
-
-      const resp = await fetch(endpoint, {
-        signal: controller.signal,
-        headers: { 'Content-Type': 'application/json' },
-      });
-      clearTimeout(timeoutId);
+      let response: Response;
+      if (service.name === 'Flow API') response = await bffFetch('/flow/health/flow');
+      else if (service.name === 'Evolution API') response = await bffFetch('/flow/health/evolution');
+      else if (service.name === 'Gemini API') response = await bffFetch('/flow/health/gemini');
+      else if (service.name === 'Veo 3') response = await bffFetch('/flow/health/veo');
+      else response = await bffFetch('/flow/health/flow');
 
       const latency = Math.round(performance.now() - start);
-      const status: ServiceStatus = resp.ok ? (latency > 2000 ? 'degraded' : 'online') : 'degraded';
+      const status: ServiceStatus = response.ok ? (latency > 2000 ? 'degraded' : 'online') : 'degraded';
 
       return { ...service, status, latency, lastCheck: new Date() };
     } catch {
@@ -169,15 +148,13 @@ const PlatformMonitor: React.FC<PlatformMonitorProps> = ({ division }) => {
     }
   }, []);
 
-  // Full health check
   const runHealthCheck = useCallback(async () => {
     setIsRefreshing(true);
-    addLog('Monitor', 'Health Check', 'Verificando status de todos os servicos...', 'info');
+    addLog('Monitor', 'Health Check', 'Verificando status de todos os serviços...', 'info');
 
     const results = await Promise.all(MONITORED_SERVICES.map(s => checkService(s)));
     setServices(results);
 
-    // Generate alerts based on results
     const newAlerts: Alert[] = [];
     results.forEach(s => {
       if (s.status === 'offline') {
@@ -186,30 +163,27 @@ const PlatformMonitor: React.FC<PlatformMonitorProps> = ({ division }) => {
           timestamp: new Date(),
           severity: 'critical',
           title: `${s.name} OFFLINE`,
-          message: `O servico ${s.name} nao esta respondendo. Verifique o servidor.`,
+          message: `O serviço ${s.name} não está respondendo. Verifique o servidor.`,
           dismissed: false,
         });
-        addLog(s.name, 'Offline', `Servico nao respondeu ao health check`, 'error');
+        addLog(s.name, 'Offline', `Serviço não respondeu ao health check`, 'error');
       } else if (s.status === 'degraded') {
         newAlerts.push({
           id: Date.now() + Math.random(),
           timestamp: new Date(),
           severity: 'warning',
           title: `${s.name} Lento`,
-          message: `Latencia de ${s.latency}ms detectada. Performance degradada.`,
+          message: `Latência de ${s.latency}ms detectada. Performance degradada.`,
           dismissed: false,
         });
-        addLog(s.name, 'Degradado', `Latencia: ${s.latency}ms`, 'warning');
+        addLog(s.name, 'Degradado', `Latência: ${s.latency}ms`, 'warning');
       } else {
         addLog(s.name, 'Online', `OK - ${s.latency}ms`, 'success');
       }
     });
 
-    if (newAlerts.length > 0) {
-      setAlerts(prev => [...newAlerts, ...prev].slice(0, 20));
-    }
+    if (newAlerts.length > 0) setAlerts(prev => [...newAlerts, ...prev].slice(0, 20));
 
-    // Fetch real stats if Flow is configured
     if (isFlowConfigured()) {
       try {
         const stats = await getStats(division);
@@ -219,9 +193,9 @@ const PlatformMonitor: React.FC<PlatformMonitorProps> = ({ division }) => {
           videosGenerated: stats.videos || stats.totalVideos || 0,
           scheduledPending: stats.scheduledPending || 0,
         }));
-        addLog('Flow API', 'Stats', `Posts: ${stats.totalPosts}, Videos: ${stats.totalVideos}`, 'success');
+        addLog('Flow API', 'Stats', `Posts: ${stats.totalPosts}, Vídeos: ${stats.totalVideos}`, 'success');
       } catch {
-        addLog('Flow API', 'Stats Error', 'Nao foi possivel carregar metricas', 'error');
+        addLog('Flow API', 'Stats Error', 'Não foi possível carregar métricas', 'error');
       }
     }
 
@@ -230,17 +204,10 @@ const PlatformMonitor: React.FC<PlatformMonitorProps> = ({ division }) => {
     setIsRefreshing(false);
   }, [addLog, checkService, division]);
 
-  // Initial check + auto-refresh every 30s
   useEffect(() => {
     const initialCheck = setTimeout(() => runHealthCheck(), 0);
-
-    refreshTimerRef.current = setInterval(() => {
-      runHealthCheck();
-    }, 30000);
-
-    countdownRef.current = setInterval(() => {
-      setCountdown(prev => (prev <= 1 ? 30 : prev - 1));
-    }, 1000);
+    refreshTimerRef.current = setInterval(() => runHealthCheck(), 30000);
+    countdownRef.current = setInterval(() => setCountdown(prev => (prev <= 1 ? 30 : prev - 1)), 1000);
 
     return () => {
       clearTimeout(initialCheck);
@@ -249,22 +216,20 @@ const PlatformMonitor: React.FC<PlatformMonitorProps> = ({ division }) => {
     };
   }, [division, runHealthCheck]);
 
-  // Simulated activity logs
   useEffect(() => {
     const interval = setInterval(() => {
       const platforms = metrics.map(m => m.platform);
       const randomPlatform = platforms[Math.floor(Math.random() * platforms.length)];
       const actions = [
-        { action: 'Novo Seguidor', detail: '+1 seguidor organico', type: 'success' as const },
-        { action: 'Comentario', detail: 'Novo comentario no ultimo post', type: 'info' as const },
-        { action: 'Compartilhamento', detail: 'Post compartilhado por usuario', type: 'success' as const },
+        { action: 'Novo Seguidor', detail: '+1 seguidor orgânico', type: 'success' as const },
+        { action: 'Comentário', detail: 'Novo comentário no último post', type: 'info' as const },
+        { action: 'Compartilhamento', detail: 'Post compartilhado por usuário', type: 'success' as const },
         { action: 'Like', detail: '+1 curtida', type: 'info' as const },
-        { action: 'Visualizacao', detail: '+25 views no story/reel', type: 'info' as const },
+        { action: 'Visualização', detail: '+25 views no story/reel', type: 'info' as const },
       ];
       const action = actions[Math.floor(Math.random() * actions.length)];
       addLog(randomPlatform, action.action, action.detail, action.type);
     }, 6000);
-
     return () => clearInterval(interval);
   }, [division, metrics, addLog]);
 
@@ -275,9 +240,6 @@ const PlatformMonitor: React.FC<PlatformMonitorProps> = ({ division }) => {
   const undismissedAlerts = alerts.filter(a => !a.dismissed);
   const criticalAlerts = undismissedAlerts.filter(a => a.severity === 'critical');
 
-  const statusColor = (s: ServiceStatus) => s === 'online' ? '#22c55e' : s === 'degraded' ? '#f59e0b' : s === 'checking' ? '#3b82f6' : '#ef4444';
-  const statusLabel = (s: ServiceStatus) => s === 'online' ? 'ONLINE' : s === 'degraded' ? 'DEGRADADO' : s === 'checking' ? 'VERIFICANDO' : 'OFFLINE';
-
   const formatTime = (date: Date) => {
     const h = date.getHours().toString().padStart(2, '0');
     const m = date.getMinutes().toString().padStart(2, '0');
@@ -285,323 +247,229 @@ const PlatformMonitor: React.FC<PlatformMonitorProps> = ({ division }) => {
     return `${h}:${m}:${s}`;
   };
 
-  const dismissAlert = (id: number) => {
-    setAlerts(prev => prev.map(a => a.id === id ? { ...a, dismissed: true } : a));
-  };
+  const dismissAlert = (id: number) => setAlerts(prev => prev.map(a => a.id === id ? { ...a, dismissed: true } : a));
 
   return (
-    <div className="animate-fade-in">
-      {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '0.8rem' }}>
+    <div className="animate-in fade-in duration-300">
+      <div className="flex flex-col md:flex-row justify-between md:items-center gap-4 mb-6">
         <div>
-          <h2 style={{ fontSize: '1.5rem', fontWeight: 900 }}>
-            Monitor <span style={{ color: theme.colors.primary }}>de Plataformas</span>
+          <h2 className="text-2xl font-black mb-1">
+            Monitor <span className="text-[var(--primary-color)]">de Plataformas</span>
           </h2>
-          <p style={{ fontSize: '0.75rem', opacity: 0.5, fontWeight: 700, marginTop: '0.2rem' }}>
-            STATUS DAS APIs E METRICAS DE USO
+          <p className="text-xs font-bold opacity-60 m-0 uppercase tracking-widest">
+            STATUS DAS APIs E MÉTRICAS DE USO
           </p>
         </div>
-        <div style={{ display: 'flex', gap: '0.8rem', alignItems: 'center' }}>
-          {/* Overall status indicator */}
-          <div style={{
-            display: 'flex', alignItems: 'center', gap: '0.5rem',
-            padding: '0.5rem 1rem', borderRadius: '12px',
-            background: `${statusColor(overallStatus)}15`,
-            border: `1px solid ${statusColor(overallStatus)}33`,
-          }}>
-            <div style={{
-              width: '10px', height: '10px', borderRadius: '50%',
-              background: statusColor(overallStatus),
-              boxShadow: `0 0 10px ${statusColor(overallStatus)}aa`,
-              animation: overallStatus === 'online' ? 'pulse-dot 2s ease-in-out infinite' : 'none',
-            }} />
-            <span style={{ fontSize: '0.75rem', fontWeight: 900, color: statusColor(overallStatus) }}>
-              {overallStatus === 'online' ? 'TODOS ONLINE' : overallStatus === 'degraded' ? 'PERFORMANCE DEGRADADA' : 'SERVICOS OFFLINE'}
+        <div className="flex gap-3 items-center flex-wrap">
+          <div className={`flex items-center gap-2 px-4 py-2 rounded-xl border ${STATUS_VARIANTS[overallStatus].bg} ${STATUS_VARIANTS[overallStatus].border}`}>
+            <div className={`w-2.5 h-2.5 rounded-full ${overallStatus === 'online' ? 'animate-pulse' : ''}`} style={{ backgroundColor: STATUS_VARIANTS[overallStatus].hex, boxShadow: `0 0 10px ${STATUS_VARIANTS[overallStatus].hex}` }} />
+            <span className={`text-[10px] sm:text-xs font-black uppercase ${STATUS_VARIANTS[overallStatus].text}`}>
+              {overallStatus === 'online' ? 'TODOS O.K.' : overallStatus === 'degraded' ? 'PERFORMANCE DEGRADADA' : 'SERVIÇOS OFFLINE'}
             </span>
           </div>
-          {/* Refresh button */}
           <button
             onClick={() => { setCountdown(30); runHealthCheck(); }}
             disabled={isRefreshing}
-            style={{
-              padding: '0.5rem 1rem', borderRadius: '10px',
-              background: subBg, border: 'none', color: cardText,
-              fontSize: '0.7rem', fontWeight: 700, cursor: 'pointer',
-              display: 'flex', alignItems: 'center', gap: '0.4rem',
-              opacity: isRefreshing ? 0.6 : 1,
-              transition: 'all 0.2s',
-            }}
+            className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[var(--sub-bg)] text-[var(--card-text)] text-xs font-bold hover:brightness-110 disabled:opacity-50 transition-all border border-transparent shadow-sm"
           >
-            <svg
-              width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
-              style={{ animation: isRefreshing ? 'spin 1s linear infinite' : 'none' }}
-            >
-              <path d="M23 4v6h-6M1 20v-6h6" /><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15" />
-            </svg>
+            <RefreshCcw size={14} className={isRefreshing ? 'animate-spin' : ''} />
             {countdown}s
           </button>
         </div>
       </div>
 
-      {/* Critical alerts banner */}
       {criticalAlerts.length > 0 && (
-        <div style={{
-          padding: '0.8rem 1.2rem', borderRadius: '12px', marginBottom: '1.2rem',
-          background: '#ef444418', border: '1px solid #ef444444',
-          display: 'flex', alignItems: 'center', gap: '0.8rem', flexWrap: 'wrap',
-        }}>
-          <div style={{
-            width: '28px', height: '28px', borderRadius: '50%', background: '#ef4444',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            color: '#fff', fontWeight: 900, fontSize: '0.9rem', flexShrink: 0,
-          }}>!</div>
-          <div style={{ flex: 1, minWidth: '200px' }}>
-            <div style={{ fontWeight: 800, fontSize: '0.8rem', color: '#ef4444' }}>
-              {criticalAlerts.length} ALERTA{criticalAlerts.length > 1 ? 'S' : ''} CRITICO{criticalAlerts.length > 1 ? 'S' : ''}
+        <div className="flex flex-wrap items-center gap-4 p-4 rounded-xl mb-6 bg-red-500/10 border border-red-500/30 text-red-500 animate-in slide-in-from-top-4">
+          <div className="w-8 h-8 shrink-0 rounded-full bg-red-500 text-white flex items-center justify-center font-black">
+            <AlertTriangle size={16} />
+          </div>
+          <div className="flex-1 min-w-[200px]">
+            <div className="font-black text-sm uppercase tracking-wide">
+              {criticalAlerts.length} ALERTA{criticalAlerts.length > 1 ? 'S' : ''} CRÍTICO{criticalAlerts.length > 1 ? 'S' : ''}
             </div>
-            <div style={{ fontSize: '0.72rem', opacity: 0.7 }}>
-              {criticalAlerts.map(a => a.title).join(' | ')}
+            <div className="text-xs font-medium opacity-80 mt-0.5">
+              {criticalAlerts.map(a => a.title).join(' • ')}
             </div>
           </div>
           <button
             onClick={() => setActiveSection('alerts')}
-            style={{
-              padding: '0.4rem 0.8rem', borderRadius: '8px',
-              background: '#ef4444', color: '#fff', fontWeight: 800,
-              fontSize: '0.7rem', cursor: 'pointer',
-            }}
-          >VER ALERTAS</button>
+            className="px-4 py-2 rounded-xl bg-red-500 text-white font-black text-xs hover:bg-red-600 transition-colors shadow-md shadow-red-500/20"
+          >
+            VER ALERTAS
+          </button>
         </div>
       )}
 
-      {/* Section tabs */}
-      <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem', background: subBg, padding: '0.3rem', borderRadius: '12px', width: 'fit-content', flexWrap: 'wrap' }}>
+      <div className="flex gap-2 mb-6 bg-[var(--sub-bg)] p-1.5 rounded-xl w-fit overflow-x-auto max-w-full relative">
         {[
           { key: 'status' as const, label: 'Status APIs' },
-          { key: 'metrics' as const, label: 'Metricas' },
+          { key: 'metrics' as const, label: 'Métricas' },
           { key: 'logs' as const, label: `Logs (${logs.length})` },
           { key: 'alerts' as const, label: `Alertas${undismissedAlerts.length > 0 ? ` (${undismissedAlerts.length})` : ''}` },
         ].map(tab => (
           <button
             key={tab.key}
             onClick={() => setActiveSection(tab.key)}
-            style={{
-              padding: '0.6rem 1.2rem', borderRadius: '10px',
-              backgroundColor: activeSection === tab.key ? theme.colors.primary : 'transparent',
-              color: activeSection === tab.key ? '#fff' : (isDark ? '#666' : '#999'),
-              fontWeight: 700, fontSize: '0.8rem', transition: 'all 0.3s',
-              position: 'relative',
-            }}
+            className={`relative px-5 py-2.5 rounded-lg font-bold text-sm whitespace-nowrap transition-all duration-300
+              ${activeSection === tab.key ? 'bg-[var(--primary-color)] text-[var(--card-bg)] shadow-md' : 'text-slate-400 hover:text-[var(--card-text)]'}`}
           >
             {tab.label}
             {tab.key === 'alerts' && undismissedAlerts.length > 0 && (
-              <span style={{
-                position: 'absolute', top: '-4px', right: '-4px',
-                width: '8px', height: '8px', borderRadius: '50%',
-                background: '#ef4444',
-              }} />
+              <span className="absolute top-1 right-1 w-2.5 h-2.5 rounded-full bg-red-500 ring-2 ring-[var(--sub-bg)]" />
             )}
           </button>
         ))}
       </div>
 
-      {/* ===== STATUS APIs ===== */}
       {activeSection === 'status' && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1.5rem' }}>
-          {/* API Service Cards */}
-          <div className="premium-card" style={{ backgroundColor: cardBg, color: cardText }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-              <h3 style={{ fontSize: '1rem', fontWeight: 800, opacity: 0.4 }}>STATUS DAS APIs</h3>
-              <div style={{ fontSize: '0.6rem', opacity: 0.3, fontWeight: 700 }}>
-                Ultima verificacao: {formatTime(lastRefresh)}
-              </div>
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_1.2fr] gap-6 animate-in slide-in-from-bottom-4 duration-300">
+          <Card className="flex flex-col gap-4">
+            <div className="flex justify-between items-center mb-2">
+              <h3 className="font-black text-xs opacity-60 tracking-widest uppercase">Status das APIs</h3>
+              <div className="text-[10px] font-bold opacity-40">Verificado: {formatTime(lastRefresh)}</div>
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
-              {services.map((s, i) => (
-                <div key={i} style={{
-                  padding: '1rem', borderRadius: '16px', background: subBg,
-                  display: 'flex', alignItems: 'center', gap: '1rem',
-                  borderLeft: `4px solid ${statusColor(s.status)}`,
-                  transition: 'all 0.3s',
-                }}>
-                  <div style={{
-                    width: '44px', height: '44px', borderRadius: '12px',
-                    background: `${statusColor(s.status)}18`,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontWeight: 900, fontSize: '1rem', color: statusColor(s.status),
-                  }}>{s.icon}</div>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontWeight: 800, fontSize: '0.9rem' }}>{s.name}</div>
-                    <div style={{ fontSize: '0.65rem', opacity: 0.5, marginTop: '0.15rem' }}>{s.description}</div>
-                  </div>
-                  <div style={{ textAlign: 'right' }}>
-                    <div style={{
-                      padding: '0.3rem 0.7rem', borderRadius: '8px', fontSize: '0.6rem', fontWeight: 900,
-                      background: `${statusColor(s.status)}15`,
-                      color: statusColor(s.status),
-                      marginBottom: '0.2rem',
-                      display: 'flex', alignItems: 'center', gap: '0.3rem',
-                    }}>
-                      <div style={{
-                        width: '6px', height: '6px', borderRadius: '50%',
-                        background: statusColor(s.status),
-                      }} />
-                      {statusLabel(s.status)}
+            <div className="flex flex-col gap-3">
+              {services.map((s, i) => {
+                const variant = STATUS_VARIANTS[s.status];
+                return (
+                  <div key={i} className={`p-4 rounded-2xl bg-[var(--sub-bg)] flex items-center gap-4 border-l-4 ${variant.border} hover:translate-x-1 transition-transform`}>
+                    <div className={`w-12 h-12 shrink-0 rounded-xl ${variant.bg} ${variant.text} flex items-center justify-center text-xl`}>
+                      {s.icon}
                     </div>
-                    {s.latency !== null && (
-                      <div style={{ fontSize: '0.55rem', opacity: 0.4, fontWeight: 700 }}>
-                        {s.latency}ms
+                    <div className="flex-1 min-w-0">
+                      <div className="font-black text-sm truncate">{s.name}</div>
+                      <div className="text-[10px] opacity-60 font-bold truncate mt-0.5">{s.description}</div>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[10px] font-black tracking-wider mb-1 ${variant.bg} ${variant.text}`}>
+                        <div className="w-1.5 h-1.5 rounded-full bg-current" />
+                        {variant.label}
                       </div>
-                    )}
+                      {s.latency !== null && (
+                        <div className="text-[10px] font-bold opacity-40">{s.latency}ms</div>
+                      )}
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
-
-            {/* Uptime summary */}
-            <div style={{
-              marginTop: '1.2rem', padding: '1rem', borderRadius: '12px',
-              background: `${theme.colors.primary}08`, border: `1px solid ${theme.colors.primary}22`,
-            }}>
-              <div style={{ fontSize: '0.7rem', fontWeight: 800, opacity: 0.5, marginBottom: '0.6rem' }}>RESUMO DE UPTIME</div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.8rem' }}>
-                <div style={{ textAlign: 'center' }}>
-                  <div style={{ fontSize: '1.4rem', fontWeight: 900, color: '#22c55e' }}>{onlineCount}</div>
-                  <div style={{ fontSize: '0.6rem', opacity: 0.5 }}>Online</div>
+            <div className={`mt-2 p-4 rounded-xl border bg-slate-500/5 border-white/10 dark:border-black/5`}>
+              <div className="text-[10px] font-black opacity-50 uppercase tracking-widest mb-3">Resumo de Uptime</div>
+              <div className="grid grid-cols-3 gap-4 text-center">
+                <div>
+                  <div className="text-2xl font-black text-emerald-500 leading-none mb-1">{onlineCount}</div>
+                  <div className="text-[10px] font-bold opacity-60 uppercase">Online</div>
                 </div>
-                <div style={{ textAlign: 'center' }}>
-                  <div style={{ fontSize: '1.4rem', fontWeight: 900, color: '#f59e0b' }}>{degradedCount}</div>
-                  <div style={{ fontSize: '0.6rem', opacity: 0.5 }}>Degradado</div>
+                <div>
+                  <div className="text-2xl font-black text-amber-500 leading-none mb-1">{degradedCount}</div>
+                  <div className="text-[10px] font-bold opacity-60 uppercase">Degradado</div>
                 </div>
-                <div style={{ textAlign: 'center' }}>
-                  <div style={{ fontSize: '1.4rem', fontWeight: 900, color: '#ef4444' }}>{offlineCount}</div>
-                  <div style={{ fontSize: '0.6rem', opacity: 0.5 }}>Offline</div>
+                <div>
+                  <div className="text-2xl font-black text-red-500 leading-none mb-1">{offlineCount}</div>
+                  <div className="text-[10px] font-bold opacity-60 uppercase">Offline</div>
                 </div>
               </div>
             </div>
-          </div>
+          </Card>
 
-          {/* Social Network Status */}
-          <div className="premium-card" style={{ backgroundColor: cardBg, color: cardText }}>
-            <h3 style={{ fontSize: '1rem', fontWeight: 800, marginBottom: '1.5rem', opacity: 0.4 }}>STATUS DAS REDES SOCIAIS</h3>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
+          <Card className="flex flex-col gap-4">
+            <h3 className="font-black text-xs opacity-60 tracking-widest uppercase mb-2">Status das Redes Sociais</h3>
+            <div className="flex flex-col gap-3">
               {metrics.map((m, i) => (
-                <div key={i} style={{
-                  padding: '1rem', borderRadius: '16px', background: subBg,
-                  display: 'flex', alignItems: 'center', gap: '1rem',
-                }}>
-                  <div style={{ width: '40px', height: '40px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
-                    <PlatformIcon platformId={m.platformId} size={40} />
+                <div key={i} className="p-4 rounded-2xl bg-[var(--sub-bg)] flex flex-col sm:flex-row sm:items-center gap-4 hover:shadow-md transition-shadow">
+                  <div className="flex items-center gap-4">
+                     <div className="w-10 h-10 shrink-0 rounded-xl flex items-center justify-center overflow-hidden">
+                       <PlatformIcon platformId={m.platformId} size={40} />
+                     </div>
+                     <div className="font-black text-base">{m.platform}</div>
                   </div>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontWeight: 800, fontSize: '0.9rem' }}>{m.platform}</div>
-                    <div style={{ display: 'flex', gap: '1rem', marginTop: '0.3rem', flexWrap: 'wrap' }}>
-                      <div>
-                        <div style={{ fontSize: '0.55rem', opacity: 0.4, fontWeight: 700 }}>SEGUIDORES</div>
-                        <div style={{ fontSize: '0.8rem', fontWeight: 800 }}>{m.followers}</div>
-                      </div>
-                      <div>
-                        <div style={{ fontSize: '0.55rem', opacity: 0.4, fontWeight: 700 }}>ALCANCE</div>
-                        <div style={{ fontSize: '0.8rem', fontWeight: 800 }}>{m.reach}</div>
-                      </div>
-                      <div>
-                        <div style={{ fontSize: '0.55rem', opacity: 0.4, fontWeight: 700 }}>ENGAJAMENTO</div>
-                        <div style={{ fontSize: '0.8rem', fontWeight: 800, color: theme.colors.primary }}>{m.engagement}</div>
-                      </div>
-                      <div>
-                        <div style={{ fontSize: '0.55rem', opacity: 0.4, fontWeight: 700 }}>VIEWS</div>
-                        <div style={{ fontSize: '0.8rem', fontWeight: 800 }}>{m.views}</div>
-                      </div>
+                  <div className="flex-1 grid grid-cols-4 gap-2 text-center items-center">
+                    <div>
+                      <div className="text-[9px] sm:text-[10px] opacity-50 font-black uppercase mb-0.5">Seg.</div>
+                      <div className="text-xs sm:text-sm font-black">{m.followers}</div>
+                    </div>
+                    <div>
+                      <div className="text-[9px] sm:text-[10px] opacity-50 font-black uppercase mb-0.5">Alcance</div>
+                      <div className="text-xs sm:text-sm font-black">{m.reach}</div>
+                    </div>
+                    <div>
+                      <div className="text-[9px] sm:text-[10px] opacity-50 font-black uppercase mb-0.5 text-[var(--primary-color)]">Eng.</div>
+                      <div className="text-xs sm:text-sm font-black text-[var(--primary-color)]">{m.engagement}</div>
+                    </div>
+                    <div>
+                      <div className="text-[9px] sm:text-[10px] opacity-50 font-black uppercase mb-0.5">Views</div>
+                      <div className="text-xs sm:text-sm font-black">{m.views}</div>
                     </div>
                   </div>
-                  <div style={{
-                    padding: '0.3rem 0.6rem', borderRadius: '8px', fontSize: '0.6rem', fontWeight: 900,
-                    background: m.status === 'online' ? '#22c55e15' : m.status === 'sync' ? '#3b82f615' : '#ef444415',
-                    color: m.status === 'online' ? '#22c55e' : m.status === 'sync' ? '#3b82f6' : '#ef4444',
-                  }}>
-                    {m.status === 'online' ? 'ATIVO' : m.status === 'sync' ? 'SYNC' : 'ALERTA'}
+                  <div className="shrink-0 flex justify-end">
+                    <div className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] sm:text-xs font-black
+                       ${m.status === 'online' ? 'bg-emerald-500/10 text-emerald-500' : m.status === 'sync' ? 'bg-blue-500/10 text-blue-500' : 'bg-red-500/10 text-red-500'}`}>
+                      {m.status === 'online' ? 'ATIVO' : m.status === 'sync' ? 'SYNC' : 'ALERTA'}
+                    </div>
                   </div>
                 </div>
               ))}
             </div>
-          </div>
+          </Card>
         </div>
       )}
 
-      {/* ===== METRICAS DE USO ===== */}
       {activeSection === 'metrics' && (
-        <div>
-          {/* Metric cards */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
+        <div className="animate-in slide-in-from-bottom-4 duration-300">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
             {[
-              { label: 'Posts Hoje', value: usageMetrics.postsToday, color: theme.colors.primary, icon: 'P' },
-              { label: 'Videos Gerados', value: usageMetrics.videosGenerated, color: '#8b5cf6', icon: 'V' },
-              { label: 'Msgs WhatsApp', value: usageMetrics.whatsappMessages, color: '#25D366', icon: 'W' },
-              { label: 'Agendados', value: usageMetrics.scheduledPending, color: '#3b82f6', icon: 'A' },
-              { label: 'Chamadas API', value: usageMetrics.apiCalls, color: '#f59e0b', icon: 'C' },
-              { label: 'Erros Hoje', value: usageMetrics.errorsToday, color: '#ef4444', icon: '!' },
+              { label: 'Posts Hoje', value: usageMetrics.postsToday, color: 'text-blue-500', bg: 'bg-blue-500/10', border: 'border-blue-500', icon: '📝' },
+              { label: 'Vídeos', value: usageMetrics.videosGenerated, color: 'text-purple-500', bg: 'bg-purple-500/10', border: 'border-purple-500', icon: '🎬' },
+              { label: 'Msgs WPP', value: usageMetrics.whatsappMessages, color: 'text-emerald-500', bg: 'bg-emerald-500/10', border: 'border-emerald-500', icon: '💬' },
+              { label: 'Agendados', value: usageMetrics.scheduledPending, color: 'text-amber-500', bg: 'bg-amber-500/10', border: 'border-amber-500', icon: '🕒' },
+              { label: 'APIs', value: usageMetrics.apiCalls, color: 'text-[var(--primary-color)]', bg: 'bg-[var(--primary-color)]/10', border: 'border-[var(--primary-color)]', icon: '⚡' },
+              { label: 'Erros', value: usageMetrics.errorsToday, color: 'text-red-500', bg: 'bg-red-500/10', border: 'border-red-500', icon: '❌' },
             ].map((metric, i) => (
-              <div key={i} className="premium-card" style={{
-                backgroundColor: cardBg, color: cardText, padding: '1.2rem',
-                borderTop: `3px solid ${metric.color}`,
-              }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.8rem' }}>
-                  <div style={{ fontSize: '0.65rem', fontWeight: 700, opacity: 0.5, textTransform: 'uppercase' }}>{metric.label}</div>
-                  <div style={{
-                    width: '28px', height: '28px', borderRadius: '8px',
-                    background: `${metric.color}18`, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontWeight: 900, fontSize: '0.7rem', color: metric.color,
-                  }}>{metric.icon}</div>
+              <Card key={i} className={`border-b-4 ${metric.border} !p-4`}>
+                <div className="flex justify-between items-start mb-3">
+                  <div className="text-[9px] font-black opacity-60 uppercase tracking-widest max-w-[60%]">{metric.label}</div>
+                  <div className={`w-6 h-6 rounded-md ${metric.bg} flex items-center justify-center text-[10px]`}>{metric.icon}</div>
                 </div>
-                <div style={{ fontSize: '2rem', fontWeight: 900, color: metric.color }}>{metric.value}</div>
-              </div>
+                <div className={`text-2xl font-black ${metric.color}`}>{metric.value}</div>
+              </Card>
             ))}
           </div>
 
-          {/* Social platform detailed metrics */}
-          <div className="premium-card" style={{ backgroundColor: cardBg, color: cardText }}>
-            <h3 style={{ fontSize: '1rem', fontWeight: 800, marginBottom: '1.5rem', opacity: 0.4 }}>METRICAS POR REDE SOCIAL</h3>
-            <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem' }}>
+          <Card>
+            <h3 className="font-black text-xs opacity-60 tracking-widest uppercase mb-4">Métricas Detalhadas por Rede</h3>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-sm whitespace-nowrap">
                 <thead>
-                  <tr>
-                    {['Rede', 'Seguidores', 'Alcance', 'Engajamento', 'Views', 'Status'].map(h => (
-                      <th key={h} style={{
-                        textAlign: 'left', padding: '0.8rem 1rem',
-                        fontSize: '0.65rem', fontWeight: 800, opacity: 0.4, textTransform: 'uppercase',
-                        borderBottom: `1px solid ${isDark ? '#333' : '#eee'}`,
-                      }}>{h}</th>
-                    ))}
+                  <tr className="border-b border-[var(--sub-bg)] text-[10px] uppercase tracking-widest opacity-60 font-black">
+                    <th className="pb-3 pr-4">Rede</th>
+                    <th className="pb-3 px-4">Seguidores</th>
+                    <th className="pb-3 px-4">Alcance</th>
+                    <th className="pb-3 px-4">Engajamento</th>
+                    <th className="pb-3 px-4">Views</th>
+                    <th className="pb-3 pl-4">Status</th>
                   </tr>
                 </thead>
-                <tbody>
+                <tbody className="divide-y divide-[var(--sub-bg)]">
                   {metrics.map((m, i) => (
-                    <tr key={i} style={{ borderBottom: `1px solid ${isDark ? '#2a2a2a' : '#f0f0f0'}` }}>
-                      <td style={{ padding: '0.8rem 1rem' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-                          <PlatformIcon platformId={m.platformId} size={24} />
-                          <span style={{ fontWeight: 700 }}>{m.platform}</span>
+                    <tr key={i} className="hover:bg-[var(--sub-bg)]/50 transition-colors">
+                      <td className="py-3 pr-4">
+                        <div className="flex items-center gap-3">
+                          <PlatformIcon platformId={m.platformId} size={20} />
+                          <span className="font-bold">{m.platform}</span>
                         </div>
                       </td>
-                      <td style={{ padding: '0.8rem 1rem', fontWeight: 800 }}>{m.followers}</td>
-                      <td style={{ padding: '0.8rem 1rem', fontWeight: 700 }}>{m.reach}</td>
-                      <td style={{ padding: '0.8rem 1rem' }}>
-                        <span style={{
-                          padding: '0.2rem 0.5rem', borderRadius: '6px',
-                          background: `${theme.colors.primary}18`, color: theme.colors.primary,
-                          fontWeight: 800, fontSize: '0.75rem',
-                        }}>{m.engagement}</span>
+                      <td className="py-3 px-4 font-black">{m.followers}</td>
+                      <td className="py-3 px-4 font-bold opacity-80">{m.reach}</td>
+                      <td className="py-3 px-4">
+                        <span className="px-2 py-1 rounded bg-[var(--primary-color)]/10 text-[var(--primary-color)] font-black text-xs">
+                          {m.engagement}
+                        </span>
                       </td>
-                      <td style={{ padding: '0.8rem 1rem', fontWeight: 700 }}>{m.views}</td>
-                      <td style={{ padding: '0.8rem 1rem' }}>
-                        <div style={{
-                          display: 'inline-flex', alignItems: 'center', gap: '0.3rem',
-                          padding: '0.2rem 0.5rem', borderRadius: '6px',
-                          background: m.status === 'online' ? '#22c55e15' : '#3b82f615',
-                          color: m.status === 'online' ? '#22c55e' : '#3b82f6',
-                          fontSize: '0.65rem', fontWeight: 800,
-                        }}>
-                          <div style={{ width: '5px', height: '5px', borderRadius: '50%', background: 'currentColor' }} />
+                      <td className="py-3 px-4 font-bold opacity-80">{m.views}</td>
+                      <td className="py-3 pl-4">
+                        <div className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-[10px] font-black
+                          ${m.status === 'online' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-blue-500/10 text-blue-500'}`}>
+                          <div className="w-1 h-1 rounded-full bg-current" />
                           {m.status === 'online' ? 'ATIVO' : 'SYNC'}
                         </div>
                       </td>
@@ -610,126 +478,112 @@ const PlatformMonitor: React.FC<PlatformMonitorProps> = ({ division }) => {
                 </tbody>
               </table>
             </div>
-          </div>
+          </Card>
         </div>
       )}
 
-      {/* ===== LOGS ===== */}
       {activeSection === 'logs' && (
-        <div className="premium-card" style={{ backgroundColor: cardBg, color: cardText }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-            <h3 style={{ fontSize: '1rem', fontWeight: 800, opacity: 0.4 }}>LOG DE ATIVIDADES</h3>
-            <div style={{ display: 'flex', gap: '0.6rem', alignItems: 'center' }}>
-              <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#22c55e', animation: 'pulse-dot 2s ease-in-out infinite' }} />
-              <span style={{ fontSize: '0.65rem', opacity: 0.4, fontWeight: 700 }}>AO VIVO</span>
+        <Card className="animate-in slide-in-from-bottom-4 duration-300">
+          <div className="flex justify-between items-center mb-6">
+            <h3 className="font-black text-xs opacity-60 tracking-widest uppercase m-0">Log de Atividades</h3>
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2">
+                <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(34,197,94,0.6)]" />
+                <span className="text-[10px] font-black opacity-60 uppercase tracking-widest">AO VIVO</span>
+              </div>
               <button
                 onClick={() => setLogs([])}
-                style={{
-                  padding: '0.3rem 0.6rem', borderRadius: '6px', background: subBg,
-                  fontSize: '0.6rem', fontWeight: 700, cursor: 'pointer', border: 'none', color: cardText, opacity: 0.5,
-                }}
-              >LIMPAR</button>
+                className="px-3 py-1.5 rounded-lg bg-[var(--sub-bg)] text-xs font-bold opacity-60 hover:opacity-100 transition-opacity"
+              >
+                LIMPAR
+              </button>
             </div>
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', maxHeight: '500px', overflowY: 'auto' }}>
+
+          <div className="flex flex-col gap-2 max-h-[500px] overflow-y-auto pr-2 scrollbar-thin">
             {logs.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '3rem', opacity: 0.3, fontSize: '0.85rem' }}>
+              <div className="text-center py-16 opacity-40 font-bold text-sm">
                 Aguardando atividades...
               </div>
             ) : logs.map((log) => {
-              const typeColors = { success: '#22c55e', info: '#3b82f6', warning: '#f59e0b', error: '#ef4444' };
+              const typeVariants = {
+                success: { bg: 'bg-emerald-500/10', text: 'text-emerald-500', border: 'border-emerald-500', badge: 'OK' },
+                info: { bg: 'bg-blue-500/10', text: 'text-blue-500', border: 'border-blue-500', badge: 'INFO' },
+                warning: { bg: 'bg-amber-500/10', text: 'text-amber-500', border: 'border-amber-500', badge: 'WARN' },
+                error: { bg: 'bg-red-500/10', text: 'text-red-500', border: 'border-red-500', badge: 'ERR' },
+              }[log.type];
+
               return (
-                <div key={log.id} className="animate-fade-in" style={{
-                  padding: '0.6rem 0.8rem', borderRadius: '8px', background: subBg,
-                  display: 'flex', alignItems: 'center', gap: '0.6rem',
-                  borderLeft: `3px solid ${typeColors[log.type]}`,
-                  fontSize: '0.75rem',
-                }}>
-                  <span style={{
-                    fontSize: '0.6rem', fontWeight: 800, opacity: 0.4, minWidth: '55px',
-                    fontFamily: 'monospace',
-                  }}>
+                <div key={log.id} className={`animate-in fade-in slide-in-from-top-2 p-3 rounded-xl bg-[var(--sub-bg)] flex flex-wrap sm:flex-nowrap items-center gap-3 border-l-4 ${typeVariants.border}`}>
+                  <span className="font-mono text-[10px] opacity-50 font-bold w-[60px] shrink-0">
                     {formatTime(log.timestamp)}
                   </span>
-                  <span style={{
-                    padding: '0.1rem 0.4rem', borderRadius: '4px',
-                    background: `${typeColors[log.type]}18`, color: typeColors[log.type],
-                    fontSize: '0.55rem', fontWeight: 800, minWidth: '40px', textAlign: 'center',
-                  }}>
-                    {log.type === 'success' ? 'OK' : log.type === 'info' ? 'INFO' : log.type === 'warning' ? 'WARN' : 'ERR'}
+                  <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider w-[46px] text-center shrink-0 ${typeVariants.bg} ${typeVariants.text}`}>
+                    {typeVariants.badge}
                   </span>
-                  <span style={{ fontWeight: 800, minWidth: '80px' }}>{log.service}</span>
-                  <span style={{ fontWeight: 700, color: theme.colors.primary }}>{log.action}</span>
-                  <span style={{ opacity: 0.5, flex: 1, textAlign: 'right', fontSize: '0.7rem' }}>{log.detail}</span>
+                  <span className="font-black text-xs min-w-[100px] truncate">{log.service}</span>
+                  <span className="font-bold text-xs text-[var(--primary-color)] truncate max-w-[140px] shrink-0">{log.action}</span>
+                  <span className="text-xs opacity-60 truncate font-medium flex-1 sm:text-right w-full sm:w-auto mt-1 sm:mt-0">{log.detail}</span>
                 </div>
               );
             })}
           </div>
-        </div>
+        </Card>
       )}
 
-      {/* ===== ALERTAS ===== */}
       {activeSection === 'alerts' && (
-        <div className="premium-card" style={{ backgroundColor: cardBg, color: cardText }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-            <h3 style={{ fontSize: '1rem', fontWeight: 800, opacity: 0.4 }}>ALERTAS E NOTIFICACOES</h3>
+        <Card className="animate-in slide-in-from-bottom-4 duration-300">
+          <div className="flex justify-between items-center mb-6">
+            <h3 className="font-black text-xs opacity-60 tracking-widest uppercase m-0">Alertas e Notificações</h3>
             {undismissedAlerts.length > 0 && (
               <button
                 onClick={() => setAlerts(prev => prev.map(a => ({ ...a, dismissed: true })))}
-                style={{
-                  padding: '0.4rem 0.8rem', borderRadius: '8px', background: subBg,
-                  fontSize: '0.65rem', fontWeight: 700, cursor: 'pointer', border: 'none', color: cardText,
-                }}
-              >DISPENSAR TODOS</button>
+                className="px-4 py-2 rounded-lg bg-[var(--sub-bg)] text-[10px] font-black uppercase tracking-widest opacity-70 hover:opacity-100 transition-opacity"
+              >
+                DISPENSAR TODOS
+              </button>
             )}
           </div>
 
           {alerts.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '4rem' }}>
-              <div style={{ fontSize: '2rem', marginBottom: '0.8rem', opacity: 0.2 }}>
-                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" opacity="0.3"><path d="M22 11.08V12a10 10 0 11-5.93-9.14" /><polyline points="22 4 12 14.01 9 11.01" /></svg>
+            <div className="text-center py-16">
+              <div className="mb-4 text-slate-400 opacity-30 flex justify-center">
+                <AlertTriangle size={64} strokeWidth={1} />
               </div>
-              <div style={{ fontSize: '0.9rem', fontWeight: 700, opacity: 0.3 }}>Nenhum alerta ativo</div>
-              <div style={{ fontSize: '0.75rem', opacity: 0.2, marginTop: '0.3rem' }}>Todos os servicos estao operando normalmente</div>
+              <div className="text-base font-black opacity-40">Nenhum alerta ativo</div>
+              <div className="text-xs font-bold opacity-30 mt-2">Todos os serviços estão operando normalmente</div>
             </div>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+            <div className="flex flex-col gap-3">
               {alerts.map(alert => {
-                const sevColors = { info: '#3b82f6', warning: '#f59e0b', critical: '#ef4444' };
-                const sevColor = sevColors[alert.severity];
+                const sevVariants = {
+                  info: { bg: 'bg-blue-500/10', border: 'border-blue-500', text: 'text-blue-500', label: 'INFO' },
+                  warning: { bg: 'bg-amber-500/10', border: 'border-amber-500', text: 'text-amber-500', label: 'AVISO' },
+                  critical: { bg: 'bg-red-500/10', border: 'border-red-500', text: 'text-red-500', label: 'CRÍTICO' },
+                }[alert.severity];
+
                 return (
-                  <div key={alert.id} style={{
-                    padding: '1rem', borderRadius: '12px', background: subBg,
-                    borderLeft: `4px solid ${sevColor}`,
-                    opacity: alert.dismissed ? 0.4 : 1,
-                    transition: 'opacity 0.3s',
-                  }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                      <div style={{ flex: 1 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.3rem' }}>
-                          <span style={{
-                            padding: '0.15rem 0.5rem', borderRadius: '4px',
-                            background: `${sevColor}18`, color: sevColor,
-                            fontSize: '0.55rem', fontWeight: 900, textTransform: 'uppercase',
-                          }}>
-                            {alert.severity === 'critical' ? 'CRITICO' : alert.severity === 'warning' ? 'AVISO' : 'INFO'}
+                  <div key={alert.id} className={`p-4 rounded-2xl bg-[var(--sub-bg)] border-l-4 ${sevVariants.border} transition-all duration-300 ${alert.dismissed ? 'opacity-40 grayscale focus-within:grayscale-0 focus-within:opacity-100' : ''}`}>
+                    <div className="flex flex-col sm:flex-row justify-between sm:items-start gap-4">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-3 mb-1.5">
+                          <span className={`px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider ${sevVariants.bg} ${sevVariants.text}`}>
+                            {sevVariants.label}
                           </span>
-                          <span style={{ fontWeight: 800, fontSize: '0.85rem' }}>{alert.title}</span>
+                          <span className="font-black text-sm">{alert.title}</span>
                         </div>
-                        <div style={{ fontSize: '0.75rem', opacity: 0.6 }}>{alert.message}</div>
-                        <div style={{ fontSize: '0.6rem', opacity: 0.3, marginTop: '0.3rem' }}>
+                        <div className="text-xs font-medium opacity-80 leading-relaxed max-w-2xl">{alert.message}</div>
+                        <div className="text-[10px] font-mono font-bold opacity-40 mt-3">
                           {formatTime(alert.timestamp)}
                         </div>
                       </div>
                       {!alert.dismissed && (
                         <button
                           onClick={() => dismissAlert(alert.id)}
-                          style={{
-                            padding: '0.3rem 0.6rem', borderRadius: '6px',
-                            background: 'transparent', border: `1px solid ${isDark ? '#444' : '#ddd'}`,
-                            fontSize: '0.6rem', fontWeight: 700, cursor: 'pointer', color: cardText, opacity: 0.5,
-                          }}
-                        >DISPENSAR</button>
+                          className="px-3 py-1.5 rounded-lg border border-[var(--sub-bg)] text-[10px] font-black tracking-widest opacity-60 hover:opacity-100 hover:bg-[var(--sub-bg)] transition-all shrink-0 uppercase"
+                        >
+                          DISPENSAR
+                        </button>
                       )}
                     </div>
                   </div>
@@ -737,18 +591,8 @@ const PlatformMonitor: React.FC<PlatformMonitorProps> = ({ division }) => {
               })}
             </div>
           )}
-        </div>
+        </Card>
       )}
-
-      <style>{`
-        @keyframes pulse-dot {
-          0%, 100% { opacity: 1; }
-          50% { opacity: 0.5; }
-        }
-        @keyframes spin {
-          to { transform: rotate(360deg); }
-        }
-      `}</style>
     </div>
   );
 };

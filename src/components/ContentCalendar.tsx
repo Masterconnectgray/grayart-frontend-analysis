@@ -1,7 +1,8 @@
 import React, { useState, useCallback } from 'react';
 import type { Division } from '../constants/Themes';
-import { DIVISIONS } from '../constants/Themes';
 import { useAppContext } from '../context/AppContext';
+import { Card, EmptyState } from '../design-system';
+import { ChevronLeft, ChevronRight, X, Calendar as CalendarIcon, Clock, Plus, Trash2 } from 'lucide-react';
 
 interface ContentCalendarProps {
   division: Division;
@@ -22,10 +23,10 @@ interface ScheduledItem {
 }
 
 const STATUS_COLORS: Record<EventStatus, string> = {
-  rascunho: '#6b7280',
-  agendado: '#f59e0b',
-  publicado: '#22c55e',
-  fixed: '#ef4444',
+  rascunho: 'bg-slate-500/10 text-slate-500 border-slate-500/30',
+  agendado: 'bg-amber-500/10 text-amber-500 border-amber-500/30',
+  publicado: 'bg-emerald-500/10 text-emerald-500 border-emerald-500/30',
+  fixed: 'bg-red-500/10 text-red-500 border-red-500/30',
 };
 
 const STATUS_LABELS: Record<EventStatus, string> = {
@@ -36,36 +37,36 @@ const STATUS_LABELS: Record<EventStatus, string> = {
 };
 
 const TYPE_ICONS: Record<EventType, string> = {
-  Reels: '\u25B6',
-  Story: '\u25CB',
-  Post: '\u25A0',
-  Live: '\u25CF',
-  Video: '\u25B7',
-  Holiday: '\u2605',
-  Global: '\u25C6',
+  Reels: '▶',
+  Story: '○',
+  Post: '■',
+  Live: '●',
+  Video: '▷',
+  Holiday: '★',
+  Global: '◆',
 };
 
 const EVENT_TYPES: EventType[] = ['Reels', 'Story', 'Post', 'Live', 'Video'];
 const EVENT_STATUSES: EventStatus[] = ['rascunho', 'agendado', 'publicado'];
 
 const BR_HOLIDAYS = [
-  { day: 1, month: 0, title: 'Confraternizacao Universal' },
+  { day: 1, month: 0, title: 'Confraternização Universal' },
   { day: 16, month: 1, title: 'Carnaval' },
   { day: 17, month: 1, title: 'Carnaval' },
   { day: 3, month: 3, title: 'Sexta-feira Santa' },
   { day: 21, month: 3, title: 'Tiradentes' },
   { day: 1, month: 4, title: 'Dia do Trabalho' },
   { day: 4, month: 5, title: 'Corpus Christi' },
-  { day: 7, month: 8, title: 'Independencia do Brasil' },
+  { day: 7, month: 8, title: 'Independência do Brasil' },
   { day: 12, month: 9, title: 'Nsa. Sra. Aparecida' },
   { day: 2, month: 10, title: 'Finados' },
-  { day: 15, month: 10, title: 'Proclamacao da Republica' },
-  { day: 20, month: 10, title: 'Consciencia Negra' },
+  { day: 15, month: 10, title: 'Proclamação da República' },
+  { day: 20, month: 10, title: 'Consciência Negra' },
   { day: 25, month: 11, title: 'Natal' },
 ];
 
 const GLOBAL_EVENTS = [
-  { day: 15, month: 2, title: 'Reuniao Geral Grupo Gray' },
+  { day: 15, month: 2, title: 'Reunião Geral Grupo Gray' },
   { day: 28, month: 2, title: 'Review Trimestral de Marketing' },
 ];
 
@@ -74,50 +75,51 @@ const genId = () => `evt-${++_idCounter}`;
 
 const INITIAL_CONTENT: Record<Division, ScheduledItem[]> = {
   'connect-gray': [
-    { id: genId(), day: 3, month: 2, year: 2026, type: 'Reels', title: 'Dor: Gestao condominial caotica', status: 'publicado', time: '12:00' },
-    { id: genId(), day: 5, month: 2, year: 2026, type: 'Post', title: 'Carrossel: 5 dicas para sindicos', status: 'agendado', time: '18:30' },
+    { id: genId(), day: 3, month: 2, year: 2026, type: 'Reels', title: 'Dor: Gestão condominial caótica', status: 'publicado', time: '12:00' },
+    { id: genId(), day: 5, month: 2, year: 2026, type: 'Post', title: 'Carrossel: 5 dicas para síndicos', status: 'agendado', time: '18:30' },
     { id: genId(), day: 10, month: 2, year: 2026, type: 'Story', title: 'Bastidores do evento', status: 'agendado', time: '14:00' },
-    { id: genId(), day: 10, month: 2, year: 2026, type: 'Live', title: 'Live com sindico parceiro', status: 'rascunho', time: '20:00' },
+    { id: genId(), day: 10, month: 2, year: 2026, type: 'Live', title: 'Live com síndico parceiro', status: 'rascunho', time: '20:00' },
     { id: genId(), day: 15, month: 2, year: 2026, type: 'Reels', title: 'Coffee Meet highlights', status: 'rascunho', time: '10:00' },
     { id: genId(), day: 20, month: 2, year: 2026, type: 'Video', title: 'Depoimento cliente Coffee Meet', status: 'agendado', time: '09:00' },
     { id: genId(), day: 22, month: 2, year: 2026, type: 'Post', title: 'Resultado: evento marco', status: 'rascunho', time: '15:00' },
     { id: genId(), day: 25, month: 2, year: 2026, type: 'Story', title: 'Contagem regressiva evento', status: 'agendado', time: '11:00' },
   ],
   'gray-up': [
-    { id: genId(), day: 2, month: 2, year: 2026, type: 'Reels', title: 'Dor: Elevador parado = prejuizo', status: 'publicado', time: '07:30' },
-    { id: genId(), day: 4, month: 2, year: 2026, type: 'Post', title: 'Antes/Depois modernizacao', status: 'agendado', time: '12:00' },
-    { id: genId(), day: 9, month: 2, year: 2026, type: 'Video', title: 'Tour obra Salvador Dali', status: 'agendado', time: '19:00' },
+    { id: genId(), day: 2, month: 2, year: 2026, type: 'Reels', title: 'Dor: Elevador parado = prejuízo', status: 'publicado', time: '07:30' },
+    { id: genId(), day: 4, month: 2, year: 2026, type: 'Post', title: 'Antes/Depois modernização', status: 'agendado', time: '12:00' },
+    { id: genId(), day: 9, month: 2, year: 2026, type: 'Video', title: 'Tour obra Salvador Dalí', status: 'agendado', time: '19:00' },
     { id: genId(), day: 12, month: 2, year: 2026, type: 'Story', title: 'Equipe em campo', status: 'rascunho', time: '08:00' },
-    { id: genId(), day: 16, month: 2, year: 2026, type: 'Reels', title: 'Time-lapse instalacao', status: 'agendado', time: '12:00' },
-    { id: genId(), day: 21, month: 2, year: 2026, type: 'Live', title: 'FAQ manutencao preventiva', status: 'rascunho', time: '20:00' },
-    { id: genId(), day: 27, month: 2, year: 2026, type: 'Post', title: 'Dica seguranca elevadores', status: 'agendado', time: '10:00' },
+    { id: genId(), day: 16, month: 2, year: 2026, type: 'Reels', title: 'Time-lapse instalação', status: 'agendado', time: '12:00' },
+    { id: genId(), day: 21, month: 2, year: 2026, type: 'Live', title: 'FAQ manutenção preventiva', status: 'rascunho', time: '20:00' },
+    { id: genId(), day: 27, month: 2, year: 2026, type: 'Post', title: 'Dica segurança elevadores', status: 'agendado', time: '10:00' },
   ],
   'gray-up-flow': [
     { id: genId(), day: 3, month: 2, year: 2026, type: 'Reels', title: 'Dor: Empresa desorganizada', status: 'publicado', time: '08:00' },
-    { id: genId(), day: 7, month: 2, year: 2026, type: 'Post', title: 'Case: reducao 30% desperdicio', status: 'agendado', time: '12:30' },
+    { id: genId(), day: 7, month: 2, year: 2026, type: 'Post', title: 'Case: redução 30% desperdício', status: 'agendado', time: '12:30' },
     { id: genId(), day: 12, month: 2, year: 2026, type: 'Video', title: 'Workshop Lean Manufacturing', status: 'agendado', time: '20:00' },
     { id: genId(), day: 17, month: 2, year: 2026, type: 'Story', title: 'Bastidores consultoria', status: 'rascunho', time: '14:00' },
-    { id: genId(), day: 23, month: 2, year: 2026, type: 'Reels', title: '5S na pratica', status: 'rascunho', time: '09:00' },
+    { id: genId(), day: 23, month: 2, year: 2026, type: 'Reels', title: '5S na prática', status: 'rascunho', time: '09:00' },
     { id: genId(), day: 26, month: 2, year: 2026, type: 'Live', title: 'Webinar processos', status: 'agendado', time: '19:00' },
   ],
   'gray-art': [
     { id: genId(), day: 2, month: 2, year: 2026, type: 'Reels', title: 'Trend: Design minimalista 2026', status: 'publicado', time: '10:00' },
     { id: genId(), day: 5, month: 2, year: 2026, type: 'Story', title: 'Processo criativo do dia', status: 'agendado', time: '14:00' },
-    { id: genId(), day: 8, month: 2, year: 2026, type: 'Post', title: 'Feed grid harmonico', status: 'agendado', time: '21:30' },
+    { id: genId(), day: 8, month: 2, year: 2026, type: 'Post', title: 'Feed grid harmônico', status: 'agendado', time: '21:30' },
     { id: genId(), day: 11, month: 2, year: 2026, type: 'Video', title: 'Time-lapse logo design', status: 'rascunho', time: '16:00' },
     { id: genId(), day: 14, month: 2, year: 2026, type: 'Reels', title: 'Paleta de cores trending', status: 'agendado', time: '10:00' },
-    { id: genId(), day: 18, month: 2, year: 2026, type: 'Live', title: 'Review de portfolio ao vivo', status: 'rascunho', time: '20:00' },
+    { id: genId(), day: 18, month: 2, year: 2026, type: 'Live', title: 'Review de portfólio ao vivo', status: 'rascunho', time: '20:00' },
     { id: genId(), day: 22, month: 2, year: 2026, type: 'Post', title: 'Carrossel: ferramentas design', status: 'agendado', time: '11:00' },
-    { id: genId(), day: 26, month: 2, year: 2026, type: 'Story', title: 'Inspiracao do dia', status: 'rascunho', time: '09:00' },
-    { id: genId(), day: 28, month: 2, year: 2026, type: 'Reels', title: 'Transformacao marca cliente', status: 'agendado', time: '14:00' },
+    { id: genId(), day: 26, month: 2, year: 2026, type: 'Story', title: 'Inspiração do dia', status: 'rascunho', time: '09:00' },
+    { id: genId(), day: 28, month: 2, year: 2026, type: 'Reels', title: 'Transformação marca cliente', status: 'agendado', time: '14:00' },
   ],
 };
 
-const MONTHS = ['Janeiro', 'Fevereiro', 'Marco', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
-const DAYS = ['DOM', 'SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SAB'];
+const MONTHS = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+const DAYS = ['DOM', 'SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SÁB'];
 
 // ── Modal Component ─────────────────────────────────────────────────────────
-const DayModal: React.FC<{
+
+interface DayModalProps {
   day: number;
   month: number;
   year: number;
@@ -127,12 +129,9 @@ const DayModal: React.FC<{
   onAdd: (item: Omit<ScheduledItem, 'id'>) => void;
   onDelete: (id: string) => void;
   onUpdateStatus: (id: string, status: EventStatus) => void;
-  theme: { colors: { primary: string } };
-  isDark: boolean;
-  cardBg: string;
-  cardText: string;
-  subBg: string;
-}> = ({ day, month, year, events, holidays, onClose, onAdd, onDelete, onUpdateStatus, theme, isDark, cardBg, cardText, subBg }) => {
+}
+
+const DayModal: React.FC<DayModalProps> = ({ day, month, year, events, holidays, onClose, onAdd, onDelete, onUpdateStatus }) => {
   const [showForm, setShowForm] = useState(false);
   const [newType, setNewType] = useState<EventType>('Reels');
   const [newTitle, setNewTitle] = useState('');
@@ -146,152 +145,112 @@ const DayModal: React.FC<{
     setShowForm(false);
   };
 
-  const inputStyle: React.CSSProperties = {
-    width: '100%', padding: '0.6rem 0.8rem', borderRadius: '8px',
-    border: `1px solid ${isDark ? '#444' : '#ddd'}`, background: isDark ? '#333' : '#fff',
-    color: cardText, fontSize: '0.85rem', fontWeight: 600, outline: 'none',
-    boxSizing: 'border-box',
-  };
-
-  const selectStyle: React.CSSProperties = {
-    ...inputStyle, cursor: 'pointer', appearance: 'auto' as const,
-  };
-
   return (
-    <div onClick={onClose} style={{
-      position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex',
-      alignItems: 'center', justifyContent: 'center', zIndex: 9999,
-      backdropFilter: 'blur(4px)',
-    }}>
-      <div onClick={e => e.stopPropagation()} style={{
-        background: cardBg, color: cardText, borderRadius: '20px', padding: '2rem',
-        width: '480px', maxWidth: '90vw', maxHeight: '85vh', overflowY: 'auto',
-        boxShadow: '0 25px 80px rgba(0,0,0,0.5)',
-        border: `1px solid ${isDark ? '#333' : '#eee'}`,
-      }}>
-        {/* Header */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+    <div onClick={onClose} className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+      <div onClick={e => e.stopPropagation()} className="w-full max-w-lg max-h-[90vh] overflow-y-auto bg-[var(--card-bg)] text-[var(--card-text)] rounded-[24px] p-6 shadow-2xl border border-white/10 dark:border-black/10 animate-in zoom-in-95 duration-200">
+        
+        <div className="flex justify-between items-start mb-6">
           <div>
-            <h2 style={{ fontSize: '1.5rem', fontWeight: 900, margin: 0, color: theme.colors.primary }}>
-              {day} de {MONTHS[month]}
-            </h2>
-            <div style={{ fontSize: '0.75rem', opacity: 0.4, fontWeight: 700, marginTop: '0.2rem' }}>{year}</div>
+            <h2 className="text-2xl font-black text-[var(--primary-color)]">{day} de {MONTHS[month]}</h2>
+            <div className="text-xs font-bold opacity-50 tracking-widest uppercase mt-1">{year}</div>
           </div>
-          <button onClick={onClose} style={{
-            width: '36px', height: '36px', borderRadius: '50%', border: 'none',
-            background: subBg, color: cardText, fontSize: '1.2rem', cursor: 'pointer',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900,
-          }}>X</button>
+          <button onClick={onClose} className="w-10 h-10 rounded-full bg-[var(--sub-bg)] flex items-center justify-center hover:bg-[var(--primary-color)] hover:text-white transition-colors">
+            <X size={20} className="opacity-70 hover:opacity-100" />
+          </button>
         </div>
 
-        {/* Holidays */}
         {holidays.length > 0 && (
-          <div style={{ marginBottom: '1rem' }}>
+          <div className="mb-4 space-y-2">
             {holidays.map((h, i) => (
-              <div key={i} style={{
-                padding: '0.6rem 1rem', borderRadius: '10px', marginBottom: '0.5rem',
-                background: `${STATUS_COLORS.fixed}15`, borderLeft: `4px solid ${STATUS_COLORS.fixed}`,
-                fontSize: '0.8rem', fontWeight: 700,
-              }}>
-                {TYPE_ICONS.Holiday} {h.title}
+              <div key={i} className="px-4 py-3 rounded-xl bg-red-500/10 border-l-4 border-red-500 text-red-500 text-sm font-bold flex items-center gap-2">
+                <span className="text-lg">{TYPE_ICONS.Holiday}</span> {h.title}
               </div>
             ))}
           </div>
         )}
 
-        {/* Events */}
         {events.length === 0 && holidays.length === 0 && (
-          <div style={{ padding: '2rem', textAlign: 'center', background: subBg, borderRadius: '12px', opacity: 0.5, fontSize: '0.85rem', marginBottom: '1rem' }}>
-            Nenhum conteudo agendado.
-          </div>
+          <EmptyState
+             icon={CalendarIcon}
+             title="Nenhum conteúdo"
+             description="Você não tem nenhum conteúdo agendado ou feriado para este dia."
+             className="mb-6 !p-6"
+          />
         )}
+
         {events.length > 0 && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', marginBottom: '1rem' }}>
-            {events.map(evt => (
-              <div key={evt.id} style={{
-                padding: '0.8rem 1rem', borderRadius: '12px', background: subBg,
-                borderLeft: `4px solid ${STATUS_COLORS[evt.status]}`,
-              }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.3rem' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <span style={{
-                      width: '24px', height: '24px', borderRadius: '6px',
-                      background: `${STATUS_COLORS[evt.status]}20`, color: STATUS_COLORS[evt.status],
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      fontSize: '0.7rem', fontWeight: 900,
-                    }}>{TYPE_ICONS[evt.type]}</span>
-                    <span style={{ fontSize: '0.65rem', fontWeight: 800, textTransform: 'uppercase', color: theme.colors.primary }}>{evt.type}</span>
-                    {evt.time && <span style={{ fontSize: '0.65rem', opacity: 0.4, fontWeight: 700 }}>{evt.time}</span>}
+          <div className="space-y-3 mb-6">
+            {events.map(evt => {
+              const statusClass = STATUS_COLORS[evt.status];
+              return (
+                <div key={evt.id} className="p-4 rounded-xl bg-[var(--sub-bg)] border-l-4" style={{ borderLeftColor: statusClass.split(' ')[1].replace('text-', 'var(--').replace('500', 'color)') }}>
+                  <div className="flex justify-between items-start mb-2 gap-4">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className={`w-6 h-6 rounded flex items-center justify-center text-xs ${statusClass}`}>
+                        {TYPE_ICONS[evt.type]}
+                      </span>
+                      <span className="text-[10px] font-black uppercase text-[var(--primary-color)] tracking-wider">{evt.type}</span>
+                      {evt.time && <span className="text-[10px] font-bold opacity-50 flex items-center gap-1"><Clock size={10}/> {evt.time}</span>}
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <select
+                        value={evt.status}
+                        onChange={e => onUpdateStatus(evt.id, e.target.value as EventStatus)}
+                        className={`text-[10px] font-black px-2 py-1 rounded-md outline-none cursor-pointer appearance-none text-center ${statusClass}`}
+                      >
+                        {EVENT_STATUSES.map(s => <option key={s} value={s}>{STATUS_LABELS[s]}</option>)}
+                      </select>
+                      <button onClick={() => onDelete(evt.id)} className="w-6 h-6 rounded flex items-center justify-center bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-colors">
+                        <Trash2 size={12} />
+                      </button>
+                    </div>
                   </div>
-                  <div style={{ display: 'flex', gap: '0.3rem', alignItems: 'center' }}>
-                    <select
-                      value={evt.status}
-                      onChange={e => onUpdateStatus(evt.id, e.target.value as EventStatus)}
-                      style={{
-                        fontSize: '0.6rem', fontWeight: 800, padding: '0.15rem 0.3rem',
-                        borderRadius: '4px', border: 'none', cursor: 'pointer',
-                        background: `${STATUS_COLORS[evt.status]}20`, color: STATUS_COLORS[evt.status],
-                      }}
-                    >
-                      {EVENT_STATUSES.map(s => (
-                        <option key={s} value={s}>{STATUS_LABELS[s]}</option>
-                      ))}
-                    </select>
-                    <button onClick={() => onDelete(evt.id)} style={{
-                      width: '22px', height: '22px', borderRadius: '6px', border: 'none',
-                      background: '#ef444420', color: '#ef4444', cursor: 'pointer',
-                      fontSize: '0.65rem', fontWeight: 900,
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    }}>X</button>
-                  </div>
+                  <div className="font-bold text-sm ml-8 opacity-90">{evt.title}</div>
                 </div>
-                <div style={{ fontWeight: 700, fontSize: '0.85rem', paddingLeft: '2rem' }}>{evt.title}</div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
 
-        {/* Add Form */}
         {showForm ? (
-          <div style={{ padding: '1rem', borderRadius: '14px', background: subBg, display: 'flex', flexDirection: 'column', gap: '0.7rem' }}>
-            <div style={{ fontWeight: 800, fontSize: '0.8rem', opacity: 0.6, textTransform: 'uppercase', letterSpacing: '1px' }}>Novo Agendamento</div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.5rem' }}>
-              <select value={newType} onChange={e => setNewType(e.target.value as EventType)} style={selectStyle}>
+          <div className="p-5 rounded-2xl bg-[var(--sub-bg)] space-y-4 shadow-inner border border-white/5 dark:border-black/5">
+            <div className="text-[10px] font-black uppercase tracking-widest opacity-50 flex items-center gap-2">
+               <Plus size={12} className="text-[var(--primary-color)]" /> Novo Agendamento
+            </div>
+            
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <select value={newType} onChange={e => setNewType(e.target.value as EventType)} className="w-full p-2.5 rounded-lg bg-[var(--card-bg)] text-[var(--card-text)] text-sm font-bold border border-white/10 outline-none focus:ring-2 ring-[var(--primary-color)]/50 focus:border-transparent">
                 {EVENT_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
               </select>
-              <select value={newStatus} onChange={e => setNewStatus(e.target.value as EventStatus)} style={selectStyle}>
+              <select value={newStatus} onChange={e => setNewStatus(e.target.value as EventStatus)} className="w-full p-2.5 rounded-lg bg-[var(--card-bg)] text-[var(--card-text)] text-sm font-bold border border-white/10 outline-none focus:ring-2 ring-[var(--primary-color)]/50 focus:border-transparent">
                 {EVENT_STATUSES.map(s => <option key={s} value={s}>{STATUS_LABELS[s]}</option>)}
               </select>
-              <input type="time" value={newTime} onChange={e => setNewTime(e.target.value)} style={inputStyle} />
+              <input type="time" value={newTime} onChange={e => setNewTime(e.target.value)} className="w-full p-2.5 rounded-lg bg-[var(--card-bg)] text-[var(--card-text)] text-sm font-bold border border-white/10 outline-none focus:ring-2 ring-[var(--primary-color)]/50 focus:border-transparent" />
             </div>
+            
             <input
               type="text"
-              placeholder="Titulo do conteudo..."
+              placeholder="Título do conteúdo..."
               value={newTitle}
               onChange={e => setNewTitle(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && handleSubmit()}
-              style={inputStyle}
+              className="w-full p-3 rounded-lg bg-[var(--card-bg)] text-[var(--card-text)] text-sm font-bold border border-white/10 outline-none focus:ring-2 ring-[var(--primary-color)]/50 focus:border-transparent"
               autoFocus
             />
-            <div style={{ display: 'flex', gap: '0.5rem' }}>
-              <button onClick={handleSubmit} style={{
-                flex: 1, padding: '0.7rem', borderRadius: '10px', border: 'none',
-                background: theme.colors.primary, color: isDark ? '#fff' : '#000',
-                fontWeight: 800, fontSize: '0.85rem', cursor: 'pointer',
-              }}>ADICIONAR</button>
-              <button onClick={() => setShowForm(false)} style={{
-                padding: '0.7rem 1rem', borderRadius: '10px', border: 'none',
-                background: isDark ? '#444' : '#ddd', color: cardText,
-                fontWeight: 800, fontSize: '0.85rem', cursor: 'pointer',
-              }}>CANCELAR</button>
+            
+            <div className="flex gap-3 pt-2">
+              <button onClick={handleSubmit} className="flex-1 py-3 rounded-xl bg-[var(--primary-color)] text-[var(--card-bg)] text-xs font-black hover:brightness-110 active:scale-95 transition-all shadow-lg shadow-[var(--primary-color)]/20">
+                ADICIONAR
+              </button>
+              <button onClick={() => setShowForm(false)} className="px-6 py-3 rounded-xl bg-[var(--card-bg)] text-[var(--card-text)] text-xs font-black opacity-70 hover:opacity-100 transition-opacity">
+                CANCELAR
+              </button>
             </div>
           </div>
         ) : (
-          <button onClick={() => setShowForm(true)} style={{
-            width: '100%', padding: '0.8rem', borderRadius: '12px', border: `2px dashed ${isDark ? '#444' : '#ccc'}`,
-            background: 'transparent', color: theme.colors.primary,
-            fontWeight: 800, fontSize: '0.85rem', cursor: 'pointer',
-          }}>+ NOVO AGENDAMENTO</button>
+          <button onClick={() => setShowForm(true)} className="w-full py-4 rounded-xl border-2 border-dashed border-[var(--primary-color)]/40 text-[var(--primary-color)] text-xs font-black hover:bg-[var(--primary-color)]/5 transition-colors flex items-center justify-center gap-2">
+            <Plus size={16} /> NOVO AGENDAMENTO
+          </button>
         )}
       </div>
     </div>
@@ -299,10 +258,9 @@ const DayModal: React.FC<{
 };
 
 // ── Main Component ──────────────────────────────────────────────────────────
+
 const ContentCalendar: React.FC<ContentCalendarProps> = ({ division }) => {
   const { addNotification } = useAppContext();
-  const theme = DIVISIONS[division];
-  const isDark = division !== 'gray-art';
 
   const today = new Date();
   const [currentMonth, setCurrentMonth] = useState(today.getMonth());
@@ -311,7 +269,6 @@ const ContentCalendar: React.FC<ContentCalendarProps> = ({ division }) => {
   const [modalDay, setModalDay] = useState<number | null>(null);
   const [events, setEvents] = useState<ScheduledItem[]>(() => [...INITIAL_CONTENT[division]]);
 
-  // Reset events when division changes
   const [prevDiv, setPrevDiv] = useState(division);
   if (division !== prevDiv) {
     setPrevDiv(division);
@@ -345,7 +302,7 @@ const ContentCalendar: React.FC<ContentCalendarProps> = ({ division }) => {
   const handleAddEvent = useCallback((item: Omit<ScheduledItem, 'id'>) => {
     const newItem: ScheduledItem = { ...item, id: genId() };
     setEvents(prev => [...prev, newItem]);
-    addNotification(`Conteudo "${item.title}" adicionado em ${item.day}/${item.month + 1}`, 'success');
+    addNotification(`Conteúdo "${item.title}" adicionado em ${item.day}/${item.month + 1}`, 'success');
   }, [addNotification]);
 
   const handleDeleteEvent = useCallback((id: string) => {
@@ -357,65 +314,72 @@ const ContentCalendar: React.FC<ContentCalendarProps> = ({ division }) => {
     setEvents(prev => prev.map(e => e.id === id ? { ...e, status } : e));
   }, []);
 
-  const cardBg = isDark ? '#1e1e1e' : '#fff';
-  const cardText = isDark ? '#fff' : '#1a1a1a';
-  const subBg = isDark ? '#2d2d2d' : '#f0f2f5';
-
-  // count posts per day (exclude holidays/global)
   const getPostCount = (day: number) => monthEvents.filter(e => e.day === day && e.type !== 'Holiday' && e.type !== 'Global').length;
 
-  // Summary stats
   const totalPosts = events.filter(e => e.month === currentMonth && e.year === currentYear).length;
   const draftCount = events.filter(e => e.month === currentMonth && e.year === currentYear && e.status === 'rascunho').length;
   const scheduledCount = events.filter(e => e.month === currentMonth && e.year === currentYear && e.status === 'agendado').length;
   const publishedCount = events.filter(e => e.month === currentMonth && e.year === currentYear && e.status === 'publicado').length;
 
   return (
-    <div className="animate-fade-in">
-      {/* Stats bar */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.8rem', marginBottom: '1.5rem' }}>
+    <div className="animate-in fade-in duration-300">
+      
+      {/* Stats Bar */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
         {[
-          { label: 'Total', value: totalPosts, color: theme.colors.primary },
-          { label: 'Rascunhos', value: draftCount, color: STATUS_COLORS.rascunho },
-          { label: 'Agendados', value: scheduledCount, color: STATUS_COLORS.agendado },
-          { label: 'Publicados', value: publishedCount, color: STATUS_COLORS.publicado },
+          { label: 'Total', value: totalPosts, borderClass: `border-[var(--primary-color)]`, textClass: `text-[var(--primary-color)]` },
+          { label: 'Rascunhos', value: draftCount, borderClass: `border-slate-500`, textClass: `text-slate-500` },
+          { label: 'Agendados', value: scheduledCount, borderClass: `border-amber-500`, textClass: `text-amber-500` },
+          { label: 'Publicados', value: publishedCount, borderClass: `border-emerald-500`, textClass: `text-emerald-500` },
         ].map((s, i) => (
-          <div key={i} className="premium-card" style={{
-            backgroundColor: cardBg, color: cardText, padding: '1rem',
-            borderBottom: `3px solid ${s.color}`, textAlign: 'center',
-          }}>
-            <div style={{ fontSize: '1.8rem', fontWeight: 900, color: s.color }}>{s.value}</div>
-            <div style={{ fontSize: '0.65rem', fontWeight: 800, opacity: 0.4, textTransform: 'uppercase', letterSpacing: '1px' }}>{s.label}</div>
-          </div>
+          <Card key={i} className={`border-b-4 ${s.borderClass} !p-4 flex flex-col items-center justify-center`}>
+            <div className={`text-3xl font-black mb-1 ${s.textClass}`}>{s.value}</div>
+            <div className="text-[10px] font-black opacity-50 uppercase tracking-widest">{s.label}</div>
+          </Card>
         ))}
       </div>
 
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1.5rem', alignItems: 'flex-start' }}>
+      <div className="flex flex-col lg:flex-row gap-6 items-start">
+        
         {/* Calendar Grid Section */}
-        <div className="premium-card" style={{ flex: '2 1 600px', backgroundColor: cardBg, color: cardText, padding: '1.5rem' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+        <Card className="flex-1 w-full !p-4 sm:!p-6">
+          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
             <div>
-              <h2 style={{ fontSize: '1.5rem', fontWeight: 900, color: theme.colors.primary, margin: 0 }}>{MONTHS[currentMonth].toUpperCase()}</h2>
-              <div style={{ fontSize: '0.8rem', opacity: 0.4, fontWeight: 700 }}>AGENDA ESTRATEGICA {currentYear}</div>
+              <h2 className="text-3xl font-black text-[var(--primary-color)] mb-1 uppercase tracking-tight">
+                {MONTHS[currentMonth]}
+              </h2>
+              <div className="text-xs font-bold opacity-50 uppercase tracking-widest flex items-center gap-2">
+                 <CalendarIcon size={14} className="text-[var(--primary-color)]" />
+                 Agenda Estratégica {currentYear}
+              </div>
             </div>
-            <div style={{ display: 'flex', gap: '0.5rem', background: subBg, padding: '0.3rem', borderRadius: '10px' }}>
-              <button onClick={() => { setCurrentMonth(m => m === 0 ? 11 : m - 1); if (currentMonth === 0) setCurrentYear(y => y - 1); setSelectedDay(null); }} style={{ padding: '0.5rem 0.8rem', borderRadius: '8px', background: 'transparent', color: cardText, border: 'none', cursor: 'pointer', fontWeight: 900 }}>{'\u2039'}</button>
-              <button onClick={() => { const now = new Date(); setCurrentMonth(now.getMonth()); setCurrentYear(now.getFullYear()); setSelectedDay(null); }} style={{ padding: '0.5rem 0.8rem', borderRadius: '8px', background: 'transparent', color: theme.colors.primary, border: 'none', cursor: 'pointer', fontWeight: 800, fontSize: '0.7rem' }}>HOJE</button>
-              <button onClick={() => { setCurrentMonth(m => m === 11 ? 0 : m + 1); if (currentMonth === 11) setCurrentYear(y => y + 1); setSelectedDay(null); }} style={{ padding: '0.5rem 0.8rem', borderRadius: '8px', background: 'transparent', color: cardText, border: 'none', cursor: 'pointer', fontWeight: 900 }}>{'\u203A'}</button>
+            <div className="flex gap-2 bg-[var(--sub-bg)] p-1.5 rounded-xl self-start sm:self-auto shadow-inner border border-white/5 dark:border-black/5">
+              <button onClick={() => { setCurrentMonth(m => m === 0 ? 11 : m - 1); if (currentMonth === 0) setCurrentYear(y => y - 1); setSelectedDay(null); }} className="p-2 rounded-lg hover:bg-[var(--card-bg)] hover:shadow-sm transition-all text-slate-400 hover:text-[var(--card-text)]">
+                <ChevronLeft size={18} strokeWidth={3} />
+              </button>
+              <button onClick={() => { const now = new Date(); setCurrentMonth(now.getMonth()); setCurrentYear(now.getFullYear()); setSelectedDay(null); }} className="px-4 py-2 rounded-lg text-[10px] font-black bg-[var(--card-bg)] text-[var(--primary-color)] shadow-sm hover:brightness-110 transition-all uppercase tracking-widest">
+                Hoje
+              </button>
+              <button onClick={() => { setCurrentMonth(m => m === 11 ? 0 : m + 1); if (currentMonth === 11) setCurrentYear(y => y + 1); setSelectedDay(null); }} className="p-2 rounded-lg hover:bg-[var(--card-bg)] hover:shadow-sm transition-all text-slate-400 hover:text-[var(--card-text)]">
+                <ChevronRight size={18} strokeWidth={3} />
+              </button>
             </div>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '4px' }}>
+          <div className="grid grid-cols-7 gap-1 sm:gap-2">
             {DAYS.map(day => (
-              <div key={day} style={{ padding: '0.8rem 0', textAlign: 'center', fontWeight: 900, fontSize: '0.7rem', opacity: 0.3, letterSpacing: '0.1em' }}>{day}</div>
+              <div key={day} className="text-center font-black text-[10px] sm:text-xs opacity-40 uppercase tracking-widest pb-2">
+                {day}
+              </div>
             ))}
             {cells.map((day, i) => {
-              if (!day) return <div key={i} style={{ minHeight: '85px', opacity: 0.05 }} />;
+              if (!day) return <div key={i} className="min-h-[80px] sm:min-h-[100px] rounded-2xl bg-[var(--sub-bg)] opacity-10" />;
 
               const items = getEventsForDay(day);
               const holiday = items.find(e => e.type === 'Holiday');
               const postCount = getPostCount(day);
               const isSelected = day === selectedDay;
+              const isTodayDay = isToday(day);
 
               return (
                 <div
@@ -424,180 +388,165 @@ const ContentCalendar: React.FC<ContentCalendarProps> = ({ division }) => {
                     setSelectedDay(isSelected ? null : day);
                     setModalDay(day);
                   }}
-                  style={{
-                    minHeight: '85px', padding: '0.6rem',
-                    background: holiday
-                      ? `${STATUS_COLORS.fixed}08`
-                      : isSelected
-                        ? `${theme.colors.primary}15`
-                        : subBg,
-                    border: isSelected
-                      ? `2px solid ${theme.colors.primary}`
-                      : holiday
-                        ? `2px solid ${STATUS_COLORS.fixed}30`
-                        : '2px solid transparent',
-                    borderRadius: '14px', cursor: 'pointer',
-                    transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-                    position: 'relative',
-                  }}
+                  className={`min-h-[80px] sm:min-h-[100px] p-2 sm:p-3 rounded-2xl cursor-pointer transition-all duration-300 relative group
+                    ${holiday ? 'bg-red-500/5 hover:bg-red-500/10' : isSelected ? 'bg-[var(--primary-color)]/10 shadow-md shadow-[var(--primary-color)]/10' : 'bg-[var(--sub-bg)] hover:-translate-y-1 hover:shadow-md'}
+                    ${isSelected ? 'ring-2 ring-[var(--primary-color)]' : holiday ? 'ring-1 ring-red-500/20' : 'ring-1 ring-transparent hover:ring-[var(--primary-color)]/30'}
+                  `}
                 >
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-                    <span style={{
-                      fontSize: '0.85rem',
-                      fontWeight: isToday(day) ? 900 : 700,
-                      color: isToday(day) ? theme.colors.primary : 'inherit',
-                      ...(isToday(day) ? {
-                        background: `${theme.colors.primary}20`,
-                        borderRadius: '50%',
-                        width: '24px', height: '24px',
-                        display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                      } : {}),
-                    }}>{day}</span>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.2rem' }}>
-                      {holiday && <span title={holiday.title} style={{ fontSize: '0.6rem', color: STATUS_COLORS.fixed }}>{TYPE_ICONS.Holiday}</span>}
+                  <div className="flex justify-between items-start mb-2">
+                    <span className={`text-sm sm:text-base font-black w-6 h-6 sm:w-8 sm:h-8 flex items-center justify-center rounded-full transition-colors
+                      ${isTodayDay ? 'bg-[var(--primary-color)] text-[var(--card-bg)] shadow-md shadow-[var(--primary-color)]/30' : 'text-slate-400 group-hover:text-[var(--card-text)]'}
+                    `}>
+                      {day}
+                    </span>
+                    <div className="flex items-center gap-1">
+                      {holiday && <span title={holiday.title} className="text-red-500 text-xs sm:text-sm">{TYPE_ICONS.Holiday}</span>}
                       {postCount > 0 && (
-                        <span style={{
-                          fontSize: '0.55rem', fontWeight: 900, minWidth: '16px', height: '16px',
-                          borderRadius: '8px', background: theme.colors.primary,
-                          color: isDark ? '#fff' : '#000', display: 'flex',
-                          alignItems: 'center', justifyContent: 'center',
-                        }}>{postCount}</span>
+                        <span className="text-[10px] font-black w-4 h-4 rounded-full bg-[var(--primary-color)] text-[var(--card-bg)] flex items-center justify-center shadow-sm">
+                          {postCount}
+                        </span>
                       )}
                     </div>
                   </div>
-                  {/* Event dots with status color */}
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '3px' }}>
-                    {items.filter(it => it.type !== 'Holiday').slice(0, 4).map((item, idx) => (
-                      <div key={idx} style={{
-                        width: '20px', height: '20px', borderRadius: '6px',
-                        background: STATUS_COLORS[item.status],
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        color: '#fff', fontSize: '0.6rem', fontWeight: 900,
-                        boxShadow: '0 2px 4px rgba(0,0,0,0.15)',
-                      }} title={`${item.type}: ${item.title} (${STATUS_LABELS[item.status]})`}>
-                        {TYPE_ICONS[item.type]}
+                  
+                  <div className="flex flex-wrap gap-1 sm:gap-1.5 mt-auto">
+                    {items.filter(it => it.type !== 'Holiday').slice(0, 3).map((item, idx) => {
+                       const statusClass = STATUS_COLORS[item.status];
+                       return (
+                         <div key={idx} className={`w-4 h-4 sm:w-5 sm:h-5 rounded flex items-center justify-center text-[8px] sm:text-[10px] shadow-sm ${statusClass}`} title={`${item.type}: ${item.title}`}>
+                           {TYPE_ICONS[item.type]}
+                         </div>
+                       );
+                    })}
+                    {items.filter(it => it.type !== 'Holiday').length > 3 && (
+                      <div className="w-4 h-4 sm:w-5 sm:h-5 rounded flex items-center justify-center text-[8px] font-black bg-slate-500/20 text-slate-500">
+                        +{items.filter(it => it.type !== 'Holiday').length - 3}
                       </div>
-                    ))}
-                    {items.filter(it => it.type !== 'Holiday').length > 4 && (
-                      <div style={{
-                        width: '20px', height: '20px', borderRadius: '6px',
-                        background: isDark ? '#555' : '#ccc', display: 'flex',
-                        alignItems: 'center', justifyContent: 'center',
-                        fontSize: '0.55rem', fontWeight: 900, color: cardText,
-                      }}>+{items.filter(it => it.type !== 'Holiday').length - 4}</div>
                     )}
                   </div>
-                  {/* Holiday title below */}
+                  
                   {holiday && (
-                    <div style={{
-                      fontSize: '0.5rem', fontWeight: 700, color: STATUS_COLORS.fixed,
-                      marginTop: '0.3rem', lineHeight: 1.2, opacity: 0.8,
-                    }}>{holiday.title}</div>
+                    <div className="text-[8px] sm:text-[9px] font-bold text-red-500 mt-2 leading-tight opacity-80 truncate" title={holiday.title}>
+                      {holiday.title}
+                    </div>
                   )}
                 </div>
               );
             })}
           </div>
-        </div>
+        </Card>
 
         {/* Sidebar Section */}
-        <div style={{ flex: '1 1 300px', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-          {/* Day Details */}
-          <div className="premium-card" style={{ backgroundColor: cardBg, color: cardText }}>
-            <h3 style={{ fontSize: '1rem', fontWeight: 800, marginBottom: '1.2rem', color: theme.colors.primary }}>DETALHES DO DIA</h3>
+        <div className="w-full lg:w-[320px] flex flex-col gap-6 shrink-0">
+          
+          <Card className="!p-5 border border-white/5 dark:border-black/5">
+            <h3 className="text-xs font-black tracking-widest uppercase text-[var(--primary-color)] mb-4 flex items-center gap-2">
+              <CalendarIcon size={14} /> Detalhes do Dia
+            </h3>
+            
             {selectedDay ? (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                <div style={{ fontSize: '1.4rem', fontWeight: 900 }}>{selectedDay} de {MONTHS[currentMonth]}</div>
+              <div className="flex flex-col gap-4">
+                <div className="text-3xl font-black mb-1">{selectedDay} <span className="text-xl opacity-50">{MONTHS[currentMonth]}</span></div>
+                
                 {getHolidaysForDay(selectedDay).map((h, i) => (
-                  <div key={i} style={{
-                    padding: '0.6rem 0.8rem', borderRadius: '10px',
-                    background: `${STATUS_COLORS.fixed}15`, borderLeft: `4px solid ${STATUS_COLORS.fixed}`,
-                    fontSize: '0.8rem', fontWeight: 700,
-                  }}>{TYPE_ICONS.Holiday} {h.title}</div>
+                  <div key={i} className="px-4 py-3 rounded-xl bg-red-500/10 border-l-4 border-red-500 text-sm font-bold text-red-500 flex items-center gap-2">
+                    {TYPE_ICONS.Holiday} {h.title}
+                  </div>
                 ))}
+                
                 {getUserEventsForDay(selectedDay).length === 0 && getHolidaysForDay(selectedDay).length === 0 ? (
-                  <div style={{ padding: '2rem', textAlign: 'center', background: subBg, borderRadius: '12px', opacity: 0.5, fontSize: '0.85rem' }}>Nenhum conteudo.</div>
+                  <EmptyState
+                     icon={CalendarIcon}
+                     title="Sem Conteúdo"
+                     description="O dia selecionado está vazio."
+                     className="!p-4"
+                  />
                 ) : (
-                  getUserEventsForDay(selectedDay).map(it => (
-                    <div key={it.id} style={{ padding: '1rem', borderRadius: '16px', background: subBg, borderLeft: `4px solid ${STATUS_COLORS[it.status]}` }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.4rem' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                          <span style={{ fontSize: '0.65rem', fontWeight: 800, color: theme.colors.primary, textTransform: 'uppercase' }}>{it.type}</span>
-                          {it.time && <span style={{ fontSize: '0.6rem', opacity: 0.4, fontWeight: 700 }}>{it.time}</span>}
+                  getUserEventsForDay(selectedDay).map(it => {
+                    const statusClass = STATUS_COLORS[it.status];
+                    return (
+                      <div key={it.id} className="p-4 rounded-xl bg-[var(--sub-bg)] border-l-4 shadow-sm hover:-translate-y-0.5 transition-transform" style={{ borderLeftColor: statusClass.split(' ')[1].replace('text-', 'var(--').replace('500', 'color)') }}>
+                        <div className="flex justify-between items-start mb-2">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-[10px] font-black text-[var(--primary-color)] uppercase tracking-wider bg-[var(--primary-color)]/10 px-2 py-0.5 rounded-md flex items-center gap-1.5">
+                              <span>{TYPE_ICONS[it.type]}</span> {it.type}
+                            </span>
+                            {it.time && <span className="text-[10px] font-bold opacity-50 flex items-center gap-1"><Clock size={10} /> {it.time}</span>}
+                          </div>
                         </div>
-                        <span style={{
-                          fontSize: '0.55rem', fontWeight: 800, padding: '0.15rem 0.4rem',
-                          borderRadius: '4px', background: `${STATUS_COLORS[it.status]}20`,
-                          color: STATUS_COLORS[it.status],
-                        }}>{STATUS_LABELS[it.status]}</span>
+                        <div className="font-bold text-sm leading-snug">{it.title}</div>
+                        <div className="mt-2.5">
+                          <span className={`text-[9px] font-black px-2 py-1 rounded inline-block uppercase tracking-wider ${statusClass}`}>
+                             {STATUS_LABELS[it.status]}
+                          </span>
+                        </div>
                       </div>
-                      <div style={{ fontWeight: 700, fontSize: '0.9rem' }}>{it.title}</div>
-                    </div>
-                  ))
+                    );
+                  })
                 )}
-                <button onClick={() => setModalDay(selectedDay)} style={{
-                  width: '100%', padding: '0.8rem', borderRadius: '12px',
-                  background: theme.colors.primary, color: isDark ? '#fff' : '#000',
-                  fontWeight: 800, fontSize: '0.85rem', cursor: 'pointer',
-                  marginTop: '0.5rem', border: 'none',
-                }}>ABRIR GERENCIADOR</button>
+                
+                <button onClick={() => setModalDay(selectedDay)} className="mt-2 w-full py-3.5 rounded-xl bg-[var(--primary-color)] text-[var(--card-bg)] text-xs font-black uppercase tracking-widest hover:brightness-110 active:scale-95 transition-all shadow-lg shadow-[var(--primary-color)]/20 flex items-center justify-center gap-2">
+                  <CalendarIcon size={14} /> GERENCIADOR
+                </button>
               </div>
             ) : (
-              <div style={{ padding: '2rem', textAlign: 'center', opacity: 0.3, fontSize: '0.9rem' }}>Selecione um dia no calendario para gerenciar o conteudo.</div>
+              <EmptyState
+                 icon={CalendarIcon}
+                 title="Nenhum dia selecionado"
+                 description="Selecione um dia no calendário para gerenciar o conteúdo."
+                 className="mt-6 border-none bg-transparent"
+              />
             )}
-          </div>
+          </Card>
 
-          {/* Legend */}
-          <div className="premium-card" style={{ backgroundColor: cardBg, color: cardText }}>
-            <h3 style={{ fontSize: '0.9rem', fontWeight: 800, marginBottom: '1rem', opacity: 0.4 }}>TIPOS DE CONTEUDO</h3>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.6rem' }}>
+          <Card className="!p-5">
+            <h3 className="text-[10px] font-black tracking-widest uppercase opacity-50 mb-4">Tipos de Conteúdo</h3>
+            <div className="grid grid-cols-2 gap-3 mb-6">
               {EVENT_TYPES.map(k => (
-                <div key={k} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.75rem', fontWeight: 700 }}>
-                  <span style={{ width: '24px', height: '24px', borderRadius: '6px', background: subBg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.7rem' }}>{TYPE_ICONS[k]}</span>
+                <div key={k} className="flex items-center gap-2 text-xs font-bold">
+                  <span className="w-6 h-6 rounded flex items-center justify-center bg-[var(--sub-bg)] text-slate-400 shadow-sm border border-white/5 dark:border-black/5">{TYPE_ICONS[k]}</span>
                   {k}
                 </div>
               ))}
             </div>
-            <div style={{ marginTop: '1rem', borderTop: `1px solid ${isDark ? '#333' : '#eee'}`, paddingTop: '1rem' }}>
-              <h4 style={{ fontSize: '0.75rem', fontWeight: 800, marginBottom: '0.6rem', opacity: 0.4 }}>STATUS</h4>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-                {EVENT_STATUSES.map(s => (
-                  <div key={s} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.75rem', fontWeight: 700 }}>
-                    <div style={{ width: '12px', height: '12px', borderRadius: '3px', background: STATUS_COLORS[s] }} />
-                    {STATUS_LABELS[s]}
-                  </div>
-                ))}
+            
+            <div className="pt-4 border-t border-[var(--sub-bg)]">
+              <h4 className="text-[10px] font-black tracking-widest uppercase opacity-50 mb-3">Status</h4>
+              <div className="flex flex-col gap-2.5">
+                {EVENT_STATUSES.map(s => {
+                   const statusClass = STATUS_COLORS[s];
+                   return (
+                     <div key={s} className="flex items-center gap-2 text-xs font-bold">
+                       <div className={`w-3 h-3 rounded-[3px] shadow-sm ${statusClass}`} />
+                       {STATUS_LABELS[s]}
+                     </div>
+                   );
+                })}
               </div>
             </div>
-          </div>
+          </Card>
 
-          {/* Upcoming holidays */}
-          <div className="premium-card" style={{ backgroundColor: cardBg, color: cardText }}>
-            <h3 style={{ fontSize: '0.9rem', fontWeight: 800, marginBottom: '1rem', opacity: 0.4 }}>FERIADOS {currentYear}</h3>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', maxHeight: '200px', overflowY: 'auto' }}>
+          <Card className="!p-5">
+            <h3 className="text-[10px] font-black tracking-widest uppercase opacity-50 mb-4 flex items-center justify-between">
+               Feriados {currentYear}
+               <span className="text-[var(--primary-color)] font-black text-xs">{BR_HOLIDAYS.length}</span>
+            </h3>
+            <div className="flex flex-col gap-2 max-h-[160px] overflow-y-auto pr-2 scrollbar-thin">
               {BR_HOLIDAYS.map((h, i) => {
                 const isPast = h.month < currentMonth || (h.month === currentMonth && h.day < today.getDate());
                 const isCurrent = h.month === currentMonth;
                 return (
-                  <div key={i} style={{
-                    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                    padding: '0.4rem 0.6rem', borderRadius: '8px',
-                    background: isCurrent ? `${STATUS_COLORS.fixed}10` : 'transparent',
-                    opacity: isPast ? 0.3 : 1,
-                  }}>
-                    <span style={{ fontSize: '0.72rem', fontWeight: 700 }}>{h.title}</span>
-                    <span style={{ fontSize: '0.65rem', fontWeight: 800, opacity: 0.5 }}>
-                      {h.day}/{h.month + 1 < 10 ? `0${h.month + 1}` : h.month + 1}
-                    </span>
+                  <div key={i} className={`flex justify-between items-center p-2.5 rounded-lg text-xs transition-colors ${isCurrent ? 'bg-red-500/10 text-red-500 border border-red-500/20' : 'hover:bg-[var(--sub-bg)]'} ${isPast ? 'opacity-30 grayscale' : 'opacity-100'}`}>
+                    <span className="font-bold flex items-center gap-1.5 truncate"><span className="text-[10px]">{TYPE_ICONS.Holiday}</span> {h.title}</span>
+                    <span className="font-black opacity-60 ml-2 shrink-0">{h.day}/{String(h.month + 1).padStart(2, '0')}</span>
                   </div>
                 );
               })}
             </div>
-          </div>
+          </Card>
         </div>
       </div>
 
-      {/* Modal */}
       {modalDay !== null && (
         <DayModal
           day={modalDay}
@@ -609,11 +558,6 @@ const ContentCalendar: React.FC<ContentCalendarProps> = ({ division }) => {
           onAdd={handleAddEvent}
           onDelete={handleDeleteEvent}
           onUpdateStatus={handleUpdateStatus}
-          theme={theme}
-          isDark={isDark}
-          cardBg={cardBg}
-          cardText={cardText}
-          subBg={subBg}
         />
       )}
     </div>

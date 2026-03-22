@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback, use
 import type { Division } from '../constants/Themes';
 
 export type Tab = 'marketing' | 'operations';
-export type MarketingView = 'generator' | 'video-lab' | 'publisher' | 'calendar' | 'feed' | 'analytics' | 'accounts' | 'whatsapp' | 'monitor';
+export type MarketingView = 'create' | 'media' | 'video' | 'connect' | 'publish' | 'monitor';
 
 interface Notification {
     id: number;
@@ -54,7 +54,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         return (localStorage.getItem('activeTab') as Tab) || 'marketing';
     });
     const [marketingView, setMarketingView] = useState<MarketingView>(() => {
-        return (localStorage.getItem('marketingView') as MarketingView) || 'generator';
+        return (localStorage.getItem('marketingView') as MarketingView) || 'create';
     });
 
     const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -99,7 +99,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     const sendCopyToVideoLab = useCallback((copy: GeneratedCopy) => {
         setGeneratedCopy(copy);
         setActiveTab('marketing');
-        setMarketingView('video-lab');
+        setMarketingView('video');
     }, []);
 
     return (

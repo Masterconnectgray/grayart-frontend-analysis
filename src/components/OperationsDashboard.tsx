@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import type { Division } from '../constants/Themes';
-import { DIVISIONS } from '../constants/Themes';
 import { useAppContext } from '../context/AppContext';
+import { Card } from '../design-system';
+import { Plus, Trash2, CheckCircle2, Clock, Circle } from 'lucide-react';
 
 interface OperationsDashboardProps {
   division: Division;
@@ -34,16 +35,16 @@ const STATUS_LABELS: Record<string, string> = {
   concluido: 'CONCLUÍDO',
 };
 
-const STATUS_COLORS: Record<string, string> = {
-  pendente: '#f59e0b',
-  em_andamento: '#3b82f6',
-  concluido: '#22c55e',
+const STATUS_COLORS: Record<string, { bg: string, text: string, border: string, icon: React.ReactNode }> = {
+  pendente: { bg: 'bg-amber-500/10', text: 'text-amber-500', border: 'border-amber-500/30', icon: <Circle size={14} /> },
+  em_andamento: { bg: 'bg-blue-500/10', text: 'text-blue-500', border: 'border-blue-500/30', icon: <Clock size={14} /> },
+  concluido: { bg: 'bg-emerald-500/10', text: 'text-emerald-500', border: 'border-emerald-500/30', icon: <CheckCircle2 size={14} /> },
 };
 
 const PRIORITY_COLORS: Record<string, string> = {
-  alta: '#ef4444',
-  media: '#f59e0b',
-  baixa: '#22c55e',
+  alta: 'bg-red-500/15 text-red-500',
+  media: 'bg-amber-500/15 text-amber-500',
+  baixa: 'bg-emerald-500/15 text-emerald-500',
 };
 
 const INITIAL_DATA: Record<Division, {
@@ -111,12 +112,9 @@ const INITIAL_DATA: Record<Division, {
 
 const OperationsDashboard: React.FC<OperationsDashboardProps> = ({ division }) => {
   const { addNotification, stats } = useAppContext();
-  const theme = DIVISIONS[division];
-  const isDark = division !== 'gray-art';
 
   const [activeSection, setActiveSection] = useState<'processos' | 'tarefas' | 'equipe'>('processos');
   const [data, setData] = useState(INITIAL_DATA);
-
 
   // Indicators based on stats for gray-art, or fixed for others
   const metrics = division === 'gray-art' ? [
@@ -130,10 +128,6 @@ const OperationsDashboard: React.FC<OperationsDashboardProps> = ({ division }) =
     { label: 'Eficiência', value: '88%', trend: '+2%' },
     { label: 'Equipe', value: data[division].team.length.toString(), trend: '0' },
   ];
-
-  const cardBg = isDark ? '#1e1e1e' : '#fff';
-  const cardText = isDark ? '#fff' : '#1a1a1a';
-  const subBg = isDark ? '#2d2d2d' : '#f0f2f5';
 
   const cycleStatus = (taskId: number) => {
     setData(prev => ({
@@ -179,36 +173,31 @@ const OperationsDashboard: React.FC<OperationsDashboardProps> = ({ division }) =
   };
 
   return (
-    <div className="animate-fade-in">
+    <div className="animate-in fade-in duration-300">
       {/* Metrics */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         {metrics.map((m, i) => (
-          <div key={i} className="premium-card" style={{ backgroundColor: cardBg, color: cardText, borderBottom: `4px solid ${theme.colors.primary}` }}>
-            <h4 style={{ opacity: 0.4, fontSize: '0.65rem', marginBottom: '0.5rem', fontWeight: 800, letterSpacing: '0.05em' }}>{m.label.toUpperCase()}</h4>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
-              <span style={{ fontSize: '1.8rem', fontWeight: 900 }}>{m.value}</span>
-              <span style={{
-                color: m.trend.startsWith('+') ? '#22c55e' : m.trend.startsWith('-') ? '#ef4444' : (isDark ? '#666' : '#999'),
-                fontSize: '0.8rem', fontWeight: 800,
-              }}>{m.trend}</span>
+          <Card key={i} className="border-b-4 border-[var(--primary-color)] !p-5">
+            <h4 className="opacity-40 text-[10px] uppercase font-black tracking-widest mb-2">{m.label}</h4>
+            <div className="flex justify-between items-end">
+              <span className="text-3xl font-black">{m.value}</span>
+              <span className={`text-sm font-black ${m.trend.startsWith('+') ? 'text-emerald-500' : m.trend.startsWith('-') ? 'text-red-500' : 'text-slate-400'}`}>
+                {m.trend}
+              </span>
             </div>
-          </div>
+          </Card>
         ))}
       </div>
 
       {/* Section Tabs & Add Button */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
-        <div style={{ display: 'flex', gap: '0.5rem', background: subBg, padding: '0.3rem', borderRadius: '12px' }}>
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+        <div className="flex gap-2 p-1.5 rounded-xl bg-[var(--sub-bg)] overflow-x-auto max-w-full">
           {(['processos', 'tarefas', 'equipe'] as const).map(tab => (
             <button
               key={tab}
               onClick={() => setActiveSection(tab)}
-              style={{
-                padding: '0.6rem 1.2rem', borderRadius: '10px',
-                backgroundColor: activeSection === tab ? theme.colors.primary : 'transparent',
-                color: activeSection === tab ? (isDark ? '#fff' : '#000') : (isDark ? '#666' : '#999'),
-                fontWeight: 700, fontSize: '0.8rem', transition: 'all 0.3s'
-              }}
+              className={`px-5 py-2.5 rounded-lg font-bold text-sm whitespace-nowrap transition-all duration-300
+                ${activeSection === tab ? 'bg-[var(--primary-color)] text-[var(--card-bg)] shadow-md' : 'text-slate-400 hover:text-[var(--card-text)]'}`}
             >
               {tab.toUpperCase()}
             </button>
@@ -216,126 +205,162 @@ const OperationsDashboard: React.FC<OperationsDashboardProps> = ({ division }) =
         </div>
         <button
           onClick={() => addItem(activeSection === 'processos' ? 'processes' : activeSection === 'tarefas' ? 'tasks' : 'team')}
-          style={{
-            padding: '0.6rem 1.5rem', borderRadius: '12px', background: theme.colors.primary,
-            color: isDark ? '#fff' : '#000', fontWeight: 800, fontSize: '0.8rem',
-            cursor: 'pointer', boxShadow: `0 4px 15px ${theme.colors.primary}44`
-          }}
+          className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-[var(--primary-color)] text-[var(--card-bg)] font-black text-sm shadow-lg shadow-[var(--primary-color)]/30 hover:scale-[1.02] transition-transform"
         >
-          + ADICIONAR {activeSection.slice(0, -1).toUpperCase()}
+          <Plus size={16} strokeWidth={3} />
+          <span>ADICIONAR {activeSection.slice(0, -1).toUpperCase()}</span>
         </button>
       </div>
 
-      <div className="premium-card" style={{ backgroundColor: cardBg, color: cardText, minHeight: '400px' }}>
+      <Card className="min-h-[400px]">
         {activeSection === 'processos' && (
-          <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-            <h3 style={{ fontSize: '1.1rem', fontWeight: 800, marginBottom: '0.5rem', color: theme.colors.primary }}>PROCESSOS ATIVOS</h3>
+          <div className="animate-in fade-in slide-in-from-bottom-4 duration-300 flex flex-col gap-4">
+            <h3 className="text-lg font-black text-[var(--primary-color)] mb-2">PROCESSOS ATIVOS</h3>
             {data[division].processes.map(proc => (
-              <div key={proc.id} style={{ padding: '1.2rem', borderRadius: '16px', background: subBg, position: 'relative' }}>
-                <button onClick={() => deleteItem('processes', proc.id)} style={{ position: 'absolute', top: '10px', right: '10px', background: 'transparent', color: '#ef4444', fontSize: '1rem', cursor: 'pointer', border: 'none' }}>×</button>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.8rem' }}>
-                  <div contentEditable suppressContentEditableWarning={true} onBlur={(e) => {
-                    const newName = (e.target as HTMLElement).innerText;
+              <div key={proc.id} className="p-5 rounded-2xl bg-[var(--sub-bg)] relative group border border-transparent hover:border-[var(--primary-color)]/30 transition-colors">
+                <button
+                  onClick={() => deleteItem('processes', proc.id)}
+                  className="absolute top-4 right-4 w-8 h-8 rounded-lg bg-red-500/10 text-red-500 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-500 hover:text-white"
+                  title="Remover"
+                >
+                  <Trash2 size={16} />
+                </button>
+                <div className="flex justify-between items-center mb-4 pr-8">
+                  <div
+                    contentEditable
+                    suppressContentEditableWarning
+                    onBlur={(e) => {
+                      const newName = (e.target as HTMLElement).innerText;
+                      setData(prev => ({
+                        ...prev, [division]: { ...prev[division], processes: prev[division].processes.map(p => p.id === proc.id ? { ...p, name: newName } : p) },
+                      }));
+                    }}
+                    className="font-black text-base md:text-lg focus:outline-none focus:ring-2 ring-[var(--primary-color)] rounded px-1 -ml-1 border-b border-transparent focus:border-[var(--primary-color)]/50"
+                  >
+                    {proc.name}
+                  </div>
+                  <span className="font-black text-[var(--primary-color)] text-lg">{proc.progress}%</span>
+                </div>
+                <div
+                  className="h-2.5 rounded-full bg-slate-200 dark:bg-[#333] overflow-hidden cursor-pointer group/bar"
+                  onClick={(e) => {
+                    const rect = e.currentTarget.getBoundingClientRect();
+                    const x = e.clientX - rect.left;
+                    const pct = Math.max(0, Math.min(100, Math.round((x / rect.width) * 100)));
                     setData(prev => ({
-                      ...prev,
-                      [division]: {
-                        ...prev[division],
-                        processes: prev[division].processes.map(p => p.id === proc.id ? { ...p, name: newName } : p),
-                      },
+                      ...prev, [division]: { ...prev[division], processes: prev[division].processes.map(p => p.id === proc.id ? { ...p, progress: pct } : p) },
                     }));
-                  }} style={{ fontWeight: 800, fontSize: '1rem', outline: 'none' }}>{proc.name}</div>
-                  <span style={{ fontWeight: 900, color: theme.colors.primary }}>{proc.progress}%</span>
+                  }}
+                >
+                  <div className="h-full bg-[var(--primary-color)] transition-all duration-300 group-hover/bar:brightness-110" style={{ width: `${proc.progress}%` }} />
                 </div>
-                <div style={{ height: '8px', borderRadius: '4px', background: isDark ? '#333' : '#e0e0e0', overflow: 'hidden', cursor: 'pointer' }} onClick={(e) => {
-                  const rect = e.currentTarget.getBoundingClientRect();
-                  const x = e.clientX - rect.left;
-                  const pct = Math.max(0, Math.min(100, Math.round((x / rect.width) * 100)));
-                  setData(prev => ({
-                    ...prev,
-                    [division]: {
-                      ...prev[division],
-                      processes: prev[division].processes.map(p => p.id === proc.id ? { ...p, progress: pct } : p),
-                    },
-                  }));
-                }}>
-                  <div style={{ width: `${proc.progress}%`, height: '100%', background: theme.colors.primary, transition: 'width 0.3s' }} />
-                </div>
-                <div style={{ marginTop: '0.8rem', fontSize: '0.75rem', opacity: 0.5, fontWeight: 700 }}>Responsável: {proc.responsible}</div>
+                <div className="mt-3 text-xs opacity-50 font-bold">Responsável: <span className="text-[var(--primary-color)]">{proc.responsible}</span></div>
               </div>
             ))}
           </div>
         )}
 
         {activeSection === 'tarefas' && (
-          <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
-            <h3 style={{ fontSize: '1.1rem', fontWeight: 800, marginBottom: '0.5rem', color: theme.colors.primary }}>PENDÊNCIAS OPERACIONAIS</h3>
-            {data[division].tasks.map(task => (
-              <div key={task.id} style={{ padding: '1rem', borderRadius: '16px', background: subBg, display: 'flex', justifyContent: 'space-between', alignItems: 'center', opacity: task.status === 'concluido' ? 0.4 : 1 }}>
-                <div style={{ flex: 1 }}>
-                  <div contentEditable suppressContentEditableWarning={true} onBlur={(e) => {
-                    const newTitle = (e.target as HTMLElement).innerText;
-                    setData(prev => ({
-                      ...prev,
-                      [division]: {
-                        ...prev[division],
-                        tasks: prev[division].tasks.map(t => t.id === task.id ? { ...t, title: newTitle } : t),
-                      },
-                    }));
-                  }} style={{ fontWeight: 700, fontSize: '0.9rem', outline: 'none', textDecoration: task.status === 'concluido' ? 'line-through' : 'none' }}>{task.title}</div>
-                  <div style={{ display: 'flex', gap: '0.8rem', alignItems: 'center', marginTop: '0.3rem' }}>
-                    <span style={{ fontSize: '0.75rem', fontWeight: 800, opacity: 0.5 }}>{task.responsible}</span>
-                    <span style={{ fontSize: '0.65rem', fontWeight: 800, color: PRIORITY_COLORS[task.priority], background: `${PRIORITY_COLORS[task.priority]}15`, padding: '0.1rem 0.4rem', borderRadius: '4px' }}>{task.priority.toUpperCase()}</span>
+          <div className="animate-in fade-in slide-in-from-bottom-4 duration-300 flex flex-col gap-3">
+            <h3 className="text-lg font-black text-[var(--primary-color)] mb-2">PENDÊNCIAS OPERACIONAIS</h3>
+            {data[division].tasks.map(task => {
+              const status = STATUS_COLORS[task.status];
+              return (
+                <div key={task.id} className={`p-4 rounded-xl bg-[var(--sub-bg)] flex flex-col sm:flex-row justify-between sm:items-center gap-4 transition-all duration-300 group ${task.status === 'concluido' ? 'opacity-50 hover:opacity-100 grayscale hover:grayscale-0' : ''}`}>
+                  <div className="flex-1">
+                    <div
+                      contentEditable
+                      suppressContentEditableWarning
+                      onBlur={(e) => {
+                        const newTitle = (e.target as HTMLElement).innerText;
+                        setData(prev => ({
+                          ...prev, [division]: { ...prev[division], tasks: prev[division].tasks.map(t => t.id === task.id ? { ...t, title: newTitle } : t) },
+                        }));
+                      }}
+                      className={`font-bold text-sm md:text-base mb-2 focus:outline-none focus:ring-2 ring-[var(--primary-color)] rounded px-1 -ml-1 py-0.5 ${task.status === 'concluido' ? 'line-through' : ''}`}
+                    >
+                      {task.title}
+                    </div>
+                    <div className="flex flex-wrap items-center gap-3">
+                      <span className="text-xs font-black opacity-60">
+                        👨‍💻 {task.responsible}
+                      </span>
+                      <span className={`text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md ${PRIORITY_COLORS[task.priority]}`}>
+                        {task.priority}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => cycleStatus(task.id)}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-black border transition-colors ${status.bg} ${status.text} ${status.border} hover:brightness-110`}
+                    >
+                      {status.icon}
+                      {STATUS_LABELS[task.status]}
+                    </button>
+                    <button
+                      onClick={() => deleteItem('tasks', task.id)}
+                      className="w-8 h-8 rounded-lg bg-red-500/10 text-red-500 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-500 hover:text-white"
+                      title="Excluir"
+                    >
+                      <Trash2 size={16} />
+                    </button>
                   </div>
                 </div>
-                <div style={{ display: 'flex', gap: '0.5rem' }}>
-                  <button onClick={() => cycleStatus(task.id)} style={{ padding: '0.4rem 0.8rem', borderRadius: '8px', background: `${STATUS_COLORS[task.status]}15`, color: STATUS_COLORS[task.status], fontWeight: 800, fontSize: '0.7rem', border: `1px solid ${STATUS_COLORS[task.status]}33`, cursor: 'pointer' }}>
-                    {STATUS_LABELS[task.status]}
-                  </button>
-                  <button onClick={() => deleteItem('tasks', task.id)} style={{ color: '#ef4444', background: 'transparent', border: 'none', cursor: 'pointer' }}>Excluir</button>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
 
         {activeSection === 'equipe' && (
-          <div className="animate-fade-in">
-            <h3 style={{ fontSize: '1.1rem', fontWeight: 800, marginBottom: '1.2rem', color: theme.colors.primary }}>COLABORADORES</h3>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '1rem' }}>
+          <div className="animate-in fade-in slide-in-from-bottom-4 duration-300">
+            <h3 className="text-lg font-black text-[var(--primary-color)] mb-4">COLABORADORES</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {data[division].team.map(member => (
-                <div key={member.id} style={{ padding: '1.2rem', borderRadius: '20px', background: subBg, display: 'flex', alignItems: 'center', gap: '1rem', position: 'relative' }}>
-                  <button onClick={() => deleteItem('team', member.id)} style={{ position: 'absolute', top: '10px', right: '10px', border: 'none', background: 'transparent', color: '#ef4444', cursor: 'pointer' }}>×</button>
-                  <div style={{ width: '45px', height: '45px', borderRadius: '13px', background: theme.colors.primary, color: isDark ? '#000' : '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '1rem' }}>
+                <div key={member.id} className="p-4 rounded-2xl bg-[var(--sub-bg)] flex items-center gap-4 relative group hover:-translate-y-1 transition-transform">
+                  <button
+                    onClick={() => deleteItem('team', member.id)}
+                    className="absolute top-2 right-2 w-7 h-7 rounded-lg bg-red-500/10 text-red-500 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-500 hover:text-white"
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                  <div className="w-12 h-12 rounded-xl bg-[var(--primary-color)] text-[var(--card-bg)] flex items-center justify-center font-black text-xl shadow-lg shadow-[var(--primary-color)]/20">
                     {member.name.slice(0, 1).toUpperCase()}
                   </div>
-                  <div>
-                    <div contentEditable suppressContentEditableWarning={true} onBlur={(e) => {
-                      const newName = (e.target as HTMLElement).innerText;
-                      setData(prev => ({
-                        ...prev,
-                        [division]: {
-                          ...prev[division],
-                          team: prev[division].team.map(m => m.id === member.id ? { ...m, name: newName } : m),
-                        },
-                      }));
-                    }} style={{ fontWeight: 800, fontSize: '0.9rem', outline: 'none' }}>{member.name}</div>
-                    <div contentEditable suppressContentEditableWarning={true} onBlur={(e) => {
-                      const newRole = (e.target as HTMLElement).innerText;
-                      setData(prev => ({
-                        ...prev,
-                        [division]: {
-                          ...prev[division],
-                          team: prev[division].team.map(m => m.id === member.id ? { ...m, role: newRole } : m),
-                        },
-                      }));
-                    }} style={{ fontSize: '0.75rem', opacity: 0.5, fontWeight: 700, outline: 'none' }}>{member.role}</div>
+                  <div className="flex-1 pr-6">
+                    <div
+                      contentEditable
+                      suppressContentEditableWarning
+                      onBlur={(e) => {
+                        const newName = (e.target as HTMLElement).innerText;
+                        setData(prev => ({
+                          ...prev, [division]: { ...prev[division], team: prev[division].team.map(m => m.id === member.id ? { ...m, name: newName } : m) },
+                        }));
+                      }}
+                      className="font-black text-sm mb-0.5 focus:outline-none focus:ring-2 ring-[var(--primary-color)] rounded px-1 -ml-1 border-b border-transparent focus:border-[var(--primary-color)]/50"
+                    >
+                      {member.name}
+                    </div>
+                    <div
+                      contentEditable
+                      suppressContentEditableWarning
+                      onBlur={(e) => {
+                        const newRole = (e.target as HTMLElement).innerText;
+                        setData(prev => ({
+                          ...prev, [division]: { ...prev[division], team: prev[division].team.map(m => m.id === member.id ? { ...m, role: newRole } : m) },
+                        }));
+                      }}
+                      className="text-xs font-bold opacity-60 focus:outline-none focus:ring-2 ring-slate-400 rounded px-1 -ml-1"
+                    >
+                      {member.role}
+                    </div>
                   </div>
                 </div>
               ))}
             </div>
           </div>
         )}
-      </div>
+      </Card>
     </div>
   );
 };

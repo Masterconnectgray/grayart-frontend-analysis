@@ -27,9 +27,9 @@ export const InstagramSVG: React.FC<IconProps> = ({ size = 24, className, style 
 export const TikTokSVG: React.FC<IconProps> = ({ size = 24, className, style }) => (
     <svg width={size} height={size} viewBox="0 0 24 24" className={className} style={style} fill="none">
         <rect width="24" height="24" rx="6" fill="#000" />
-        <path d="M9.5 7.5h2.5v6.5a2.5 2.5 0 1 0 2.5-2.5v-2.5a5 5 0 1 1-5 5V7.5Z" fill="#fff" />
-        <path d="M14.5 5.5c.4 1 1.2 1.8 2.5 2v2c-.9 0-1.8-.3-2.5-.8" fill="#69C9D0" opacity="0.9" />
-        <path d="M14.5 5.5c.4 1 1.2 1.8 2.5 2" stroke="#EE1D52" strokeWidth="0.5" />
+        <path d="M16.6 8.8c-.8-.5-1.3-1.3-1.5-2.3h-2.2v9.2c0 1.2-1 2.2-2.2 2.2s-2.2-1-2.2-2.2 1-2.2 2.2-2.2c.2 0 .5 0 .7.1v-2.3c-.2 0-.5-.1-.7-.1-2.5 0-4.5 2-4.5 4.5s2 4.5 4.5 4.5 4.5-2 4.5-4.5V11c.8.6 1.8.9 2.8.9V9.7c-.5 0-1-.1-1.4-.3-.3-.2-.7-.4-1-.6z" fill="#fff" />
+        <path d="M16.6 8.8c.8.5 1.7.8 2.8.8V7.5c-.5 0-1-.1-1.4-.3-.5-.3-.9-.7-1.2-1.2h-.2v2.8z" fill="#69C9D0" />
+        <path d="M10.7 13.6c-1.2 0-2.2 1-2.2 2.2s1 2.2 2.2 2.2 2.2-1 2.2-2.2V6.5h2.2c0-.2 0-.3 0-.5h-2.2v9.2c0 1.2-1 2.2-2.2 2.2-.4 0-.8-.1-1.1-.3.5.5 1.1.8 1.8.8 1.2 0 2.2-1 2.2-2.2V6h-.7v7.6z" fill="#EE1D52" opacity="0.7" />
     </svg>
 );
 

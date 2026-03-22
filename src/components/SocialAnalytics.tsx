@@ -2,21 +2,19 @@ import React, { useState, useEffect, useRef } from 'react';
 import type { Division } from '../constants/Themes';
 import { DIVISIONS } from '../constants/Themes';
 import { useAppContext } from '../context/AppContext';
+import { Card } from '../design-system';
 import {
   AreaChart, Area, BarChart, Bar,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   LineChart, Line, PieChart, Pie, Cell, Brush,
 } from 'recharts';
 
-
 interface SocialAnalyticsProps { division: Division; }
-
 interface TooltipPayload { name: string; value: number; color: string; }
 interface CustomTooltipProps { active?: boolean; payload?: TooltipPayload[]; label?: string; isDark: boolean; }
-
 type ChartType = 'area' | 'bar' | 'line';
+const PIE_COLORS = ['#9370DB', '#7c3aed', '#c084fc', '#4f46e5', '#22c55e', '#3b82f6'];
 
-// ── Animated Counter Hook ───────────────────────────────────────────────────
 function useAnimatedCounter(target: number, duration = 1200): number {
   const [value, setValue] = useState(0);
   const prevTarget = useRef(0);
@@ -39,23 +37,16 @@ function useAnimatedCounter(target: number, duration = 1200): number {
   return value;
 }
 
-// ── Tooltip customizado ─────────────────────────────────────────────────────
 const CustomTooltip: React.FC<CustomTooltipProps> = ({ active, payload, label, isDark }) => {
   if (!active || !payload?.length) return null;
   return (
-    <div style={{
-      background: isDark ? '#1a1a2e' : '#fff',
-      border: `1px solid rgba(255,255,255,0.1)`,
-      borderRadius: '12px', padding: '0.8rem 1rem',
-      boxShadow: '0 10px 30px rgba(0,0,0,0.3)',
-      fontSize: '0.78rem', fontFamily: 'inherit',
-    }}>
-      <div style={{ fontWeight: 800, marginBottom: '0.5rem', opacity: 0.6 }}>{label}</div>
+    <div className={`p-4 rounded-xl shadow-[0_10px_30px_rgba(0,0,0,0.3)] text-xs border ${isDark ? 'bg-[#1a1a2e] border-white/10' : 'bg-white border-black/10'}`}>
+      <div className="font-extrabold mb-2 opacity-60">{label}</div>
       {payload.map((p, i) => (
-        <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.2rem' }}>
-          <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: p.color }} />
-          <span style={{ opacity: 0.7 }}>{p.name}:</span>
-          <span style={{ fontWeight: 900, color: p.color }}>
+        <div key={i} className="flex items-center gap-2 mb-1">
+          <div className="w-2 h-2 rounded-full" style={{ backgroundColor: p.color }} />
+          <span className="opacity-70">{p.name}:</span>
+          <span className="font-black" style={{ color: p.color }}>
             {typeof p.value === 'number' && p.name?.toLowerCase().includes('%') ? `${p.value}%` : p.value.toLocaleString('pt-BR')}
           </span>
         </div>
@@ -64,7 +55,6 @@ const CustomTooltip: React.FC<CustomTooltipProps> = ({ active, payload, label, i
   );
 };
 
-// ── Dados por divisao (realistas, com sazonalidade) ─────────────────────────
 const MONTHLY_DATA: Record<Division, { month: string; alcance: number; engajamento: number; seguidores: number; impressoes: number; salvamentos: number; compartilhamentos: number }[]> = {
   'connect-gray': [
     { month: 'Set', alcance: 8200, engajamento: 3.8, seguidores: 1240, impressoes: 12300, salvamentos: 180, compartilhamentos: 95 },
@@ -161,7 +151,7 @@ const AUDIENCE_DATA: Record<Division, { name: string; value: number }[]> = {
 const TIPS_DATA: Record<Division, { title: string; detail: string; status: 'optimal' | 'warning' | 'critical' }[]> = {
   'connect-gray': [
     { title: 'Formato Ideal', detail: 'Reels de 15-30s com depoimentos reais do Coffee Meet.', status: 'optimal' },
-    { title: 'Frequencia', detail: '3 Reels + 2 Posts por semana - manter consistencia.', status: 'optimal' },
+    { title: 'Frequência', detail: '3 Reels + 2 Posts por semana - manter consistência.', status: 'optimal' },
     { title: 'Hashtags', detail: 'Use #sindicoprofissional #gestaopredial - adicione geolocalizadas.', status: 'warning' },
   ],
   'gray-up': [
@@ -170,81 +160,62 @@ const TIPS_DATA: Record<Division, { title: string; detail: string; status: 'opti
     { title: 'LinkedIn', detail: 'Replicar conteudo tecnico no LinkedIn - publico B2B presente.', status: 'warning' },
   ],
   'gray-up-flow': [
-    { title: 'Cases com Numeros', detail: 'Resultados com % geram 4x mais compartilhamentos.', status: 'optimal' },
+    { title: 'Cases com Números', detail: 'Resultados com % geram 4x mais compartilhamentos.', status: 'optimal' },
     { title: 'LinkedIn Urgente', detail: 'Publico B2B no LinkedIn precisa de atencao imediata.', status: 'critical' },
-    { title: 'Frequencia', detail: '2x semana minimo para manter algoritmo ativo.', status: 'warning' },
+    { title: 'Frequência', detail: '2x semana minimo para manter algoritmo ativo.', status: 'warning' },
   ],
   'gray-art': [
     { title: 'Reels Criativos', detail: 'Processo criativo em time-lapse gera alto engajamento.', status: 'optimal' },
     { title: 'Pinterest', detail: 'Portfolio no Pinterest para SEO visual - 40k buscas/mes.', status: 'warning' },
-    { title: 'Stories Diarios', detail: 'Stories diarios aumentam visibilidade em 22% no feed.', status: 'optimal' },
+    { title: 'Stories Diários', detail: 'Stories diarios aumentam visibilidade em 22% no feed.', status: 'optimal' },
   ],
 };
-
-const STATUS_COLOR = { optimal: '#22c55e', warning: '#f59e0b', critical: '#ef4444' };
-const PIE_COLORS = ['#9370DB', '#7c3aed', '#c084fc', '#4f46e5', '#22c55e', '#3b82f6'];
-
-// ── AnimatedKPI Card ────────────────────────────────────────────────────────
 const KPICard: React.FC<{
   label: string;
   rawValue: number;
-  formatted: string;
   trend: string;
   trendValue: number;
-  color: string;
-  cardBg: string;
-  cardText: string;
-}> = ({ label, rawValue, trend, trendValue, color, cardBg, cardText }) => {
+  borderColorClass: string;
+  textColorClass: string;
+}> = ({ label, rawValue, trend, trendValue, borderColorClass }) => {
   const animated = useAnimatedCounter(rawValue);
   const isPercent = label.toLowerCase().includes('engajamento');
 
   return (
-    <div className="premium-card" style={{
-      backgroundColor: cardBg, color: cardText,
-      borderBottom: `4px solid ${color}`, padding: '1.4rem',
-    }}>
-      <h4 style={{ opacity: 0.4, fontSize: '0.65rem', fontWeight: 800, marginBottom: '0.5rem', textTransform: 'uppercase', letterSpacing: '1px' }}>{label}</h4>
-      <div style={{ fontSize: '2rem', fontWeight: 900, lineHeight: 1 }}>
+    <Card className={`border-b-4 ${borderColorClass} !p-5 md:!p-6`}>
+      <h4 className="opacity-40 text-[10px] font-black mb-2 uppercase tracking-widest">{label}</h4>
+      <div className="text-3xl font-black leading-none mb-2">
         {isPercent ? `${(animated / 10).toFixed(1)}%` : animated.toLocaleString('pt-BR')}
       </div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginTop: '0.4rem' }}>
-        <span style={{
-          fontSize: '0.75rem', fontWeight: 800,
-          color: trendValue >= 0 ? '#22c55e' : '#ef4444',
-          display: 'inline-flex', alignItems: 'center', gap: '0.2rem'
-        }}>
-          <span style={{ fontSize: '0.6rem' }}>{trendValue >= 0 ? '\u25B2' : '\u25BC'}</span>
+      <div className="flex items-center gap-2">
+        <span className={`text-xs font-black inline-flex items-center gap-1 ${trendValue >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+          <span className="text-[10px]">{trendValue >= 0 ? '▲' : '▼'}</span>
           {trend}
         </span>
-        <span style={{ opacity: 0.3, fontWeight: 700, fontSize: '0.7rem' }}>vs mes anterior</span>
+        <span className="opacity-30 font-bold text-[10px] tracking-wide">vs mês anterior</span>
       </div>
-    </div>
+    </Card>
   );
 };
 
-// ── Chart Type Toggle ───────────────────────────────────────────────────────
 const ChartToggle: React.FC<{ current: ChartType; onChange: (t: ChartType) => void; isDark: boolean }> = ({ current, onChange, isDark }) => {
   const options: { key: ChartType; label: string }[] = [
-    { key: 'area', label: 'Area' },
+    { key: 'area', label: 'Área' },
     { key: 'bar', label: 'Barras' },
     { key: 'line', label: 'Linha' },
   ];
   return (
-    <div style={{ display: 'flex', gap: '0.3rem', background: isDark ? '#333' : '#eee', padding: '0.2rem', borderRadius: '8px' }}>
+    <div className={`flex gap-1 p-1 rounded-lg ${isDark ? 'bg-[#333]' : 'bg-slate-200'}`}>
       {options.map(o => (
-        <button key={o.key} onClick={() => onChange(o.key)} style={{
-          padding: '0.3rem 0.7rem', borderRadius: '6px', cursor: 'pointer',
-          fontSize: '0.65rem', fontWeight: 800, border: 'none',
-          backgroundColor: current === o.key ? (isDark ? '#555' : '#fff') : 'transparent',
-          color: current === o.key ? (isDark ? '#fff' : '#000') : (isDark ? '#888' : '#999'),
-          transition: 'all 0.2s',
-        }}>{o.label}</button>
+        <button key={o.key} onClick={() => onChange(o.key)} className={`px-3 py-1.5 rounded-md text-[10px] font-black transition-all
+          ${current === o.key ? (isDark ? 'bg-slate-600 text-white shadow-sm' : 'bg-white text-black shadow-sm') : 'bg-transparent text-slate-400'}`}>
+          {o.label}
+        </button>
       ))}
     </div>
   );
 };
 
-// ── Componente Principal ────────────────────────────────────────────────────
 const SocialAnalytics: React.FC<SocialAnalyticsProps> = ({ division }) => {
   useAppContext();
   const isDark = division !== 'gray-art';
@@ -263,20 +234,16 @@ const SocialAnalytics: React.FC<SocialAnalyticsProps> = ({ division }) => {
   const growthEng = +((lastMonth.engajamento - prevMonth.engajamento).toFixed(1));
   const growthImp = Math.round(((lastMonth.impressoes - prevMonth.impressoes) / prevMonth.impressoes) * 100);
 
-  const cardBg = isDark ? '#1e1e1e' : '#fff';
-  const subBg = isDark ? '#2d2d2d' : '#f0f2f5';
-  const cardText = isDark ? '#fff' : '#1a1a1a';
   const gridColor = isDark ? '#333' : '#eee';
   const axisColor = isDark ? '#666' : '#aaa';
 
   const metrics = [
-    { label: 'Alcance Mensal', rawValue: lastMonth.alcance, formatted: lastMonth.alcance.toLocaleString('pt-BR'), trend: `+${growthAlcance}%`, trendValue: growthAlcance, color: theme.colors.primary },
-    { label: 'Taxa Engajamento', rawValue: Math.round(lastMonth.engajamento * 10), formatted: `${lastMonth.engajamento}%`, trend: `+${growthEng}pp`, trendValue: growthEng, color: '#22c55e' },
-    { label: 'Seguidores', rawValue: lastMonth.seguidores, formatted: lastMonth.seguidores.toLocaleString('pt-BR'), trend: `+${growthSeg}%`, trendValue: growthSeg, color: '#f59e0b' },
-    { label: 'Impressoes', rawValue: lastMonth.impressoes, formatted: lastMonth.impressoes.toLocaleString('pt-BR'), trend: `+${growthImp}%`, trendValue: growthImp, color: '#3b82f6' },
+    { label: 'Alcance Mensal', rawValue: lastMonth.alcance, trend: `+${growthAlcance}%`, trendValue: growthAlcance, borderColorClass: 'border-[var(--primary-color)]', textColorClass: 'text-[var(--primary-color)]' },
+    { label: 'Taxa Engajamento', rawValue: Math.round(lastMonth.engajamento * 10), trend: `+${growthEng}pp`, trendValue: growthEng, borderColorClass: 'border-emerald-500', textColorClass: 'text-emerald-500' },
+    { label: 'Seguidores', rawValue: lastMonth.seguidores, trend: `+${growthSeg}%`, trendValue: growthSeg, borderColorClass: 'border-amber-500', textColorClass: 'text-amber-500' },
+    { label: 'Impressões', rawValue: lastMonth.impressoes, trend: `+${growthImp}%`, trendValue: growthImp, borderColorClass: 'border-blue-500', textColorClass: 'text-blue-500' },
   ];
 
-  // render the main chart based on chartType toggle
   const renderMainChart = () => {
     const commonProps = { data: monthly };
     const xAxis = <XAxis dataKey="month" tick={{ fill: axisColor, fontSize: 11 }} axisLine={false} tickLine={false} />;
@@ -309,7 +276,6 @@ const SocialAnalytics: React.FC<SocialAnalyticsProps> = ({ division }) => {
         </ResponsiveContainer>
       );
     }
-    // default: area
     return (
       <ResponsiveContainer width="100%" height={260}>
         <AreaChart {...commonProps}>
@@ -329,67 +295,53 @@ const SocialAnalytics: React.FC<SocialAnalyticsProps> = ({ division }) => {
   };
 
   return (
-    <div className="animate-fade-in" style={{ color: cardText }}>
-      {/* ── Metric Cards (animated counters + variation) ──────────────── */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
+    <div className="animate-in fade-in duration-300">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         {metrics.map((s, i) => (
           <KPICard
             key={i}
             label={s.label}
             rawValue={s.rawValue}
-            formatted={s.formatted}
             trend={s.trend}
             trendValue={s.trendValue}
-            color={s.color}
-            cardBg={cardBg}
-            cardText={cardText}
+            borderColorClass={s.borderColorClass}
+            textColorClass={s.textColorClass}
           />
         ))}
       </div>
 
-      {/* ── Tab Nav ──────────────────────────────────────────────────── */}
-      <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem', background: subBg, padding: '0.3rem', borderRadius: '12px', width: 'fit-content' }}>
+      <div className="flex gap-2 mb-6 bg-[var(--sub-bg)] p-1.5 rounded-xl w-fit overflow-x-auto max-w-full">
         {(['overview', 'content', 'audience'] as const).map(tab => (
-          <button key={tab} onClick={() => setActiveSection(tab)} style={{
-            padding: '0.6rem 1.2rem', borderRadius: '10px', cursor: 'pointer', border: 'none',
-            backgroundColor: activeSection === tab ? theme.colors.primary : 'transparent',
-            color: activeSection === tab ? (isDark ? '#fff' : '#000') : (isDark ? '#555' : '#999'),
-            fontWeight: 800, fontSize: '0.8rem', transition: 'all 0.3s',
-          }}>
-            {tab === 'overview' ? 'CRESCIMENTO' : tab === 'content' ? 'CONTEUDO' : 'PUBLICO'}
+          <button key={tab} onClick={() => setActiveSection(tab)} className={`px-5 py-2.5 rounded-lg font-bold text-sm whitespace-nowrap transition-all duration-300
+            ${activeSection === tab ? 'bg-[var(--primary-color)] text-[var(--card-bg)] shadow-md' : 'text-slate-400 hover:text-[var(--card-text)]'}`}>
+            {tab === 'overview' ? 'CRESCIMENTO' : tab === 'content' ? 'CONTEÚDO' : 'PÚBLICO'}
           </button>
         ))}
       </div>
 
-      {/* ── Overview: Area/Bar/Line + Engajamento ────────────────────── */}
       {activeSection === 'overview' && (
-        <div className="animate-fade-in" key={`ov-${animKey}`} style={{ display: 'grid', gap: '1.5rem' }}>
-          <div className="premium-card" style={{ backgroundColor: cardBg, color: cardText }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-              <h3 style={{ fontWeight: 800, fontSize: '0.9rem', opacity: 0.7, letterSpacing: '1px', margin: 0 }}>
-                ALCANCE ORGANICO - ULTIMOS 7 MESES
-              </h3>
+        <div className="animate-in fade-in slide-in-from-bottom-4 duration-300 grid gap-6" key={`ov-${animKey}`}>
+          <Card>
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+              <h3 className="font-black text-sm opacity-70 tracking-widest m-0 uppercase">Alcance Orgânico - Últimos 7 Meses</h3>
               <ChartToggle current={chartType} onChange={setChartType} isDark={isDark} />
             </div>
             {renderMainChart()}
-            <div style={{ display: 'flex', gap: '1.5rem', marginTop: '1rem', justifyContent: 'center' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <div style={{ width: '16px', height: '3px', background: theme.colors.primary, borderRadius: '2px' }} />
-                <span style={{ fontSize: '0.7rem', opacity: 0.6 }}>Alcance</span>
+            <div className="flex flex-wrap gap-6 mt-6 justify-center">
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-1 rounded-full bg-[var(--primary-color)]" />
+                <span className="text-xs font-bold opacity-60">Alcance</span>
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <div style={{ width: '16px', height: '3px', background: '#22c55e', borderRadius: '2px', opacity: 0.7 }} />
-                <span style={{ fontSize: '0.7rem', opacity: 0.6 }}>Seguidores</span>
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-1 rounded-full bg-emerald-500 opacity-80" />
+                <span className="text-xs font-bold opacity-60">Seguidores</span>
               </div>
             </div>
-          </div>
+          </Card>
 
-          {/* Engajamento + Dicas */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
-            <div className="premium-card" style={{ backgroundColor: cardBg, color: cardText }}>
-              <h3 style={{ fontWeight: 800, fontSize: '0.9rem', marginBottom: '1.5rem', opacity: 0.7, letterSpacing: '1px' }}>
-                TAXA DE ENGAJAMENTO (%)
-              </h3>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <Card>
+              <h3 className="font-black text-xs mb-6 opacity-70 tracking-widest uppercase">Taxa de Engajamento (%)</h3>
               <ResponsiveContainer width="100%" height={180}>
                 <LineChart data={monthly}>
                   <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
@@ -399,30 +351,34 @@ const SocialAnalytics: React.FC<SocialAnalyticsProps> = ({ division }) => {
                   <Line type="monotone" dataKey="engajamento" name="Engajamento %" stroke="#f59e0b" strokeWidth={2.5} dot={{ fill: '#f59e0b', r: 4 }} activeDot={{ r: 6 }} />
                 </LineChart>
               </ResponsiveContainer>
-            </div>
+            </Card>
 
-            <div className="premium-card" style={{ backgroundColor: cardBg, color: cardText }}>
-              <h3 style={{ fontWeight: 800, fontSize: '0.9rem', marginBottom: '1.2rem', opacity: 0.7, letterSpacing: '1px' }}>DIAGNOSTICO IA</h3>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
-                {TIPS_DATA[division].map((tip, i) => (
-                  <div key={i} style={{ padding: '0.8rem', borderRadius: '12px', background: subBg, borderLeft: `4px solid ${STATUS_COLOR[tip.status]}` }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.3rem' }}>
-                      <span style={{ fontWeight: 800, fontSize: '0.8rem' }}>{tip.title}</span>
-                      <span style={{ fontSize: '0.55rem', fontWeight: 900, padding: '0.15rem 0.4rem', borderRadius: '4px', background: `${STATUS_COLOR[tip.status]}20`, color: STATUS_COLOR[tip.status] }}>{tip.status.toUpperCase()}</span>
+            <Card>
+              <h3 className="font-black text-xs mb-5 opacity-70 tracking-widest uppercase">Diagnóstico IA</h3>
+              <div className="flex flex-col gap-3">
+                {TIPS_DATA[division].map((tip, i) => {
+                  const statusColors = {
+                    optimal: 'bg-emerald-500/10 border-emerald-500/30 text-emerald-500',
+                    warning: 'bg-amber-500/10 border-amber-500/30 text-amber-500',
+                    critical: 'bg-red-500/10 border-red-500/30 text-red-500',
+                  }[tip.status];
+                  return (
+                    <div key={i} className={`p-4 rounded-xl border border-l-4 ${statusColors}`}>
+                      <div className="flex justify-between items-center mb-1.5">
+                        <span className="font-black text-xs truncate max-w-[70%]">{tip.title}</span>
+                        <span className="text-[10px] font-black uppercase tracking-wider">{tip.status}</span>
+                      </div>
+                      <div className="text-xs opacity-80 leading-relaxed font-medium">{tip.detail}</div>
                     </div>
-                    <div style={{ fontSize: '0.72rem', opacity: 0.6, lineHeight: 1.4 }}>{tip.detail}</div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
-            </div>
+            </Card>
           </div>
 
-          {/* Extra metrics row: Salvamentos, Compartilhamentos, Impressoes */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
-            <div className="premium-card" style={{ backgroundColor: cardBg, color: cardText }}>
-              <h3 style={{ fontWeight: 800, fontSize: '0.9rem', marginBottom: '1.5rem', opacity: 0.7, letterSpacing: '1px' }}>
-                SALVAMENTOS & COMPARTILHAMENTOS
-              </h3>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <Card>
+              <h3 className="font-black text-xs mb-6 opacity-70 tracking-widest uppercase">Salvamentos & Compartilhamentos</h3>
               <ResponsiveContainer width="100%" height={180}>
                 <BarChart data={monthly}>
                   <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
@@ -433,12 +389,10 @@ const SocialAnalytics: React.FC<SocialAnalyticsProps> = ({ division }) => {
                   <Bar dataKey="compartilhamentos" name="Compartilhamentos" fill="#3b82f6" radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
-            </div>
+            </Card>
 
-            <div className="premium-card" style={{ backgroundColor: cardBg, color: cardText }}>
-              <h3 style={{ fontWeight: 800, fontSize: '0.9rem', marginBottom: '1.5rem', opacity: 0.7, letterSpacing: '1px' }}>
-                IMPRESSOES TOTAIS
-              </h3>
+            <Card>
+              <h3 className="font-black text-xs mb-6 opacity-70 tracking-widest uppercase">Impressões Totais</h3>
               <ResponsiveContainer width="100%" height={180}>
                 <AreaChart data={monthly}>
                   <defs>
@@ -451,20 +405,19 @@ const SocialAnalytics: React.FC<SocialAnalyticsProps> = ({ division }) => {
                   <XAxis dataKey="month" tick={{ fill: axisColor, fontSize: 10 }} axisLine={false} tickLine={false} />
                   <YAxis tick={{ fill: axisColor, fontSize: 10 }} axisLine={false} tickLine={false} tickFormatter={(v: number) => `${(v / 1000).toFixed(0)}k`} />
                   <Tooltip content={<CustomTooltip isDark={isDark} />} />
-                  <Area type="monotone" dataKey="impressoes" name="Impressoes" stroke="#3b82f6" strokeWidth={2} fill="url(#gradImp)" dot={{ fill: '#3b82f6', r: 3 }} />
+                  <Area type="monotone" dataKey="impressoes" name="Impressões" stroke="#3b82f6" strokeWidth={2} fill="url(#gradImp)" dot={{ fill: '#3b82f6', r: 3 }} />
                 </AreaChart>
               </ResponsiveContainer>
-            </div>
+            </Card>
           </div>
         </div>
       )}
 
-      {/* ── Content: Bar Chart ──────────────────────────────────────── */}
       {activeSection === 'content' && (
-        <div className="animate-fade-in" key={`ct-${animKey}`} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
-          <div className="premium-card" style={{ backgroundColor: cardBg, color: cardText }}>
-            <h3 style={{ fontWeight: 800, fontSize: '0.9rem', marginBottom: '1.5rem', opacity: 0.7 }}>ALCANCE POR FORMATO</h3>
-            <ResponsiveContainer width="100%" height={240}>
+        <div className="animate-in fade-in slide-in-from-bottom-4 duration-300 grid grid-cols-1 lg:grid-cols-2 gap-6" key={`ct-${animKey}`}>
+          <Card>
+            <h3 className="font-black text-xs mb-6 opacity-70 tracking-widest uppercase">Alcance por Formato</h3>
+            <ResponsiveContainer width="100%" height={260}>
               <BarChart data={CONTENT_BREAKDOWN[division]} margin={{ top: 5, right: 10, bottom: 5, left: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
                 <XAxis dataKey="tipo" tick={{ fill: axisColor, fontSize: 11 }} axisLine={false} tickLine={false} />
@@ -477,11 +430,11 @@ const SocialAnalytics: React.FC<SocialAnalyticsProps> = ({ division }) => {
                 </Bar>
               </BarChart>
             </ResponsiveContainer>
-          </div>
+          </Card>
 
-          <div className="premium-card" style={{ backgroundColor: cardBg, color: cardText }}>
-            <h3 style={{ fontWeight: 800, fontSize: '0.9rem', marginBottom: '1.5rem', opacity: 0.7 }}>ENGAJAMENTO POR FORMATO (%)</h3>
-            <ResponsiveContainer width="100%" height={240}>
+          <Card>
+            <h3 className="font-black text-xs mb-6 opacity-70 tracking-widest uppercase">Engajamento por Formato (%)</h3>
+            <ResponsiveContainer width="100%" height={260}>
               <BarChart data={CONTENT_BREAKDOWN[division]} layout="vertical" margin={{ top: 5, right: 20, bottom: 5, left: 50 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke={gridColor} horizontal={false} />
                 <XAxis type="number" tick={{ fill: axisColor, fontSize: 10 }} axisLine={false} tickLine={false} unit="%" domain={[0, 'auto']} />
@@ -490,15 +443,14 @@ const SocialAnalytics: React.FC<SocialAnalyticsProps> = ({ division }) => {
                 <Bar dataKey="eng" name="Engajamento %" radius={[0, 6, 6, 0]} fill="#22c55e" />
               </BarChart>
             </ResponsiveContainer>
-          </div>
+          </Card>
         </div>
       )}
 
-      {/* ── Audience: Pie + Bars ────────────────────────────────────── */}
       {activeSection === 'audience' && (
-        <div className="animate-fade-in" key={`au-${animKey}`} style={{ display: 'grid', gridTemplateColumns: '1fr 1.5fr', gap: '1.5rem' }}>
-          <div className="premium-card" style={{ backgroundColor: cardBg, color: cardText }}>
-            <h3 style={{ fontWeight: 800, fontSize: '0.9rem', marginBottom: '1.5rem', opacity: 0.7 }}>COMPOSICAO DO PUBLICO</h3>
+        <div className="animate-in fade-in slide-in-from-bottom-4 duration-300 grid grid-cols-1 lg:grid-cols-[1fr_1.5fr] gap-6" key={`au-${animKey}`}>
+          <Card>
+            <h3 className="font-black text-xs mb-6 opacity-70 tracking-widest uppercase">Composição do Público</h3>
             <ResponsiveContainer width="100%" height={220}>
               <PieChart>
                 <Pie data={AUDIENCE_DATA[division]} cx="50%" cy="50%" outerRadius={80} innerRadius={40} dataKey="value" paddingAngle={3} label={({ value }) => `${value}%`} labelLine={false}>
@@ -509,45 +461,47 @@ const SocialAnalytics: React.FC<SocialAnalyticsProps> = ({ division }) => {
                 <Tooltip content={<CustomTooltip isDark={isDark} />} />
               </PieChart>
             </ResponsiveContainer>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginTop: '0.5rem' }}>
+            <div className="flex flex-wrap gap-4 mt-6 justify-center">
               {AUDIENCE_DATA[division].map((d, i) => (
-                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.7rem' }}>
-                  <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: PIE_COLORS[i] }} />
-                  <span style={{ opacity: 0.7 }}>{d.name}</span>
+                <div key={i} className="flex items-center gap-2 text-xs font-bold">
+                  <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: PIE_COLORS[i] }} />
+                  <span className="opacity-70">{d.name}</span>
                 </div>
               ))}
             </div>
-          </div>
+          </Card>
 
-          <div className="premium-card" style={{ backgroundColor: cardBg, color: cardText }}>
-            <h3 style={{ fontWeight: 800, fontSize: '0.9rem', marginBottom: '1.2rem', opacity: 0.7 }}>SEGMENTOS DETALHADOS</h3>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.2rem' }}>
+          <Card>
+            <h3 className="font-black text-xs mb-6 opacity-70 tracking-widest uppercase">Segmentos Detalhados</h3>
+            <div className="flex flex-col gap-6">
               {AUDIENCE_DATA[division].map((seg, i) => (
                 <div key={i}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.4rem' }}>
-                    <span style={{ fontWeight: 800, fontSize: '0.85rem' }}>{seg.name}</span>
-                    <span style={{ fontWeight: 900, color: PIE_COLORS[i] }}>{seg.value}%</span>
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="font-bold text-sm">{seg.name}</span>
+                    <span className="font-black text-sm" style={{ color: PIE_COLORS[i] }}>{seg.value}%</span>
                   </div>
-                  <div style={{ height: '8px', borderRadius: '4px', background: isDark ? '#333' : '#eee', overflow: 'hidden' }}>
-                    <div style={{ width: `${seg.value}%`, height: '100%', background: `linear-gradient(90deg, ${PIE_COLORS[i]}, ${PIE_COLORS[i]}88)`, transition: 'width 1s cubic-bezier(0.4,0,0.2,1)', borderRadius: '4px' }} />
+                  <div className="h-2.5 rounded-full overflow-hidden bg-[var(--sub-bg)]">
+                    <div className="h-full rounded-full transition-all duration-1000 ease-out" style={{ width: `${seg.value}%`, background: `linear-gradient(90deg, ${PIE_COLORS[i]}, ${PIE_COLORS[i]}cc)` }} />
                   </div>
                 </div>
               ))}
             </div>
-            <div style={{ marginTop: '1.5rem', padding: '1rem', borderRadius: '12px', background: subBg }}>
-              <div style={{ fontSize: '0.65rem', fontWeight: 800, opacity: 0.4, marginBottom: '0.6rem', textTransform: 'uppercase' }}>Melhores Horarios</div>
-              <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap' }}>
+            <div className="mt-8 p-5 rounded-xl bg-[var(--sub-bg)]">
+              <div className="text-[10px] font-black opacity-40 mb-3 uppercase tracking-widest">Melhores Horários para Postar</div>
+              <div className="flex gap-3 flex-wrap">
                 {(division === 'connect-gray'
                   ? ['12:00', '18:30', '21:00']
                   : division === 'gray-up' ? ['07:30', '12:00', '19:00']
                     : division === 'gray-up-flow' ? ['08:00', '12:30', '20:00']
                       : ['10:00', '14:00', '21:30']
                 ).map((t, i) => (
-                  <span key={i} style={{ padding: '0.5rem 1rem', borderRadius: '10px', background: theme.colors.primary, color: isDark ? '#fff' : '#000', fontWeight: 900, fontSize: '0.9rem' }}>{t}</span>
+                  <span key={i} className="px-4 py-2 rounded-lg bg-[var(--primary-color)] text-[var(--card-bg)] font-black text-sm shadow-md">
+                    {t}
+                  </span>
                 ))}
               </div>
             </div>
-          </div>
+          </Card>
         </div>
       )}
     </div>

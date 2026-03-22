@@ -6,38 +6,51 @@ import type { Platform } from '../constants/ContentTemplates';
 import { useAppContext } from '../context/AppContext';
 import { PlatformIcon } from '../constants/SocialIcons';
 import { generateCopyWithGemini } from '../services/GeminiService';
+import { Button, Card, StatusBadge, EmptyState } from '../design-system';
+import { Copy, Wand2, Video, Check, MessageSquareDot, RefreshCw, X, ArrowRight } from 'lucide-react';
 
 interface ReelsGeneratorProps {
   division: Division;
 }
 
+interface ScriptData {
+  hook: string;
+  body: string;
+  cta: string;
+  tags: string[];
+}
+
 const ReelsGenerator: React.FC<ReelsGeneratorProps> = ({ division }) => {
   const { addNotification, sendCopyToVideoLab } = useAppContext();
   const [activePlatform, setActivePlatform] = useState<Platform>('instagram');
-  const [generatedScript, setGeneratedScript] = useState<{
-    hook: string;
-    body: string;
-    cta: string;
-    tags: string[];
-  } | null>(null);
+  
+  const [generatedScript, setGeneratedScript] = useState<ScriptData | null>(null);
+  const [previousScript, setPreviousScript] = useState<ScriptData | null>(null); // For comparison state
+  const [refinedScript, setRefinedScript] = useState<ScriptData | null>(null); // Temporary state for review
+  
   const [copyFeedback, setCopyFeedback] = useState(false);
   const [sendingToVideo, setSendingToVideo] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [customTopic, setCustomTopic] = useState('');
   const [useAI, setUseAI] = useState(true);
+  
+  // Refinement states
+  const [isRefining, setIsRefining] = useState(false);
+  const [refinementFeedback, setRefinementFeedback] = useState('');
+  const [isRefinementLoading, setIsRefinementLoading] = useState(false);
+
   const [prevDivision, setPrevDivision] = useState(division);
 
   if (division !== prevDivision) {
     setPrevDivision(division);
     setGeneratedScript(null);
+    setPreviousScript(null);
+    setRefinedScript(null);
+    setIsRefining(false);
   }
 
   const template = CONTENT_TEMPLATES[division];
   const theme = DIVISIONS[division];
-  const isDark = division !== 'gray-art';
-  const cardBg = isDark ? '#1e1e1e' : '#fff';
-  const cardText = isDark ? '#fff' : '#1a1a1a';
-  const subBg = isDark ? '#2d2d2d' : '#f0f2f5';
 
   const platforms: { id: Platform; name: string; icon: string }[] = [
     { id: 'instagram', name: 'Instagram', icon: 'IG' },
@@ -50,6 +63,9 @@ const ReelsGenerator: React.FC<ReelsGeneratorProps> = ({ division }) => {
 
   const generateScript = async () => {
     setIsGenerating(true);
+    setPreviousScript(null);
+    setRefinedScript(null);
+    setIsRefining(false);
 
     if (useAI) {
       try {
@@ -60,7 +76,7 @@ const ReelsGenerator: React.FC<ReelsGeneratorProps> = ({ division }) => {
           cta: result.cta,
           tags: result.tags,
         });
-        addNotification(`Conteudo IA para ${activePlatform} gerado com Gemini!`, 'success');
+        addNotification(`Conteúdo IA para ${activePlatform} gerado com Gemini!`, 'success');
       } catch (err) {
         addNotification(`Erro na IA, usando template local: ${err}`, 'info');
         const pd = template.platforms[activePlatform];
@@ -79,15 +95,60 @@ const ReelsGenerator: React.FC<ReelsGeneratorProps> = ({ division }) => {
         cta: pick(pd.cta),
         tags: pd.tags,
       });
-      addNotification(`Conteudo para ${activePlatform} gerado!`, 'success');
+      addNotification(`Conteúdo para ${activePlatform} gerado!`, 'success');
     }
 
     setIsGenerating(false);
   };
 
+  const handleRefine = async () => {
+    if (!generatedScript || !refinementFeedback.trim()) return;
+    setIsRefinementLoading(true);
+
+    try {
+      const contextPrompt = `Versão original a ser melhorada:\nGANCHO: ${generatedScript.hook}\nCORPO: ${generatedScript.body}\nCTA: ${generatedScript.cta}\n\nFEEDBACK/DIRETRIZ PARA MELHORIA: ${refinementFeedback}\n\nReescreva o conteúdo aplicando exatamente as melhorias solicitadas acima.`;
+      
+      const result = await generateCopyWithGemini(division, activePlatform, contextPrompt);
+      setPreviousScript(generatedScript);
+      setRefinedScript({
+        hook: result.hook,
+        body: result.body,
+        cta: result.cta,
+        tags: result.tags,
+      });
+      addNotification('Variação melhorada gerada com sucesso. Analise e decida.', 'info');
+    } catch (err) {
+      addNotification(`Erro ao refinar com Gemini: ${err}`, 'error');
+    } finally {
+      setIsRefinementLoading(false);
+    }
+  };
+
+  const acceptRefinement = () => {
+    if (refinedScript) {
+      setGeneratedScript(refinedScript);
+      setPreviousScript(null);
+      setRefinedScript(null);
+      setIsRefining(false);
+      setRefinementFeedback('');
+      addNotification('Alterações aceitas!', 'success');
+    }
+  };
+
+  const discardRefinement = () => {
+    setPreviousScript(null);
+    setRefinedScript(null);
+    addNotification('Alterações descartadas.', 'info');
+  };
+
+  const getCopyText = (script: ScriptData | null) => {
+    if (!script) return '';
+    return `[${activePlatform.toUpperCase()}] ${theme.name}\nPúblico: ${template.audience}\n\nGANCHO: ${script.hook}\nCONTEÚDO: ${script.body}\nCTA: ${script.cta}\nTAGS: ${script.tags.map(t => '#' + t).join(' ')}`;
+  };
+
   const copyToClipboard = async () => {
     if (!generatedScript) return;
-    const text = `[${activePlatform.toUpperCase()}] ${theme.name}\nPúblico: ${template.audience}\n\nGANCHO: ${generatedScript.hook}\nCONTEÚDO: ${generatedScript.body}\nCTA: ${generatedScript.cta}\nTAGS: ${generatedScript.tags.map(t => '#' + t).join(' ')}`;
+    const text = getCopyText(generatedScript);
     try {
       await navigator.clipboard.writeText(text);
       setCopyFeedback(true);
@@ -106,7 +167,6 @@ const ReelsGenerator: React.FC<ReelsGeneratorProps> = ({ division }) => {
     }
   };
 
-  // ✅ NOVO: Envia copy para o Vídeo IA Lab com animação de feedback
   const handleSendToVideoLab = () => {
     if (!generatedScript) return;
     setSendingToVideo(true);
@@ -126,205 +186,234 @@ const ReelsGenerator: React.FC<ReelsGeneratorProps> = ({ division }) => {
       setSendingToVideo(false);
     }, 800);
   };
-
-  return (
-    <div className="animate-fade-in">
-      <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem', overflowX: 'auto', paddingBottom: '0.5rem' }}>
-        {platforms.map(p => (
-          <button
-            key={p.id}
-            onClick={() => { setActivePlatform(p.id); setGeneratedScript(null); }}
-            style={{
-              padding: '0.6rem 1.2rem', borderRadius: '10px',
-              backgroundColor: activePlatform === p.id ? theme.colors.primary : subBg,
-              color: activePlatform === p.id ? (isDark ? '#fff' : '#000') : (isDark ? '#aaa' : '#666'),
-              fontWeight: 700, fontSize: '0.8rem',
-              display: 'flex', alignItems: 'center', gap: '0.4rem', whiteSpace: 'nowrap',
-            }}
-          >
-            <PlatformIcon platformId={p.id} size={16} /> {p.name}
-          </button>
+  
+  const ScriptContentDisplay = ({ script, title, isRefined = false }: { script: ScriptData, title?: string, isRefined?: boolean }) => (
+    <div className={`flex flex-col gap-5 ${isRefined ? 'p-4 rounded-xl bg-[var(--primary-color)]/5 border border-[var(--primary-color)]/20' : ''}`}>
+      {title && <h4 className={`text-xs font-black tracking-widest uppercase mb-1 ${isRefined ? 'text-[var(--primary-color)]' : 'opacity-50'}`}>{title}</h4>}
+      <div className="border-l-4 border-[var(--primary-color)] pl-4 py-1">
+        <span className="text-[10px] font-bold opacity-50 block mb-1.5 uppercase tracking-wider">GANCHO</span>
+        <p className="font-bold text-sm sm:text-base leading-snug">{script.hook}</p>
+      </div>
+      <div className="border-l-4 border-slate-500 pl-4 py-1">
+        <span className="text-[10px] font-bold opacity-50 block mb-1.5 uppercase tracking-wider">CORPO</span>
+        <p className="text-xs sm:text-sm leading-relaxed opacity-90">{script.body}</p>
+      </div>
+      <div className="border-l-4 border-emerald-500 pl-4 py-1">
+        <span className="text-[10px] font-bold opacity-50 block mb-1.5 uppercase tracking-wider">CTA</span>
+        <p className="font-bold text-xs sm:text-sm leading-snug">{script.cta}</p>
+      </div>
+      <div className="flex gap-2 flex-wrap mt-2">
+        {script.tags.map(tag => (
+          <span key={tag} className="text-[var(--primary-color)] text-[10px] sm:text-xs font-bold px-2 py-1 rounded-md bg-[var(--primary-color)]/10">
+            #{tag}
+          </span>
         ))}
       </div>
+    </div>
+  );
 
-      <div className="reels-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
-        <div className="premium-card" style={{ backgroundColor: cardBg, color: cardText }}>
-          <h2 style={{ marginBottom: '1rem', fontWeight: 800, fontSize: '1.1rem' }}>
-            Criar para <span style={{ color: theme.colors.primary }}>{activePlatform}</span>
-          </h2>
-          <p style={{ opacity: 0.5, marginBottom: '1.5rem', fontSize: '0.8rem' }}>
-            Conteúdo estratégico otimizado para o algoritmo.
-          </p>
-
-          <div style={{ marginBottom: '1rem' }}>
-            <div style={{ fontSize: '0.65rem', fontWeight: 700, opacity: 0.4, marginBottom: '0.3rem', textTransform: 'uppercase' }}>Público-Alvo</div>
-            <div style={{ padding: '0.8rem', borderRadius: '8px', background: subBg, fontSize: '0.8rem' }}>
-              {template.audience}
-            </div>
-          </div>
-
-          <div style={{ marginBottom: '1rem' }}>
-            <div style={{ fontSize: '0.65rem', fontWeight: 700, opacity: 0.4, marginBottom: '0.3rem', textTransform: 'uppercase' }}>Tema / Assunto (opcional)</div>
-            <input
-              type="text"
-              value={customTopic}
-              onChange={e => setCustomTopic(e.target.value)}
-              placeholder="Ex: Coffee Meet de marco, modernizacao de elevador..."
-              style={{
-                width: '100%', padding: '0.8rem', borderRadius: '8px',
-                background: subBg, border: 'none', color: cardText,
-                fontSize: '0.8rem', outline: 'none',
-              }}
-            />
-          </div>
-
-          <div style={{
-            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-            marginBottom: '1rem', padding: '0.6rem 0.8rem', borderRadius: '8px', background: subBg,
-          }}>
-            <span style={{ fontSize: '0.75rem', fontWeight: 700 }}>Gemini IA</span>
+  return (
+    <div className="animate-in fade-in duration-300">
+      <div className="flex gap-2 mb-6 overflow-x-auto pb-2 scrollbar-hide">
+        {platforms.map(p => {
+          const isActive = activePlatform === p.id;
+          return (
             <button
-              onClick={() => setUseAI(!useAI)}
-              style={{
-                width: '44px', height: '24px', borderRadius: '12px',
-                background: useAI ? theme.colors.primary : '#555',
-                position: 'relative', transition: 'background 0.3s',
-              }}
+              key={p.id}
+              onClick={() => { setActivePlatform(p.id); setGeneratedScript(null); setPreviousScript(null); setRefinedScript(null); setIsRefining(false); }}
+              className={`px-5 py-2.5 rounded-xl font-bold text-sm flex items-center gap-2 transition-all duration-300 whitespace-nowrap
+                ${isActive 
+                  ? 'bg-[var(--primary-color)] text-[var(--card-bg)] shadow-lg' 
+                  : 'bg-[var(--sub-bg)] text-slate-400 hover:text-[var(--card-text)]'}`}
             >
-              <span style={{
-                position: 'absolute', top: '2px',
-                left: useAI ? '22px' : '2px',
-                width: '20px', height: '20px', borderRadius: '50%',
-                background: '#fff', transition: 'left 0.3s',
-              }} />
+              <PlatformIcon platformId={p.id} size={16} /> {p.name}
             </button>
-          </div>
-
-          <button
-            onClick={generateScript}
-            disabled={isGenerating}
-            style={{
-              width: '100%', padding: '1rem', borderRadius: '12px',
-              backgroundColor: theme.colors.primary,
-              color: isDark ? '#fff' : '#000',
-              fontWeight: 800, fontSize: '0.9rem',
-              opacity: isGenerating ? 0.7 : 1,
-              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem',
-            }}
-          >
-            {isGenerating ? (
-              <>
-                <span style={{
-                  display: 'inline-block', width: '16px', height: '16px',
-                  border: '2px solid rgba(255,255,255,0.3)', borderTop: '2px solid currentColor',
-                  borderRadius: '50%', animation: 'spin 0.8s linear infinite'
-                }} />
-                GERANDO...
-              </>
-            ) : 'GERAR CONTEUDO'}
-          </button>
-
-          {/* ✅ NOVO: Botão Transformar em Vídeo — aparece quando há copy gerada */}
-          {generatedScript && (
-            <button
-              onClick={handleSendToVideoLab}
-              disabled={sendingToVideo}
-              style={{
-                width: '100%', padding: '1rem', borderRadius: '12px',
-                marginTop: '0.8rem',
-                background: sendingToVideo
-                  ? `${theme.colors.primary}88`
-                  : `linear-gradient(135deg, ${theme.colors.primary}, ${theme.colors.secondary || '#7c3aed'})`,
-                color: '#fff',
-                fontWeight: 800, fontSize: '0.9rem',
-                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem',
-                boxShadow: `0 8px 25px ${theme.colors.primary}44`,
-                transition: 'all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
-                transform: sendingToVideo ? 'scale(0.97)' : 'scale(1)',
-              }}
-            >
-              {sendingToVideo ? (
-                <>
-                  <span style={{
-                    display: 'inline-block', width: '16px', height: '16px',
-                    border: '2px solid rgba(255,255,255,0.3)', borderTop: '2px solid #fff',
-                    borderRadius: '50%', animation: 'spin 0.8s linear infinite'
-                  }} />
-                  ENVIANDO PARA O VÍDEO IA...
-                </>
-              ) : (
-                <>🎬 TRANSFORMAR EM VÍDEO IA</>
-              )}
-            </button>
-          )}
-
-          {generatedScript && (
-            <div style={{
-              marginTop: '0.8rem', padding: '0.6rem 0.8rem',
-              borderRadius: '8px', background: isDark ? '#ffffff08' : '#f8f8f8',
-              fontSize: '0.7rem', opacity: 0.5, textAlign: 'center',
-              border: `1px dashed ${isDark ? '#333' : '#ddd'}`
-            }}>
-              💡 Clique em "Transformar" para enviar a copy direto para o Vídeo IA
-            </div>
-          )}
-        </div>
-
-        <div className="premium-card" style={{
-          backgroundColor: cardBg, color: cardText,
-          border: generatedScript ? 'none' : `2px dashed ${isDark ? '#333' : '#ddd'}`,
-          minHeight: '300px',
-          display: 'flex', flexDirection: 'column',
-          justifyContent: generatedScript ? 'flex-start' : 'center',
-        }}>
-          {!generatedScript ? (
-            <div style={{ textAlign: 'center', opacity: 0.3 }}>
-              <div style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>Clique em "Gerar"</div>
-              <p style={{ fontSize: '0.8rem' }}>O conteudo aparece aqui</p>
-            </div>
-          ) : (
-            <div className="animate-fade-in">
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.2rem' }}>
-                <h3 style={{ fontSize: '1rem', fontWeight: 800 }}>SCRIPT</h3>
-                <button
-                  onClick={copyToClipboard}
-                  style={{
-                    padding: '0.4rem 0.8rem', borderRadius: '6px',
-                    border: `1px solid ${theme.colors.primary}`,
-                    color: copyFeedback ? '#22c55e' : theme.colors.primary,
-                    fontWeight: 700, fontSize: '0.7rem',
-                    background: copyFeedback ? '#22c55e18' : 'transparent',
-                  }}
-                >
-                  {copyFeedback ? 'COPIADO!' : 'COPIAR'}
-                </button>
-              </div>
-
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                <div style={{ borderLeft: `3px solid ${theme.colors.primary}`, paddingLeft: '0.8rem' }}>
-                  <span style={{ fontSize: '0.6rem', fontWeight: 700, opacity: 0.4 }}>GANCHO</span>
-                  <p style={{ fontWeight: 700, fontSize: '0.9rem' }}>{generatedScript.hook}</p>
-                </div>
-                <div style={{ borderLeft: '3px solid #888', paddingLeft: '0.8rem' }}>
-                  <span style={{ fontSize: '0.6rem', fontWeight: 700, opacity: 0.4 }}>CORPO</span>
-                  <p style={{ fontSize: '0.85rem', lineHeight: 1.5 }}>{generatedScript.body}</p>
-                </div>
-                <div style={{ borderLeft: '3px solid #22c55e', paddingLeft: '0.8rem' }}>
-                  <span style={{ fontSize: '0.6rem', fontWeight: 700, opacity: 0.4 }}>CTA</span>
-                  <p style={{ fontWeight: 700, fontSize: '0.85rem' }}>{generatedScript.cta}</p>
-                </div>
-                <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
-                  {generatedScript.tags.map(tag => (
-                    <span key={tag} style={{ color: theme.colors.primary, fontSize: '0.75rem', fontWeight: 600 }}>#{tag}</span>
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
+          );
+        })}
       </div>
 
-      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      <div className="grid grid-cols-1 lg:grid-cols-[400px_1fr] gap-6">
+        
+        {/* Left Column - Input Panel */}
+        <div className="flex flex-col gap-6">
+          <Card>
+            <h2 className="text-lg font-extrabold mb-4">
+              Criar para <span className="text-[var(--primary-color)]">{activePlatform}</span>
+            </h2>
+            <p className="text-sm opacity-50 mb-6 font-medium">
+              Conteúdo estratégico otimizado para o algoritmo.
+            </p>
+
+            <div className="mb-4">
+              <div className="text-[10px] font-bold opacity-40 mb-1.5 uppercase tracking-wider">Público-Alvo</div>
+              <div className="p-3.5 rounded-xl bg-[var(--sub-bg)] text-sm font-medium">
+                {template.audience}
+              </div>
+            </div>
+
+            <div className="mb-4">
+              <div className="text-[10px] font-bold opacity-40 mb-1.5 uppercase tracking-wider">Tema / Assunto (opcional)</div>
+              <input
+                type="text"
+                value={customTopic}
+                onChange={e => setCustomTopic(e.target.value)}
+                placeholder="Ex: Coffee Meet de março..."
+                className="w-full p-3.5 rounded-xl bg-[var(--sub-bg)] border-none text-[var(--card-text)] text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[var(--primary-color)]/50 transition-all"
+              />
+            </div>
+
+            <div className="flex items-center justify-between mb-4 p-3 rounded-xl bg-[var(--sub-bg)] border border-white/5 dark:border-black/5">
+              <span className="text-xs font-bold uppercase tracking-wider">Gemini IA</span>
+              <button
+                onClick={() => setUseAI(!useAI)}
+                className={`w-11 h-6 rounded-full relative transition-colors duration-300 ${useAI ? 'bg-[var(--primary-color)]' : 'bg-slate-600'}`}
+              >
+                <span className={`absolute top-0.5 w-5 h-5 rounded-full bg-white transition-all duration-300 ${useAI ? 'left-[22px]' : 'left-[2px]'}`} />
+              </button>
+            </div>
+
+            <Button
+              size="lg"
+              fullWidth
+              onClick={generateScript}
+              loading={isGenerating}
+              icon={Wand2}
+            >
+              GERAR CONTEÚDO
+            </Button>
+          </Card>
+          
+          {generatedScript && !refinedScript && (
+             <Card className="!bg-[var(--primary-color)]/5 border border-[var(--primary-color)]/20 animate-in slide-in-from-left-4">
+               <h3 className="text-xs font-black uppercase tracking-widest text-[var(--primary-color)] mb-3 flex items-center gap-2">
+                 <MessageSquareDot size={14} /> Refinar Copy com IA
+               </h3>
+               <p className="text-xs opacity-70 mb-3 font-medium">
+                 O conteúdo não ficou ideal? Peça ao Gemini para ajustar o tom, focar em um benefício ou reescrever.
+               </p>
+               {isRefining ? (
+                 <div className="animate-in fade-in zoom-in-95 duration-200">
+                   <textarea
+                     value={refinementFeedback}
+                     onChange={e => setRefinementFeedback(e.target.value)}
+                     placeholder="Ex: Deixe o gancho mais intimidador, reduza para 3 linhas, foque em preço..."
+                     rows={3}
+                     className="w-full p-3 rounded-xl bg-[var(--card-bg)] text-sm font-medium border border-[var(--primary-color)]/30 focus:outline-none focus:ring-2 focus:ring-[var(--primary-color)] transition-all resize-y mb-3"
+                     autoFocus
+                   />
+                   <div className="flex gap-2">
+                     <Button size="sm" fullWidth onClick={handleRefine} loading={isRefinementLoading} icon={Wand2} className="!bg-[var(--primary-color)] !text-[var(--card-bg)]">
+                       TENTAR NOVAMENTE
+                     </Button>
+                     <Button size="sm" variant="ghost" onClick={() => { setIsRefining(false); setRefinementFeedback(''); }} disabled={isRefinementLoading}>
+                       <X size={16} />
+                     </Button>
+                   </div>
+                 </div>
+               ) : (
+                 <Button size="sm" variant="secondary" fullWidth onClick={() => setIsRefining(true)} icon={RefreshCw}>
+                   PEDIR ALTERAÇÃO...
+                 </Button>
+               )}
+             </Card>
+          )}
+
+          {generatedScript && !refinedScript && (
+            <div className="animate-in slide-in-from-bottom-4">
+              <Button
+                size="lg"
+                fullWidth
+                onClick={handleSendToVideoLab}
+                loading={sendingToVideo}
+                icon={Video}
+                className="!bg-gradient-to-r !from-[var(--primary-color)] !to-purple-600 !text-white !border-none shadow-xl shadow-[var(--primary-color)]/20 hover:scale-[1.02] active:scale-95"
+              >
+                TRANSFORMAR EM VÍDEO IA
+              </Button>
+              <div className="mt-3 text-[10px] opacity-50 text-center font-bold tracking-widest uppercase">
+                Enviar direto para renderização Veo 3
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Right Column - Results Area */}
+        <Card className={`flex flex-col ${!generatedScript ? 'justify-center min-h-[400px]' : ''} ${!generatedScript ? 'border-2 border-dashed border-white/10 dark:border-black/10 !bg-transparent shadow-none' : ''}`}>
+          {!generatedScript ? (
+            <div className="flex-1 flex flex-col justify-center min-h-[400px]">
+              <EmptyState
+                icon={Wand2}
+                title="Área de Criação"
+                description='Preencha os dados e clique em "Gerar Conteúdo"'
+                className="border-none !bg-transparent"
+              />
+            </div>
+          ) : (
+            <div className="animate-in fade-in zoom-in-95 duration-300 h-full flex flex-col">
+              
+              {!refinedScript ? (
+                <>
+                  <div className="flex justify-between items-center mb-6 border-b border-[var(--sub-bg)] pb-4">
+                    <h3 className="text-sm font-black tracking-widest uppercase flex items-center gap-2">
+                      <Wand2 size={16} className="text-[var(--primary-color)]" /> Resultado Final
+                    </h3>
+                    <Button
+                      size="sm"
+                      variant={copyFeedback ? 'primary' : 'secondary'}
+                      onClick={copyToClipboard}
+                      icon={copyFeedback ? Check : Copy}
+                      className={copyFeedback ? '!bg-emerald-500/20 !text-emerald-500 !border-emerald-500/50' : ''}
+                    >
+                      {copyFeedback ? 'COPIADO!' : 'COPIAR SCRIPT'}
+                    </Button>
+                  </div>
+                  
+                  <div className="flex-1">
+                    <ScriptContentDisplay script={generatedScript} />
+                  </div>
+                </>
+              ) : (
+                <div className="flex flex-col h-full animate-in slide-in-from-right-4">
+                  <div className="flex justify-between items-center mb-6">
+                    <div className="flex items-center gap-2">
+                       <StatusBadge status="warning" label="Modo Comparação" />
+                    </div>
+                    <div className="flex gap-2">
+                      <Button size="sm" variant="ghost" onClick={discardRefinement} icon={X} className="!text-red-500 hover:!bg-red-500/10">
+                        DESCARTAR
+                      </Button>
+                      <Button size="sm" onClick={acceptRefinement} icon={Check} className="!bg-emerald-500 !text-white hover:!bg-emerald-600 shadow-lg shadow-emerald-500/20 text-xs px-4">
+                        ACEITAR MUDANÇAS
+                      </Button>
+                    </div>
+                  </div>
+                  
+                  <div className="bg-amber-500/10 border border-amber-500/20 p-3 rounded-lg text-[11px] font-bold text-amber-500 mb-6 flex items-center gap-2">
+                    <MessageSquareDot size={14} /> Feedback Aplicado: "{refinementFeedback}"
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 flex-1">
+                    {/* Linha Original */}
+                    <div className="opacity-60 grayscale hover:grayscale-0 hover:opacity-100 transition-all">
+                       <ScriptContentDisplay script={previousScript as ScriptData} title="Versão Original" />
+                    </div>
+                    
+                    {/* Divider visual em Telas Grandes */}
+                    <div className="hidden md:flex flex-col items-center justify-center absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none z-10 w-8 h-8 bg-[var(--card-bg)] rounded-full border border-[var(--primary-color)]/30 text-[var(--primary-color)]">
+                      <ArrowRight size={16} />
+                    </div>
+                    
+                    {/* Linha Modificada */}
+                    <div className="relative">
+                       <ScriptContentDisplay script={refinedScript} title="Nova Versão (Gemini AI)" isRefined />
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </Card>
+      </div>
     </div>
   );
 };
