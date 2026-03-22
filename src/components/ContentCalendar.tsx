@@ -1,7 +1,8 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import type { Division } from '../constants/Themes';
 import { useAppContext } from '../context/AppContext';
 import { Card, EmptyState } from '../design-system';
+import { cancelScheduledPost, listScheduledPosts } from '../services/FlowAPIService';
 import { ChevronLeft, ChevronRight, X, Calendar as CalendarIcon, Clock, Plus, Trash2 } from 'lucide-react';
 
 interface ContentCalendarProps {
@@ -13,6 +14,8 @@ type EventStatus = 'rascunho' | 'agendado' | 'publicado' | 'fixed';
 
 interface ScheduledItem {
   id: string;
+  backendId?: string;
+  source: 'local' | 'backend';
   day: number;
   month: number;
   year: number;
@@ -75,47 +78,39 @@ const genId = () => `evt-${++_idCounter}`;
 
 const INITIAL_CONTENT: Record<Division, ScheduledItem[]> = {
   'connect-gray': [
-    { id: genId(), day: 3, month: 2, year: 2026, type: 'Reels', title: 'Dor: Gestão condominial caótica', status: 'publicado', time: '12:00' },
-    { id: genId(), day: 5, month: 2, year: 2026, type: 'Post', title: 'Carrossel: 5 dicas para síndicos', status: 'agendado', time: '18:30' },
-    { id: genId(), day: 10, month: 2, year: 2026, type: 'Story', title: 'Bastidores do evento', status: 'agendado', time: '14:00' },
-    { id: genId(), day: 10, month: 2, year: 2026, type: 'Live', title: 'Live com síndico parceiro', status: 'rascunho', time: '20:00' },
-    { id: genId(), day: 15, month: 2, year: 2026, type: 'Reels', title: 'Coffee Meet highlights', status: 'rascunho', time: '10:00' },
-    { id: genId(), day: 20, month: 2, year: 2026, type: 'Video', title: 'Depoimento cliente Coffee Meet', status: 'agendado', time: '09:00' },
-    { id: genId(), day: 22, month: 2, year: 2026, type: 'Post', title: 'Resultado: evento marco', status: 'rascunho', time: '15:00' },
-    { id: genId(), day: 25, month: 2, year: 2026, type: 'Story', title: 'Contagem regressiva evento', status: 'agendado', time: '11:00' },
+    { id: genId(), source: 'local', day: 10, month: 2, year: 2026, type: 'Live', title: 'Live com síndico parceiro', status: 'rascunho', time: '20:00' },
+    { id: genId(), source: 'local', day: 15, month: 2, year: 2026, type: 'Reels', title: 'Coffee Meet highlights', status: 'rascunho', time: '10:00' },
+    { id: genId(), source: 'local', day: 22, month: 2, year: 2026, type: 'Post', title: 'Resultado: evento marco', status: 'rascunho', time: '15:00' },
   ],
   'gray-up': [
-    { id: genId(), day: 2, month: 2, year: 2026, type: 'Reels', title: 'Dor: Elevador parado = prejuízo', status: 'publicado', time: '07:30' },
-    { id: genId(), day: 4, month: 2, year: 2026, type: 'Post', title: 'Antes/Depois modernização', status: 'agendado', time: '12:00' },
-    { id: genId(), day: 9, month: 2, year: 2026, type: 'Video', title: 'Tour obra Salvador Dalí', status: 'agendado', time: '19:00' },
-    { id: genId(), day: 12, month: 2, year: 2026, type: 'Story', title: 'Equipe em campo', status: 'rascunho', time: '08:00' },
-    { id: genId(), day: 16, month: 2, year: 2026, type: 'Reels', title: 'Time-lapse instalação', status: 'agendado', time: '12:00' },
-    { id: genId(), day: 21, month: 2, year: 2026, type: 'Live', title: 'FAQ manutenção preventiva', status: 'rascunho', time: '20:00' },
-    { id: genId(), day: 27, month: 2, year: 2026, type: 'Post', title: 'Dica segurança elevadores', status: 'agendado', time: '10:00' },
+    { id: genId(), source: 'local', day: 12, month: 2, year: 2026, type: 'Story', title: 'Equipe em campo', status: 'rascunho', time: '08:00' },
+    { id: genId(), source: 'local', day: 21, month: 2, year: 2026, type: 'Live', title: 'FAQ manutenção preventiva', status: 'rascunho', time: '20:00' },
   ],
   'gray-up-flow': [
-    { id: genId(), day: 3, month: 2, year: 2026, type: 'Reels', title: 'Dor: Empresa desorganizada', status: 'publicado', time: '08:00' },
-    { id: genId(), day: 7, month: 2, year: 2026, type: 'Post', title: 'Case: redução 30% desperdício', status: 'agendado', time: '12:30' },
-    { id: genId(), day: 12, month: 2, year: 2026, type: 'Video', title: 'Workshop Lean Manufacturing', status: 'agendado', time: '20:00' },
-    { id: genId(), day: 17, month: 2, year: 2026, type: 'Story', title: 'Bastidores consultoria', status: 'rascunho', time: '14:00' },
-    { id: genId(), day: 23, month: 2, year: 2026, type: 'Reels', title: '5S na prática', status: 'rascunho', time: '09:00' },
-    { id: genId(), day: 26, month: 2, year: 2026, type: 'Live', title: 'Webinar processos', status: 'agendado', time: '19:00' },
+    { id: genId(), source: 'local', day: 17, month: 2, year: 2026, type: 'Story', title: 'Bastidores consultoria', status: 'rascunho', time: '14:00' },
+    { id: genId(), source: 'local', day: 23, month: 2, year: 2026, type: 'Reels', title: '5S na prática', status: 'rascunho', time: '09:00' },
   ],
   'gray-art': [
-    { id: genId(), day: 2, month: 2, year: 2026, type: 'Reels', title: 'Trend: Design minimalista 2026', status: 'publicado', time: '10:00' },
-    { id: genId(), day: 5, month: 2, year: 2026, type: 'Story', title: 'Processo criativo do dia', status: 'agendado', time: '14:00' },
-    { id: genId(), day: 8, month: 2, year: 2026, type: 'Post', title: 'Feed grid harmônico', status: 'agendado', time: '21:30' },
-    { id: genId(), day: 11, month: 2, year: 2026, type: 'Video', title: 'Time-lapse logo design', status: 'rascunho', time: '16:00' },
-    { id: genId(), day: 14, month: 2, year: 2026, type: 'Reels', title: 'Paleta de cores trending', status: 'agendado', time: '10:00' },
-    { id: genId(), day: 18, month: 2, year: 2026, type: 'Live', title: 'Review de portfólio ao vivo', status: 'rascunho', time: '20:00' },
-    { id: genId(), day: 22, month: 2, year: 2026, type: 'Post', title: 'Carrossel: ferramentas design', status: 'agendado', time: '11:00' },
-    { id: genId(), day: 26, month: 2, year: 2026, type: 'Story', title: 'Inspiração do dia', status: 'rascunho', time: '09:00' },
-    { id: genId(), day: 28, month: 2, year: 2026, type: 'Reels', title: 'Transformação marca cliente', status: 'agendado', time: '14:00' },
+    { id: genId(), source: 'local', day: 11, month: 2, year: 2026, type: 'Video', title: 'Time-lapse logo design', status: 'rascunho', time: '16:00' },
+    { id: genId(), source: 'local', day: 18, month: 2, year: 2026, type: 'Live', title: 'Review de portfólio ao vivo', status: 'rascunho', time: '20:00' },
+    { id: genId(), source: 'local', day: 26, month: 2, year: 2026, type: 'Story', title: 'Inspiração do dia', status: 'rascunho', time: '09:00' },
   ],
 };
 
 const MONTHS = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
 const DAYS = ['DOM', 'SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SÁB'];
+
+function inferEventType(platform: string): EventType {
+  if (platform === 'youtube') return 'Video';
+  if (platform === 'whatsapp') return 'Story';
+  return 'Post';
+}
+
+function mapStatus(status: string): EventStatus {
+  if (status === 'published') return 'publicado';
+  if (status === 'failed') return 'rascunho';
+  return 'agendado';
+}
 
 // ── Modal Component ─────────────────────────────────────────────────────────
 
@@ -126,7 +121,7 @@ interface DayModalProps {
   events: ScheduledItem[];
   holidays: { title: string }[];
   onClose: () => void;
-  onAdd: (item: Omit<ScheduledItem, 'id'>) => void;
+  onAdd: (item: Omit<ScheduledItem, 'id' | 'source' | 'backendId'>) => void;
   onDelete: (id: string) => void;
   onUpdateStatus: (id: string, status: EventStatus) => void;
 }
@@ -267,23 +262,53 @@ const ContentCalendar: React.FC<ContentCalendarProps> = ({ division }) => {
   const [currentYear, setCurrentYear] = useState(today.getFullYear());
   const [selectedDay, setSelectedDay] = useState<number | null>(null);
   const [modalDay, setModalDay] = useState<number | null>(null);
-  const [events, setEvents] = useState<ScheduledItem[]>(() => [...INITIAL_CONTENT[division]]);
+  const [localEvents, setLocalEvents] = useState<ScheduledItem[]>(() => [...INITIAL_CONTENT[division]]);
+  const [backendEvents, setBackendEvents] = useState<ScheduledItem[]>([]);
 
-  const [prevDiv, setPrevDiv] = useState(division);
-  if (division !== prevDiv) {
-    setPrevDiv(division);
-    setEvents([...INITIAL_CONTENT[division]]);
+  const refreshBackendEvents = useCallback(async () => {
+    try {
+      const posts = await listScheduledPosts(division);
+      const mapped = posts.map((post) => {
+        const parsed = post.scheduledAt ? new Date(post.scheduledAt) : new Date();
+        return {
+          id: `backend-${post.id}`,
+          backendId: post.id,
+          source: 'backend' as const,
+          day: parsed.getDate(),
+          month: parsed.getMonth(),
+          year: parsed.getFullYear(),
+          type: inferEventType(post.platform.split(',')[0] || 'instagram'),
+          title: post.content,
+          status: mapStatus(post.status),
+          time: post.scheduledAt
+            ? parsed.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+            : undefined,
+        };
+      });
+      setBackendEvents(mapped);
+    } catch {
+      setBackendEvents([]);
+    }
+  }, [division]);
+
+  useEffect(() => {
+    setLocalEvents([...INITIAL_CONTENT[division]]);
     setSelectedDay(null);
     setModalDay(null);
-  }
+    refreshBackendEvents();
+  }, [division, refreshBackendEvents]);
 
   const allEvents: ScheduledItem[] = [
-    ...events,
-    ...GLOBAL_EVENTS.map(e => ({ ...e, id: `global-${e.day}-${e.month}`, year: 2026, type: 'Global' as EventType, status: 'fixed' as EventStatus })),
-    ...BR_HOLIDAYS.map(h => ({ ...h, id: `hol-${h.day}-${h.month}`, year: 2026, type: 'Holiday' as EventType, status: 'fixed' as EventStatus })),
+    ...localEvents,
+    ...backendEvents,
+    ...GLOBAL_EVENTS.map(e => ({ ...e, id: `global-${e.day}-${e.month}`, source: 'local' as const, year: 2026, type: 'Global' as EventType, status: 'fixed' as EventStatus })),
+    ...BR_HOLIDAYS.map(h => ({ ...h, id: `hol-${h.day}-${h.month}`, source: 'local' as const, year: 2026, type: 'Holiday' as EventType, status: 'fixed' as EventStatus })),
   ];
 
-  const monthEvents = allEvents.filter(e => e.month === currentMonth && e.year === currentYear);
+  const monthEvents = useMemo(
+    () => allEvents.filter(e => e.month === currentMonth && e.year === currentYear),
+    [allEvents, currentMonth, currentYear]
+  );
 
   const firstDay = new Date(currentYear, currentMonth, 1).getDay();
   const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
@@ -299,27 +324,45 @@ const ContentCalendar: React.FC<ContentCalendarProps> = ({ division }) => {
   const getHolidaysForDay = (day: number) => BR_HOLIDAYS.filter(h => h.month === currentMonth && h.day === day);
   const getUserEventsForDay = (day: number) => monthEvents.filter(e => e.day === day && e.type !== 'Holiday' && e.type !== 'Global');
 
-  const handleAddEvent = useCallback((item: Omit<ScheduledItem, 'id'>) => {
-    const newItem: ScheduledItem = { ...item, id: genId() };
-    setEvents(prev => [...prev, newItem]);
+  const handleAddEvent = useCallback((item: Omit<ScheduledItem, 'id' | 'source' | 'backendId'>) => {
+    const newItem: ScheduledItem = { ...item, id: genId(), source: 'local' };
+    setLocalEvents(prev => [...prev, newItem]);
     addNotification(`Conteúdo "${item.title}" adicionado em ${item.day}/${item.month + 1}`, 'success');
   }, [addNotification]);
 
-  const handleDeleteEvent = useCallback((id: string) => {
-    setEvents(prev => prev.filter(e => e.id !== id));
+  const handleDeleteEvent = useCallback(async (id: string) => {
+    const backendEvent = backendEvents.find((event) => event.id === id);
+    if (backendEvent?.backendId) {
+      const ok = await cancelScheduledPost(backendEvent.backendId);
+      if (ok) {
+        await refreshBackendEvents();
+        addNotification('Agendamento removido do backend.', 'info');
+      } else {
+        addNotification('Não foi possível remover o agendamento.', 'error');
+      }
+      return;
+    }
+
+    setLocalEvents(prev => prev.filter(e => e.id !== id));
     addNotification('Evento removido', 'info');
-  }, [addNotification]);
+  }, [addNotification, backendEvents, refreshBackendEvents]);
 
   const handleUpdateStatus = useCallback((id: string, status: EventStatus) => {
-    setEvents(prev => prev.map(e => e.id === id ? { ...e, status } : e));
-  }, []);
+    const backendEvent = backendEvents.find((event) => event.id === id);
+    if (backendEvent) {
+      addNotification('Status de item sincronizado deve ser alterado pelo Publicador.', 'info');
+      return;
+    }
+
+    setLocalEvents(prev => prev.map(e => e.id === id ? { ...e, status } : e));
+  }, [addNotification, backendEvents]);
 
   const getPostCount = (day: number) => monthEvents.filter(e => e.day === day && e.type !== 'Holiday' && e.type !== 'Global').length;
 
-  const totalPosts = events.filter(e => e.month === currentMonth && e.year === currentYear).length;
-  const draftCount = events.filter(e => e.month === currentMonth && e.year === currentYear && e.status === 'rascunho').length;
-  const scheduledCount = events.filter(e => e.month === currentMonth && e.year === currentYear && e.status === 'agendado').length;
-  const publishedCount = events.filter(e => e.month === currentMonth && e.year === currentYear && e.status === 'publicado').length;
+  const totalPosts = monthEvents.filter(e => e.type !== 'Holiday' && e.type !== 'Global').length;
+  const draftCount = monthEvents.filter(e => e.status === 'rascunho').length;
+  const scheduledCount = monthEvents.filter(e => e.status === 'agendado').length;
+  const publishedCount = monthEvents.filter(e => e.status === 'publicado').length;
 
   return (
     <div className="animate-in fade-in duration-300">

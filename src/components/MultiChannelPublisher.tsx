@@ -73,6 +73,22 @@ function formatScheduledAt(value?: string | null) {
   return { date: localDate, time: localTime };
 }
 
+function mapScheduledPosts(posts: Awaited<ReturnType<typeof listScheduledPosts>>): ScheduledPost[] {
+  return posts.map((post, index) => {
+    const { date, time } = formatScheduledAt(post.scheduledAt);
+    return {
+      id: index + 1,
+      platforms: post.platform.split(','),
+      date,
+      time,
+      content: post.content,
+      status: toUiStatus(post.status),
+      division: post.division as Division,
+      backendId: post.id,
+    };
+  });
+}
+
 const MultiChannelPublisher: React.FC<{ division: Division }> = ({ division }) => {
   const { addNotification, incrementPosts, stats, addActivityLog } = useAppContext();
   const isDark = division !== 'gray-art';
@@ -90,39 +106,32 @@ const MultiChannelPublisher: React.FC<{ division: Division }> = ({ division }) =
   const [scheduleSuccess, setScheduleSuccess] = useState(false);
   const [previewPlatform, setPreviewPlatform] = useState<'instagram' | 'tiktok' | 'linkedin' | 'youtube'>('instagram');
 
+  const refreshScheduledPosts = async () => {
+    try {
+      const posts = await listScheduledPosts(division);
+      setScheduledPosts(mapScheduledPosts(posts));
+    } catch {
+      setScheduledPosts([]);
+    }
+  };
+
+  const refreshConnectedPlatforms = async () => {
+    try {
+      const accounts = await fetchConnectedAccounts();
+      setConnectedPlatforms([...new Set(accounts.filter((account) => account.status === 'active').map((account) => account.platform))]);
+    } catch {
+      setConnectedPlatforms([]);
+    }
+  };
+
   useEffect(() => {
     setPostContent('');
     setScheduleDate('');
     setActiveTab('publish');
     setSelectedPlatforms(['instagram']);
 
-    listScheduledPosts(division)
-      .then((posts) => {
-        setScheduledPosts(posts.map((post, index) => {
-          const { date, time } = formatScheduledAt(post.scheduledAt);
-          return {
-            id: index + 1,
-            platforms: post.platform.split(','),
-            date,
-            time,
-            content: post.content,
-            status: toUiStatus(post.status),
-            division: post.division as Division,
-            backendId: post.id,
-          };
-        }));
-      })
-      .catch(() => {
-        setScheduledPosts([]);
-      });
-
-    fetchConnectedAccounts()
-      .then((accounts) => {
-        setConnectedPlatforms([...new Set(accounts.filter((account) => account.status === 'active').map((account) => account.platform))]);
-      })
-      .catch(() => {
-        setConnectedPlatforms([]);
-      });
+    refreshScheduledPosts();
+    refreshConnectedPlatforms();
   }, [division]);
 
   const selectedPublishablePlatforms = selectedPlatforms.filter(
@@ -174,7 +183,7 @@ const MultiChannelPublisher: React.FC<{ division: Division }> = ({ division }) =
         .filter((entry): entry is { result: PromiseFulfilledResult<any>; platform: PlatformKey } => entry.result.status === 'fulfilled');
 
       if (fulfilled.length > 0) {
-        incrementPosts();
+        fulfilled.forEach(() => incrementPosts());
         fulfilledPlatforms.forEach(({ platform }) => addActivityLog(platform, 'Post Publicado', 'Postado com sucesso via Publicador', 'success'));
         setPublishSuccess(true);
         addNotification(
@@ -256,19 +265,7 @@ const MultiChannelPublisher: React.FC<{ division: Division }> = ({ division }) =
 
       if (fulfilled.length > 0) {
         fulfilled.forEach(({ platform }) => addActivityLog(platform, 'Post Agendado', `Para ${scheduleDate} às ${scheduleTime}`, 'info'));
-        setScheduledPosts((current) => [
-          {
-            id: Date.now(),
-            platforms: fulfilled.map((entry) => entry.platform),
-            date: scheduleDate,
-            time: scheduleTime,
-            content: postContent,
-            status: 'agendado',
-            division,
-            backendId: String(fulfilled[0].result.value.id),
-          },
-          ...current,
-        ]);
+        await refreshScheduledPosts();
         setScheduleSuccess(true);
         addNotification(
           `Agendado em ${fulfilled.length} rede${fulfilled.length > 1 ? 's' : ''}.`,
@@ -327,7 +324,7 @@ const MultiChannelPublisher: React.FC<{ division: Division }> = ({ division }) =
         publishablePlatforms={selectedPublishablePlatforms}
       />
 
-      <div className={`flex gap-2 mb-6 p-1.5 rounded-xl w-fit ${isDark ? 'bg-white/5' : 'bg-black/5'}`}>
+      <div className={`flex flex-wrap gap-2 mb-6 p-1.5 rounded-xl ${isDark ? 'bg-white/5' : 'bg-black/5'}`}>
         {[
           { key: 'publish' as const, label: 'Publicar Agora' },
           { key: 'schedule' as const, label: 'Agendar' },
@@ -337,7 +334,7 @@ const MultiChannelPublisher: React.FC<{ division: Division }> = ({ division }) =
           <button
             key={tab.key}
             onClick={() => setActiveTab(tab.key)}
-            className={`px-5 py-2 rounded-lg font-bold text-sm transition-all duration-300 ${
+            className={`min-w-[140px] px-5 py-2 rounded-lg font-bold text-sm transition-all duration-300 ${
               activeTab === tab.key
                 ? 'bg-[var(--primary-color)] text-[#1a1a1a] shadow-md'
                 : (isDark ? 'text-slate-400 hover:text-white hover:bg-white/5' : 'text-slate-500 hover:text-black hover:bg-black/5')
@@ -357,7 +354,7 @@ const MultiChannelPublisher: React.FC<{ division: Division }> = ({ division }) =
               <div className={`text-sm mb-6 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
                 Você selecionou <strong className={isDark ? 'text-white' : 'text-black'}>{selectedPlatforms.length}</strong> redes sociais para disparo simultâneo do conteúdo.
               </div>
-              <div className={`mb-6 rounded-xl border p-4 text-xs leading-relaxed ${
+              <div className={`mb-6 rounded-xl border p-4 text-xs leading-relaxed space-y-2 ${
                 isDark ? 'bg-black/20 border-white/10 text-slate-300' : 'bg-white/60 border-black/10 text-slate-700'
               }`}>
                 <div><strong>Publicação imediata:</strong> {selectedPublishablePlatforms.length} rede{selectedPublishablePlatforms.length !== 1 ? 's' : ''} pronta{selectedPublishablePlatforms.length !== 1 ? 's' : ''}.</div>
@@ -376,7 +373,6 @@ const MultiChannelPublisher: React.FC<{ division: Division }> = ({ division }) =
                 scheduleSuccess={scheduleSuccess}
                 selectedCount={selectedPlatforms.length}
                 publishDisabled={selectedPublishablePlatforms.length === 0 || !postContent.trim()}
-                scheduleDisabled={selectedSchedulablePlatforms.length === 0}
               />
             </div>
           </div>

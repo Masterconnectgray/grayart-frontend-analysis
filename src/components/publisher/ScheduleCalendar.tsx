@@ -66,12 +66,36 @@ export const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({
   onSchedule
 }) => {
   const theme = DIVISIONS[division];
+  const isDark = division !== 'gray-art';
   const schedule = DIVISION_SCHEDULES[division] || [];
+
+  const selectRecommendedSlot = (dayLabel: string, time: string) => {
+    const weekdayMap: Record<string, number> = {
+      Dom: 0,
+      Seg: 1,
+      Ter: 2,
+      Qua: 3,
+      Qui: 4,
+      Sex: 5,
+      Sab: 6,
+    };
+
+    const targetWeekday = weekdayMap[dayLabel];
+    const now = new Date();
+    const next = new Date(now);
+    const currentWeekday = next.getDay();
+    let offset = (targetWeekday - currentWeekday + 7) % 7;
+    if (offset === 0) offset = 7;
+    next.setDate(now.getDate() + offset);
+
+    onDateChange(next.toLocaleDateString('sv-SE'));
+    onTimeChange(time);
+  };
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-      <div className="bg-white/5 border border-white/10 rounded-2xl p-6">
-        <h3 className="text-base font-bold mb-5">AGENDAMENTO</h3>
+      <div className={`rounded-2xl p-6 border ${isDark ? 'bg-white/5 border-white/10' : 'bg-black/5 border-black/10'}`}>
+        <h3 className={`text-base font-bold mb-5 ${isDark ? 'text-white' : 'text-[#1a1a1a]'}`}>AGENDAMENTO</h3>
         <div className="grid grid-cols-2 gap-4 mb-4">
           <div>
             <label className="text-xs font-bold opacity-50 block mb-2">DATA</label>
@@ -79,7 +103,9 @@ export const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({
               type="date" 
               value={scheduleDate} 
               onChange={e => onDateChange(e.target.value)} 
-              className="w-full p-3 rounded-xl bg-black/20 border-none text-white focus:outline-none focus:ring-2 focus:ring-[var(--primary-color)]" 
+              className={`w-full p-3 rounded-xl border focus:outline-none focus:ring-2 focus:ring-[var(--primary-color)] ${
+                isDark ? 'bg-black/20 border-white/10 text-white' : 'bg-white border-black/10 text-[#1a1a1a]'
+              }`}
             />
           </div>
           <div>
@@ -88,7 +114,9 @@ export const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({
               type="time" 
               value={scheduleTime} 
               onChange={e => onTimeChange(e.target.value)} 
-              className="w-full p-3 rounded-xl bg-black/20 border-none text-white focus:outline-none focus:ring-2 focus:ring-[var(--primary-color)]" 
+              className={`w-full p-3 rounded-xl border focus:outline-none focus:ring-2 focus:ring-[var(--primary-color)] ${
+                isDark ? 'bg-black/20 border-white/10 text-white' : 'bg-white border-black/10 text-[#1a1a1a]'
+              }`}
             />
           </div>
         </div>
@@ -97,7 +125,9 @@ export const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({
           onChange={e => onContentChange(e.target.value)}
           placeholder="Conteúdo para agendar..."
           rows={4}
-          className="w-full p-4 rounded-xl bg-black/20 border-none text-white text-sm resize-none mb-4 focus:outline-none focus:ring-2 focus:ring-[var(--primary-color)]"
+          className={`w-full p-4 rounded-xl border text-sm resize-none mb-4 focus:outline-none focus:ring-2 focus:ring-[var(--primary-color)] ${
+            isDark ? 'bg-black/20 border-white/10 text-white' : 'bg-white border-black/10 text-[#1a1a1a]'
+          }`}
         />
         <Button 
           fullWidth
@@ -111,15 +141,17 @@ export const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({
         </Button>
       </div>
 
-      <div className="bg-white/5 border border-white/10 rounded-2xl p-6">
-        <h3 className="text-base font-bold mb-1">CRONOGRAMA ESTRATÉGICO</h3>
+      <div className={`rounded-2xl p-6 border ${isDark ? 'bg-white/5 border-white/10' : 'bg-black/5 border-black/10'}`}>
+        <h3 className={`text-base font-bold mb-1 ${isDark ? 'text-white' : 'text-[#1a1a1a]'}`}>CRONOGRAMA ESTRATÉGICO</h3>
         <p className="text-xs opacity-50 mb-4">Horários recomendados para {theme.name}</p>
         <div className="flex flex-col gap-3">
           {schedule.map((item, i) => (
             <div 
               key={i} 
-              className="p-3 border border-white/5 rounded-xl bg-black/20 flex justify-between items-center cursor-pointer hover:bg-white/5 transition-colors"
-              onClick={() => onTimeChange(item.time)}
+              className={`p-3 rounded-xl flex justify-between items-center cursor-pointer transition-colors border ${
+                isDark ? 'border-white/5 bg-black/20 hover:bg-white/5' : 'border-black/5 bg-white/60 hover:bg-black/5'
+              }`}
+              onClick={() => selectRecommendedSlot(item.day, item.time)}
             >
               <div className="flex-1">
                 <div className="flex items-center gap-2 mb-1">
@@ -134,7 +166,7 @@ export const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({
               </div>
               <div className="flex gap-1">
                 {item.platforms.map(pId => (
-                  <span key={pId} className="flex items-center justify-center w-7 h-7 rounded-lg overflow-hidden bg-white/5">
+                  <span key={pId} className={`flex items-center justify-center w-7 h-7 rounded-lg overflow-hidden ${isDark ? 'bg-white/5' : 'bg-black/5'}`}>
                     <PlatformIcon platformId={pId} size={20} />
                   </span>
                 ))}

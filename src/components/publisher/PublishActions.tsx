@@ -31,7 +31,7 @@ export const PublishActions: React.FC<PublishActionsProps> = ({
         loading={isPublishing}
         disabled={publishDisabled}
         onClick={onPublishNow}
-        className={publishSuccess ? '!bg-emerald-500 !text-white' : ''}
+        className={publishSuccess ? '!bg-emerald-500 !text-white min-h-[56px]' : 'min-h-[56px]'}
         icon={publishSuccess ? undefined : Send}
       >
         {publishSuccess ? 'Publicado com Sucesso!' : `Publicar em ${selectedCount} Redes`}
@@ -43,7 +43,7 @@ export const PublishActions: React.FC<PublishActionsProps> = ({
         fullWidth
         disabled={scheduleDisabled}
         onClick={onSchedule}
-        className={scheduleSuccess ? '!bg-emerald-500/20 !text-emerald-400 !border-emerald-500/50' : ''}
+        className={scheduleSuccess ? '!bg-emerald-500/20 !text-emerald-400 !border-emerald-500/50 min-h-[56px]' : 'min-h-[56px]'}
         icon={scheduleSuccess ? undefined : CalendarClock}
       >
         {scheduleSuccess ? 'Agendado!' : 'Agendar Publicação'}

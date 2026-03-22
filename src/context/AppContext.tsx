@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback, use
 import type { Division } from '../constants/Themes';
 
 export type Tab = 'marketing' | 'operations';
-export type MarketingView = 'create' | 'media' | 'video' | 'photo' | 'connect' | 'publish' | 'monitor';
+export type MarketingView = 'create' | 'media' | 'video' | 'photo' | 'connect' | 'publish' | 'monitor' | 'history';
 
 interface Notification {
     id: number;

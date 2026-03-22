@@ -13,9 +13,10 @@ const ConnectJourney = lazy(() => import('./components/journeys/ConnectJourney')
 const PublishJourney = lazy(() => import('./components/journeys/PublishJourney'));
 const MonitorJourney = lazy(() => import('./components/journeys/MonitorJourney'));
 const PhotoAnalyzer = lazy(() => import('./components/PhotoAnalyzer'));
+const ActivityHistory = lazy(() => import('./components/ActivityHistory'));
 const OAuthCallback = lazy(() => import('./components/OAuthCallback'));
 import { DIVISION_LOGOS, GrupoGrayLogo } from './constants/DivisionLogos';
-import { PenTool, Video, Link2, Send, BarChart3, Sparkles, FileText, Users } from 'lucide-react';
+import { PenTool, Video, Link2, Send, BarChart3, Sparkles, FileText, Users, Clock } from 'lucide-react';
 import { useDashboardStats } from './hooks/useDashboardStats';
 import './index.css';
 
@@ -207,6 +208,7 @@ const App: React.FC = () => {
             { id: 'video', label: 'Gerar Vídeo', icon: Video },
             { id: 'connect', label: 'Conectar Contas', icon: Link2 },
             { id: 'publish', label: 'Publicar', icon: Send },
+            { id: 'history', label: 'Historico', icon: Clock },
             { id: 'monitor', label: 'Monitorar', icon: BarChart3 }
           ].map(v => (
             <button
@@ -247,6 +249,7 @@ const App: React.FC = () => {
                     {marketingView === 'photo' && <PhotoAnalyzer division={activeDivision} />}
                     {marketingView === 'connect' && <ConnectJourney division={activeDivision} />}
                     {marketingView === 'publish' && <PublishJourney division={activeDivision} />}
+                    {marketingView === 'history' && <ActivityHistory division={activeDivision} />}
                     {marketingView === 'monitor' && <MonitorJourney division={activeDivision} />}
                   </div>
                 ) : (
