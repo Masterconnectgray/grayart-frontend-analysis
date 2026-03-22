@@ -4,7 +4,7 @@ import QRCode from 'qrcode';
 import type { Division } from '../constants/Themes';
 import { DIVISIONS } from '../constants/Themes';
 import { useAppContext } from '../context/AppContext';
-import * as xlsx from 'xlsx';
+
 
 const WhatsAppChat = lazy(() => import('./WhatsAppChat'));
 const WhatsAppBroadcast = lazy(() => import('./WhatsAppBroadcast'));
@@ -480,8 +480,9 @@ const WhatsAppConnect: React.FC<WhatsAppConnectProps> = ({ division }) => {
     if (!file) return;
 
     const reader = new FileReader();
-    reader.onload = (evt) => {
+    reader.onload = async (evt) => {
       try {
+        const xlsx = await import('xlsx');
         const bstr = evt.target?.result;
         const wb = xlsx.read(bstr, { type: 'binary' });
         const wsname = wb.SheetNames[0];

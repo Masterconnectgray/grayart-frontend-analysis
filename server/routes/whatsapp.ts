@@ -10,6 +10,21 @@ import { publishScheduledPost } from '../utils/publishing';
 const whatsappRouter = Router();
 const upload = multer({ storage: multer.memoryStorage() });
 
+function normalizePhone(raw: string): string {
+  const digits = raw.replace(/\D/g, '');
+  let normalized: string;
+  if (digits.startsWith('55') && digits.length >= 12) {
+    normalized = digits;
+  } else if (digits.length === 11) {
+    normalized = '55' + digits;
+  } else if (digits.length === 10) {
+    normalized = '55' + digits;
+  } else {
+    normalized = digits;
+  }
+  return normalized + '@s.whatsapp.net';
+}
+
 async function evolutionFetch(path: string, options: RequestInit = {}) {
   return fetch(`${env.evolutionApiUrl}${path}`, {
     ...options,
@@ -251,6 +266,7 @@ whatsappRouter.post('/send', async (req, res) => {
     return res.status(400).json({ error: 'instance e number são obrigatórios' });
   }
 
+  const normalizedNumber = normalizePhone(number);
 
   // Verificar se instancia esta conectada antes de enviar (evita timeout)
   try {
@@ -269,8 +285,8 @@ whatsappRouter.post('/send', async (req, res) => {
   const isMedia = Boolean(image || video);
   const endpoint = isMedia ? `/message/sendMedia/${instance}` : `/message/sendText/${instance}`;
   const body = isMedia
-    ? { number, mediatype: image ? 'image' : 'video', media: image || video, caption: text || '' }
-    : { number, textMessage: { text: text || '' } };
+    ? { number: normalizedNumber, mediatype: image ? 'image' : 'video', media: image || video, caption: text || '' }
+    : { number: normalizedNumber, textMessage: { text: text || '' } };
 
   const response = await evolutionFetch(endpoint, {
     method: 'POST',
@@ -311,7 +327,7 @@ whatsappRouter.post('/broadcast', async (req, res) => {
       const response = await evolutionFetch(`/message/sendText/${instance}`, {
         method: 'POST',
         body: JSON.stringify({
-          number: contact.phone,
+          number: normalizePhone(contact.phone),
           textMessage: { text: template.replace(/\{\{name\}\}/g, contact.name || '') },
         }),
       });
@@ -368,6 +384,130 @@ whatsappRouter.get('/qr/:instance', async (req, res) => {
     });
   } catch (error) {
     return res.status(502).json({ error: 'Erro ao conectar com Evolution API' });
+  }
+});
+
+// ─── Report de mensagens enviadas por instância ─────────────────────────────
+whatsappRouter.get('/report/:instanceName', async (req, res) => {
+  const { instanceName } = req.params;
+
+  try {
+    // Buscar mensagens via Evolution API chat endpoint
+    const response = await evolutionFetch(`/chat/findMessages/${instanceName}`, {
+      method: 'POST',
+      body: JSON.stringify({ where: { owner: instanceName } }),
+    });
+
+    if (!response.ok) {
+      // Fallback: tentar dados locais do banco
+      const campaigns = db.prepare(`
+        SELECT id, template, sent_count, failed_count, status, created_at
+        FROM whatsapp_campaigns
+        WHERE instance_name = ?
+        ORDER BY datetime(created_at) DESC
+        LIMIT 50
+      `).all(instanceName) as Array<{
+        id: number; template: string; sent_count: number; failed_count: number; status: string; created_at: string;
+      }>;
+
+      const totalSent = campaigns.reduce((acc, c) => acc + (c.sent_count || 0), 0);
+      const totalFailed = campaigns.reduce((acc, c) => acc + (c.failed_count || 0), 0);
+
+      return res.json({
+        source: 'local_db',
+        total: totalSent + totalFailed,
+        delivered: totalSent,
+        read: null,
+        failed: totalFailed,
+        messages: campaigns.map((c) => ({
+          campaign_id: c.id,
+          template: c.template?.substring(0, 100),
+          sent: c.sent_count,
+          failed: c.failed_count,
+          status: c.status,
+          created_at: c.created_at,
+        })),
+      });
+    }
+
+    const data = await response.json() as Array<{
+      key?: { remoteJid?: string; fromMe?: boolean; id?: string };
+      status?: number;
+      messageTimestamp?: number;
+      message?: { conversation?: string; extendedTextMessage?: { text?: string } };
+    }>;
+
+    const messages = Array.isArray(data) ? data : [];
+    const outgoing = messages.filter((m) => m.key?.fromMe);
+
+    let delivered = 0;
+    let read = 0;
+    let failed = 0;
+
+    for (const msg of outgoing) {
+      // Evolution API status codes: 0=error, 1=pending, 2=sent/server, 3=delivered, 4=read, 5=played
+      const s = msg.status ?? -1;
+      if (s >= 4) {
+        read += 1;
+        delivered += 1;
+      } else if (s >= 3) {
+        delivered += 1;
+      } else if (s === 0) {
+        failed += 1;
+      }
+    }
+
+    return res.json({
+      source: 'evolution_api',
+      total: outgoing.length,
+      delivered,
+      read,
+      failed,
+      messages: outgoing.slice(0, 100).map((m) => ({
+        id: m.key?.id,
+        to: m.key?.remoteJid,
+        status: m.status,
+        timestamp: m.messageTimestamp,
+        text: (m.message?.conversation || m.message?.extendedTextMessage?.text || '').substring(0, 200),
+      })),
+    });
+  } catch (error) {
+    // Fallback total: retorna dados do banco local
+    try {
+      const campaigns = db.prepare(`
+        SELECT id, template, sent_count, failed_count, status, created_at
+        FROM whatsapp_campaigns
+        WHERE instance_name = ?
+        ORDER BY datetime(created_at) DESC
+        LIMIT 50
+      `).all(instanceName) as Array<{
+        id: number; template: string; sent_count: number; failed_count: number; status: string; created_at: string;
+      }>;
+
+      const totalSent = campaigns.reduce((acc, c) => acc + (c.sent_count || 0), 0);
+      const totalFailed = campaigns.reduce((acc, c) => acc + (c.failed_count || 0), 0);
+
+      return res.json({
+        source: 'local_db_fallback',
+        total: totalSent + totalFailed,
+        delivered: totalSent,
+        read: null,
+        failed: totalFailed,
+        messages: campaigns.map((c) => ({
+          campaign_id: c.id,
+          template: c.template?.substring(0, 100),
+          sent: c.sent_count,
+          failed: c.failed_count,
+          status: c.status,
+          created_at: c.created_at,
+        })),
+      });
+    } catch {
+      return res.status(500).json({
+        error: 'Erro ao gerar relatório',
+        details: error instanceof Error ? error.message : String(error),
+      });
+    }
   }
 });
 

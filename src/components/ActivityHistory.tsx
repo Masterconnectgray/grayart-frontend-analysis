@@ -5,7 +5,8 @@ import { Card } from '../design-system';
 import { PlatformIcon } from '../constants/SocialIcons';
 import { bffFetch } from '../services/BFFClient';
 import { useAppContext } from '../context/AppContext';
-import { Clock, Video, FileText, Send, Copy, Wand2 } from 'lucide-react';
+import { Clock, Video, FileText, Send, Copy, Wand2, DollarSign } from 'lucide-react';
+import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 
 interface ActivityHistoryProps {
   division: Division;
@@ -174,6 +175,71 @@ const ActivityHistory: React.FC<ActivityHistoryProps> = ({ division }) => {
           </div>
         ))}
       </div>
+
+      {/* Charts Section */}
+      {(() => {
+        const now = new Date();
+        const days14 = Array.from({ length: 14 }, (_, i) => {
+          const d = new Date(now); d.setDate(d.getDate() - (13 - i));
+          return d.toISOString().slice(0, 10);
+        });
+        const chartData = days14.map(day => {
+          const dayItems = items.filter(i => i.created_at.slice(0, 10) === day);
+          return { day: day.slice(5), copies: dayItems.filter(i => i.type === 'copy').length, videos: dayItems.filter(i => i.type === 'video').length };
+        });
+        const providers = [
+          { key: 'veo', label: 'Veo', color: 'bg-blue-500' },
+          { key: 'kling', label: 'Kling', color: 'bg-orange-500' },
+          { key: 'seedance', label: 'Seedance', color: 'bg-teal-500' },
+        ].map(p => ({ ...p, count: items.filter(i => i.type === 'video' && i.model?.toLowerCase().includes(p.key)).length }));
+        const maxProv = Math.max(1, ...providers.map(p => p.count));
+
+        return (
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            {/* Line chart */}
+            <div className="lg:col-span-2 rounded-2xl bg-black/40 border border-white/5 p-4">
+              <p className="text-[10px] font-bold uppercase tracking-widest opacity-40 mb-3">Producao ultimos 14 dias</p>
+              <ResponsiveContainer width="100%" height={140}>
+                <AreaChart data={chartData}>
+                  <defs>
+                    <linearGradient id="gCopy" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#a855f7" stopOpacity={0.3}/><stop offset="100%" stopColor="#a855f7" stopOpacity={0}/></linearGradient>
+                    <linearGradient id="gVideo" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#10b981" stopOpacity={0.3}/><stop offset="100%" stopColor="#10b981" stopOpacity={0}/></linearGradient>
+                  </defs>
+                  <XAxis dataKey="day" tick={{ fontSize: 9, fill: 'rgba(255,255,255,0.35)' }} axisLine={false} tickLine={false} />
+                  <YAxis allowDecimals={false} tick={{ fontSize: 9, fill: 'rgba(255,255,255,0.35)' }} axisLine={false} tickLine={false} width={20} />
+                  <Tooltip contentStyle={{ background: '#1a1a2e', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, fontSize: 11 }} />
+                  <Area type="monotone" dataKey="copies" stroke="#a855f7" fill="url(#gCopy)" strokeWidth={2} name="Copies" />
+                  <Area type="monotone" dataKey="videos" stroke="#10b981" fill="url(#gVideo)" strokeWidth={2} name="Videos" />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+            {/* Right column: providers + cost */}
+            <div className="flex flex-col gap-4">
+              <div className="rounded-2xl bg-black/40 border border-white/5 p-4 flex-1">
+                <p className="text-[10px] font-bold uppercase tracking-widest opacity-40 mb-3">Videos por provider</p>
+                <div className="space-y-2">
+                  {providers.map(p => (
+                    <div key={p.key} className="flex items-center gap-2">
+                      <span className="text-[10px] font-bold w-16 opacity-60">{p.label}</span>
+                      <div className="flex-1 h-3 rounded-full bg-white/5 overflow-hidden">
+                        <div className={`h-full rounded-full ${p.color} transition-all`} style={{ width: `${(p.count / maxProv) * 100}%` }} />
+                      </div>
+                      <span className="text-xs font-black w-6 text-right opacity-70">{p.count}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div className="rounded-2xl bg-black/40 border border-white/5 p-4 flex items-center gap-3">
+                <div className="p-2 rounded-xl bg-red-500/10"><DollarSign size={18} className="text-red-400" /></div>
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-widest opacity-40">Custo total IA</p>
+                  <p className="text-xl font-black text-red-400">${stats.totalCost.toFixed(4)}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Filtros */}
       <div className="flex gap-2 overflow-x-auto scrollbar-hide">

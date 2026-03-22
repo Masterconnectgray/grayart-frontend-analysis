@@ -12,7 +12,7 @@ interface VideoGeneratorProps {
   division: Division;
 }
 
-type Provider = 'auto' | 'veo' | 'kling';
+type Provider = 'auto' | 'veo' | 'kling' | 'seedance';
 type Format = '9:16' | '16:9' | '1:1';
 type Duration = 6 | 8;
 
@@ -41,18 +41,21 @@ interface HistoryItem {
 const PROVIDER_COLORS: Record<string, string> = {
   veo: '#3b82f6',
   kling: '#8B5CF6',
+  seedance: '#f97316',
   auto: '#25D366',
 };
 
 const PROVIDER_LABELS: Record<string, string> = {
   veo: 'Veo 3.1',
   kling: 'Kling 3.0',
+  seedance: 'Seedance 2.0',
   auto: 'Automatico',
 };
 
 function ProviderBadge({ provider }: { provider: string }) {
   const key = provider.toLowerCase().includes('veo') ? 'veo'
-    : provider.toLowerCase().includes('kling') ? 'kling' : 'auto';
+    : provider.toLowerCase().includes('kling') ? 'kling'
+    : provider.toLowerCase().includes('seedance') ? 'seedance' : 'auto';
   return (
     <span
       className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold text-white"
@@ -91,7 +94,7 @@ export default function VideoGenerator({ division: _division }: VideoGeneratorPr
         id: item.id,
         prompt: item.prompt || '',
         status: item.status === 'completed' ? 'done' : item.status,
-        provider: item.model?.includes('kling') ? 'kling' : 'veo',
+        provider: item.model?.includes('seedance') ? 'seedance' : item.model?.includes('kling') ? 'kling' : 'veo',
         videoUrl: item.result?.videoUrl || null,
         createdAt: item.created_at || item.createdAt,
       })));
@@ -140,7 +143,7 @@ export default function VideoGenerator({ division: _division }: VideoGeneratorPr
           setGenerating(false);
           setCurrentVideo({ url: data.videoUrl, provider: data.provider });
           fetchHistory();
-          addNotification(`Video gerado com ${data.provider === 'kling' ? 'Kling 3.0' : 'Veo 3.1'}! Salvo no historico.`, 'success');
+          addNotification(`Video gerado com ${PROVIDER_LABELS[data.provider] ?? data.provider}! Salvo no historico.`, 'success');
         } else if (data.status === 'failed') {
           clearInterval(pollRef.current!);
           pollRef.current = null;
@@ -194,6 +197,7 @@ export default function VideoGenerator({ division: _division }: VideoGeneratorPr
     { value: 'auto', label: 'Automatico' },
     { value: 'veo', label: 'Veo 3.1' },
     { value: 'kling', label: 'Kling 3.0' },
+    { value: 'seedance', label: 'Seedance 2.0' },
   ];
 
   const formatOptions: { value: Format; label: string; sub: string }[] = [
@@ -206,7 +210,7 @@ export default function VideoGenerator({ division: _division }: VideoGeneratorPr
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
       {/* Left — Controls */}
       <div className="space-y-5">
-        <Card title="Gerar Video" subtitle="Multi-provider: Veo 3.1 + Kling 3.0">
+        <Card title="Gerar Video" subtitle="Multi-provider: Veo 3.1 + Kling 3.0 + Seedance 2.0">
           {/* Prompt */}
           <textarea
             className="w-full p-4 rounded-xl bg-black/5 dark:bg-black/40 text-[var(--card-text)] text-sm font-bold border-2 border-[var(--primary-color)]/20 shadow-inner focus:outline-none focus:border-[var(--primary-color)] focus:ring-4 focus:ring-[var(--primary-color)]/20 transition-all resize-none min-h-[120px] placeholder:opacity-40"
@@ -281,7 +285,7 @@ export default function VideoGenerator({ division: _division }: VideoGeneratorPr
             </div>
             <p className="text-[11px] text-slate-500 mt-1.5">
               <Clock size={11} className="inline mr-1" />
-              Veo 3: 6s ou 8s | Kling: 6s no plano gratuito
+              Veo 3: 6s ou 8s | Kling/Seedance: 5s no plano gratuito
             </p>
           </div>
 

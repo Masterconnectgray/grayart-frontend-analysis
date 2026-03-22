@@ -10,7 +10,7 @@ const PIAPI_BASE = 'https://api.piapi.ai/api/v1/task';
 
 type VideoFormat = '9:16' | '16:9' | '1:1';
 type VideoDuration = 5 | 8;
-type VideoProvider = 'veo' | 'kling' | 'auto';
+type VideoProvider = 'veo' | 'kling' | 'seedance' | 'auto';
 
 function ensureUser(userId: number) {
   const exists = db.prepare('SELECT id FROM users WHERE id = ?').get(userId);
@@ -57,6 +57,32 @@ function piApiHeaders() {
   };
 }
 
+async function sendWhatsAppNotification(message: string) {
+  try {
+    const instances = await fetch(`${process.env.EVOLUTION_API_URL || 'http://localhost:8080'}/instance/fetchInstances`, {
+      headers: { apikey: process.env.EVOLUTION_API_KEY || '' },
+    }).then(r => r.json()) as any[];
+
+    const openInstance = instances.find((i: any) => i.instance?.status === 'open');
+    if (!openInstance) return;
+
+    const instanceName = openInstance.instance.instanceName;
+    const owner = openInstance.instance.owner;
+    if (!owner) return;
+
+    await fetch(`${process.env.EVOLUTION_API_URL || 'http://localhost:8080'}/message/sendText/${instanceName}`, {
+      method: 'POST',
+      headers: {
+        apikey: process.env.EVOLUTION_API_KEY || '',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ number: owner, text: message }),
+    });
+  } catch {
+    // Silent — notification is best-effort
+  }
+}
+
 videoV2Router.use(verifyToken);
 
 // POST /generate
@@ -73,7 +99,7 @@ videoV2Router.post('/generate', async (req, res) => {
   }
 
   const userId = req.user!.userId;
-  let usedProvider: 'veo' | 'kling' | null = null;
+  let usedProvider: 'veo' | 'kling' | 'seedance' | null = null;
   let jobId: number | null = null;
 
   // Try Veo 3.1
@@ -157,7 +183,52 @@ videoV2Router.post('/generate', async (req, res) => {
       logAudit({ userId, action: 'video_v2.generate', details: { jobId, provider: 'kling', format, fallback: provider === 'auto' }, ipAddress: req.ip });
     } catch (error) {
       const errMsg = error instanceof Error ? error.message : 'Erro interno';
-      updateJob(jobId!, { status: 'failed', result: { error: errMsg, provider: 'kling' } });
+      if (isQuotaError(errMsg) && provider === 'auto') {
+        updateJob(jobId!, { status: 'failed', result: { error: 'QUOTA_EXCEEDED', provider: 'kling' } });
+        jobId = null; // will create new job for seedance
+      } else {
+        updateJob(jobId!, { status: 'failed', result: { error: errMsg, provider: 'kling' } });
+        return res.status(502).json({ error: errMsg });
+      }
+    }
+  }
+
+  // Try Seedance 2.0 (explicit or fallback)
+  if (!usedProvider && (provider === 'seedance' || provider === 'auto')) {
+    jobId = createJob(userId, prompt, 'seedance-2.0');
+    try {
+      const response = await fetch(PIAPI_BASE, {
+        method: 'POST',
+        headers: piApiHeaders(),
+        body: JSON.stringify({
+          model: 'seedance',
+          task_type: 'video_generation',
+          input: {
+            prompt,
+            aspect_ratio: format,
+            duration: 5,
+            mode: 'std',
+          },
+        }),
+      });
+
+      const data = await response.json() as { code?: number; data?: { task_id?: string }; message?: string };
+      if (data.code !== 200 || !data.data?.task_id) {
+        throw new Error(data.message || `Seedance erro: ${JSON.stringify(data)}`);
+      }
+
+      const taskId = data.data.task_id;
+
+      updateJob(jobId, {
+        status: 'processing',
+        result: { task_id: taskId, provider: 'seedance' },
+      });
+
+      usedProvider = 'seedance';
+      logAudit({ userId, action: 'video_v2.generate', details: { jobId, provider: 'seedance', format, fallback: provider === 'auto' }, ipAddress: req.ip });
+    } catch (error) {
+      const errMsg = error instanceof Error ? error.message : 'Erro interno';
+      updateJob(jobId!, { status: 'failed', result: { error: errMsg, provider: 'seedance' } });
       return res.status(502).json({ error: errMsg });
     }
   }
@@ -188,7 +259,7 @@ videoV2Router.get('/status/:jobId', async (req, res) => {
     return res.json({
       job_id: jobId,
       status: row.status,
-      provider: row.model === 'veo-3.1' ? 'veo' : 'kling',
+      provider: row.model === 'veo-3.1' ? 'veo' : row.model === 'seedance-2.0' ? 'seedance' : 'kling',
       videoUrl: (parsed as any).videoUrl || null,
       error: (parsed as any).error || null,
       done: true,
@@ -225,6 +296,7 @@ videoV2Router.get('/status/:jobId', async (req, res) => {
       if (data.error) {
         updateJob(jobId, { status: 'failed', result: { ...parsed, error: data.error.message } });
         logAudit({ userId: req.user!.userId, action: 'video_v2.failed', details: { jobId, provider: 'veo', error: data.error.message }, ipAddress: req.ip });
+        sendWhatsAppNotification(`Video IA falhou (Veo). Erro: ${data.error.message}`);
         return res.json({ job_id: jobId, status: 'failed', provider: 'veo', error: data.error.message, done: true });
       }
 
@@ -236,6 +308,7 @@ videoV2Router.get('/status/:jobId', async (req, res) => {
 
       updateJob(jobId, { status: 'completed', result: { ...parsed, videoUrl } });
       logAudit({ userId: req.user!.userId, action: 'video_v2.completed', details: { jobId, provider: 'veo' }, ipAddress: req.ip });
+      sendWhatsAppNotification(`Video IA pronto! Gerado com veo. Acesse o GrayArt para ver e baixar.`);
       return res.json({ job_id: jobId, status: 'completed', provider: 'veo', videoUrl, done: true });
     } catch (error) {
       return res.status(502).json({ error: error instanceof Error ? error.message : 'Erro ao consultar status Veo' });
@@ -270,6 +343,7 @@ videoV2Router.get('/status/:jobId', async (req, res) => {
         const errMsg = data.data?.error?.message || 'Kling generation failed';
         updateJob(jobId, { status: 'failed', result: { ...parsed, error: errMsg } });
         logAudit({ userId: req.user!.userId, action: 'video_v2.failed', details: { jobId, provider: 'kling' }, ipAddress: req.ip });
+        sendWhatsAppNotification(`Video IA falhou (Kling). Erro: ${errMsg}`);
         return res.json({ job_id: jobId, status: 'failed', provider: 'kling', error: errMsg, done: true });
       }
 
@@ -281,9 +355,56 @@ videoV2Router.get('/status/:jobId', async (req, res) => {
         || null;
       updateJob(jobId, { status: 'completed', result: { ...parsed, videoUrl } });
       logAudit({ userId: req.user!.userId, action: 'video_v2.completed', details: { jobId, provider: 'kling' }, ipAddress: req.ip });
+      sendWhatsAppNotification(`Video IA pronto! Gerado com kling. Acesse o GrayArt para ver e baixar.`);
       return res.json({ job_id: jobId, status: 'completed', provider: 'kling', videoUrl, done: true });
     } catch (error) {
       return res.status(502).json({ error: error instanceof Error ? error.message : 'Erro ao consultar status Kling' });
+    }
+  }
+
+  // Poll Seedance 2.0
+  if (row.model === 'seedance-2.0') {
+    const taskId = parsed.task_id as string | undefined;
+    if (!taskId) {
+      return res.json({ job_id: jobId, status: 'failed', provider: 'seedance', error: 'Job sem task_id registrado', done: true });
+    }
+
+    try {
+      const response = await fetch(`${PIAPI_BASE}/${taskId}`, {
+        headers: piApiHeaders(),
+      });
+
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        throw new Error((err as { error?: { message?: string } }).error?.message || `HTTP ${response.status}`);
+      }
+
+      const data = await response.json() as { code?: number; data?: any };
+      const seedStatus = data.data?.status || 'processing';
+
+      if (seedStatus === 'pending' || seedStatus === 'processing') {
+        return res.json({ job_id: jobId, status: 'processing', provider: 'seedance', done: false });
+      }
+
+      if (seedStatus === 'failed') {
+        const errMsg = data.data?.error?.message || 'Seedance generation failed';
+        updateJob(jobId, { status: 'failed', result: { ...parsed, error: errMsg } });
+        logAudit({ userId: req.user!.userId, action: 'video_v2.failed', details: { jobId, provider: 'seedance' }, ipAddress: req.ip });
+        sendWhatsAppNotification(`Video IA falhou (Seedance). Erro: ${errMsg}`);
+        return res.json({ job_id: jobId, status: 'failed', provider: 'seedance', error: errMsg, done: true });
+      }
+
+      const works = data.data?.output?.works || [];
+      const videoUrl = works[0]?.video?.resource
+        || works[0]?.video?.resource_without_watermark
+        || works[0]?.video?.url
+        || null;
+      updateJob(jobId, { status: 'completed', result: { ...parsed, videoUrl } });
+      logAudit({ userId: req.user!.userId, action: 'video_v2.completed', details: { jobId, provider: 'seedance' }, ipAddress: req.ip });
+      sendWhatsAppNotification(`Video IA pronto! Gerado com seedance. Acesse o GrayArt para ver e baixar.`);
+      return res.json({ job_id: jobId, status: 'completed', provider: 'seedance', videoUrl, done: true });
+    } catch (error) {
+      return res.status(502).json({ error: error instanceof Error ? error.message : 'Erro ao consultar status Seedance' });
     }
   }
 

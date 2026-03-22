@@ -20,6 +20,7 @@ import { processScheduledPosts } from './utils/scheduler';
 
 const app = express();
 app.set('trust proxy', 1);
+app.disable('x-powered-by');
 
 const allowedOrigins = new Set([
   'http://localhost:5173',
@@ -48,6 +49,19 @@ app.use(rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
 }));
+
+const aiRateLimit = rateLimit({
+  windowMs: 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Limite de geracoes IA atingido. Aguarde 1 minuto.' },
+});
+
+app.use('/api/ai/generate-copy', aiRateLimit);
+app.use('/api/ai/generate-video', aiRateLimit);
+app.use('/api/video-v2/generate', aiRateLimit);
+app.use('/api/video-composer/compose', aiRateLimit);
 
 app.get('/health', (_req, res) => {
   res.json({ ok: true, service: 'grayart-bff', timestamp: new Date().toISOString() });
