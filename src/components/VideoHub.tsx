@@ -167,62 +167,46 @@ export default function VideoHub({ division }: VideoHubProps) {
 
       {mode === 'providers' ? (
         <div className="space-y-4 animate-in fade-in duration-300">
-          <Card variant="elevated" title="Provedores de Video IA" subtitle="Comparativo de ferramentas integradas e disponiveis">
-            <div className="overflow-x-auto -mx-6">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-white/10">
-                    <th className="text-left py-3 px-4 text-[10px] font-black uppercase tracking-widest opacity-50">Ferramenta</th>
-                    <th className="text-left py-3 px-4 text-[10px] font-black uppercase tracking-widest opacity-50">Tier Gratuito</th>
-                    <th className="text-center py-3 px-4 text-[10px] font-black uppercase tracking-widest opacity-50">API</th>
-                    <th className="text-center py-3 px-4 text-[10px] font-black uppercase tracking-widest opacity-50">Qualidade</th>
-                    <th className="text-left py-3 px-4 text-[10px] font-black uppercase tracking-widest opacity-50">Melhor Para</th>
-                    <th className="text-center py-3 px-4 text-[10px] font-black uppercase tracking-widest opacity-50">Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {PROVIDERS.map((p, i) => {
-                    const apiBadge = API_BADGE[p.api];
-                    const statusBadge = STATUS_BADGE[p.status];
-                    return (
-                      <tr key={i} className="border-b border-white/5 hover:bg-white/5 transition-colors">
-                        <td className="py-4 px-4">
-                          <div className="flex items-center gap-3">
-                            <div className="w-3 h-8 rounded-full" style={{ backgroundColor: p.color }} />
-                            <div>
-                              <span className="font-bold text-sm">{p.name}</span>
-                              {p.url && (
-                                <a href={p.url} target="_blank" rel="noopener noreferrer" className="ml-2 opacity-30 hover:opacity-70 transition inline-flex">
-                                  <ExternalLink size={10} />
-                                </a>
-                              )}
-                            </div>
-                          </div>
-                        </td>
-                        <td className="py-4 px-4 text-xs opacity-70">{p.tier}</td>
-                        <td className="py-4 px-4 text-center">
-                          <span className={`px-2 py-1 rounded border text-[9px] font-bold ${apiBadge.class}`}>
-                            {apiBadge.label}
-                          </span>
-                        </td>
-                        <td className="py-4 px-4">
-                          <div className="flex justify-center">
-                            <Stars count={p.quality} />
-                          </div>
-                        </td>
-                        <td className="py-4 px-4 text-xs opacity-60">{p.bestFor}</td>
-                        <td className="py-4 px-4 text-center">
-                          <span className={`px-2 py-1 rounded text-[9px] font-bold ${statusBadge.class}`}>
-                            {statusBadge.label}
-                          </span>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </Card>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {PROVIDERS.map((p, i) => {
+              const apiBadge = API_BADGE[p.api];
+              const statusBadge = STATUS_BADGE[p.status];
+              return (
+                <Card key={i} variant="elevated" padding="p-5" className="hover:border-white/10 transition-all">
+                  <div className="flex items-start gap-4">
+                    <div className="w-2 h-full min-h-[80px] rounded-full shrink-0" style={{ backgroundColor: p.color }} />
+                    <div className="flex-1 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span className="font-bold text-base">{p.name}</span>
+                          {p.url && (
+                            <a href={p.url} target="_blank" rel="noopener noreferrer" className="opacity-30 hover:opacity-70 transition">
+                              <ExternalLink size={12} />
+                            </a>
+                          )}
+                        </div>
+                        <span className={`px-2.5 py-1 rounded text-[10px] font-bold ${statusBadge.class}`}>
+                          {statusBadge.label}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center gap-3">
+                        <span className={`px-2 py-1 rounded border text-[9px] font-bold ${apiBadge.class}`}>
+                          {apiBadge.label}
+                        </span>
+                        <Stars count={p.quality} />
+                      </div>
+
+                      <div className="space-y-1">
+                        <p className="text-sm opacity-80">{p.tier}</p>
+                        <p className="text-xs opacity-40">{p.bestFor}</p>
+                      </div>
+                    </div>
+                  </div>
+                </Card>
+              );
+            })}
+          </div>
 
           <Card variant="default" padding="p-4">
             <div className="flex items-start gap-3">
