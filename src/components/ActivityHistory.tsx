@@ -72,7 +72,7 @@ const TYPE_CONFIG: Record<string, { label: string; icon: React.ReactNode; color:
 };
 
 const ActivityHistory: React.FC<ActivityHistoryProps> = ({ division }) => {
-  const { addNotification, sendCopyToVideoLab, historyFilter, setHistoryFilter } = useAppContext();
+  const { addNotification, sendCopyToVideoLab, historyFilter } = useAppContext();
   const theme = DIVISIONS[division];
   const [items, setItems] = useState<HistoryItem[]>([]);
   const [loading, setLoading] = useState(true);
