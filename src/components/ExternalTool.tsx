@@ -58,7 +58,7 @@ const TOOLS = {
 };
 
 export default function ExternalTool({ division, tool }: ExternalToolProps) {
-  const theme = DIVISIONS[division];
+  const _theme = DIVISIONS[division];
   const config = TOOLS[tool];
   const [showEmbed, setShowEmbed] = useState(false);
   const basePath = import.meta.env.DEV ? '' : '/grayart';
