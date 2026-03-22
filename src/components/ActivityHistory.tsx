@@ -14,9 +14,10 @@ interface ActivityHistoryProps {
 type HistoryFilter = 'all' | 'copy' | 'video' | 'video_prompt' | 'published';
 
 interface HistoryItem {
-  id: number;
+  id: string | number;
   type: string;
-  prompt: string;
+  prompt?: string;
+  platform?: string;
   result: {
     hook?: string;
     body?: string;
@@ -27,9 +28,9 @@ interface HistoryItem {
     videoUrl?: string;
     error?: string;
   } | null;
-  model: string;
-  tokens_used: number | null;
-  cost_estimate: number | null;
+  model?: string;
+  tokens_used?: number | null;
+  cost_estimate?: number | null;
   status: string;
   created_at: string;
 }
@@ -68,7 +69,7 @@ const TYPE_CONFIG: Record<string, { label: string; icon: React.ReactNode; color:
   copy: { label: 'Copy IA', icon: <FileText size={14} />, color: 'text-purple-400 bg-purple-500/10' },
   video_prompt: { label: 'Prompt Video', icon: <Wand2 size={14} />, color: 'text-blue-400 bg-blue-500/10' },
   video: { label: 'Video IA', icon: <Video size={14} />, color: 'text-emerald-400 bg-emerald-500/10' },
-  published: { label: 'Publicado', icon: <Send size={14} />, color: 'text-amber-400 bg-amber-500/10' },
+  published: { label: 'Publicado', icon: <Send size={14} />, color: 'text-pink-400 bg-pink-500/10' },
 };
 
 const ActivityHistory: React.FC<ActivityHistoryProps> = ({ division }) => {
@@ -81,22 +82,46 @@ const ActivityHistory: React.FC<ActivityHistoryProps> = ({ division }) => {
   );
 
   useEffect(() => {
-    if (historyFilter === 'copy' || historyFilter === 'video' || historyFilter === 'video_prompt') {
+    if (historyFilter === 'copy' || historyFilter === 'video' || historyFilter === 'video_prompt' || historyFilter === 'published') {
       setFilter(historyFilter as HistoryFilter);
     }
   }, [historyFilter]);
-  const [expandedId, setExpandedId] = useState<number | null>(null);
+  const [expandedId, setExpandedId] = useState<string | number | null>(null);
 
   const loadItems = useCallback(async () => {
     setLoading(true);
     try {
-      const resp = await bffFetch('/ai/jobs');
-      if (resp.ok) {
-        const data = await resp.json() as { jobs: HistoryItem[] };
-        setItems(data.jobs.filter(j => j.status === 'completed' || j.status === 'failed' || j.status === 'processing'));
+      const [jobsResp, publishResp] = await Promise.all([
+        bffFetch('/ai/jobs'),
+        bffFetch('/social/publish-history')
+      ]);
+
+      let allItems: HistoryItem[] = [];
+
+      if (jobsResp.ok) {
+        const data = await jobsResp.json() as { jobs: HistoryItem[] };
+        allItems = [...allItems, ...data.jobs.filter(j => j.status === 'completed' || j.status === 'failed' || j.status === 'processing')];
       }
-    } catch { /* silencioso */ }
-    finally { setLoading(false); }
+
+          if (publishResp.ok) {
+            const data = await publishResp.json() as { publishJobs: any[] };
+            const pubItems: HistoryItem[] = data.publishJobs.map(pj => ({
+              id: `pub-${pj.id}`,
+              type: 'published',
+              platform: pj.platform,
+              status: pj.status,
+              created_at: pj.created_at,
+              result: { hook: pj.content.substring(0, 50) + '...' }
+            }));
+            allItems = [...allItems, ...pubItems];
+          }
+
+      setItems(allItems.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()));
+    } catch (err) {
+      console.error('Erro ao carregar historico:', err);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   useEffect(() => { loadItems(); }, [loadItems]);
@@ -107,6 +132,7 @@ const ActivityHistory: React.FC<ActivityHistoryProps> = ({ division }) => {
     copies: items.filter(i => i.type === 'copy').length,
     videos: items.filter(i => i.type === 'video').length,
     prompts: items.filter(i => i.type === 'video_prompt').length,
+    published: items.filter(i => i.type === 'published').length,
     totalTokens: items.reduce((s, i) => s + (i.tokens_used || 0), 0),
     totalCost: items.reduce((s, i) => s + (i.cost_estimate || 0), 0),
   };
@@ -118,7 +144,7 @@ const ActivityHistory: React.FC<ActivityHistoryProps> = ({ division }) => {
       body: item.result.body || '',
       cta: item.result.cta || '',
       tags: item.result.tags || [],
-      platform: detectPlatform(item.prompt),
+      platform: item.prompt ? detectPlatform(item.prompt) : 'instagram', // Fallback if prompt is missing
       fullText: item.result.fullText || `${item.result.hook}\n\n${item.result.body}\n\n${item.result.cta}`,
     });
     addNotification('Copy enviada para o Video IA!', 'success');
@@ -133,15 +159,16 @@ const ActivityHistory: React.FC<ActivityHistoryProps> = ({ division }) => {
   return (
     <div className="animate-in fade-in duration-300 space-y-6">
       {/* Stats resumo */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
         {[
           { label: 'Copies IA', value: stats.copies, color: 'text-purple-400', border: 'border-purple-400/30' },
           { label: 'Videos IA', value: stats.videos, color: 'text-emerald-400', border: 'border-emerald-400/30' },
           { label: 'Prompts IA', value: stats.prompts, color: 'text-blue-400', border: 'border-blue-400/30' },
+          { label: 'Publicações', value: stats.published, color: 'text-pink-400', border: 'border-pink-400/30' },
           { label: 'Tokens IA', value: stats.totalTokens > 1000 ? `${(stats.totalTokens / 1000).toFixed(1)}k` : stats.totalTokens, color: 'text-amber-400', border: 'border-amber-400/30' },
           { label: 'Investimento', value: `$${stats.totalCost.toFixed(3)}`, color: 'text-red-400', border: 'border-red-400/30' },
         ].map((s, i) => (
-          <div key={i} className={`p-6 rounded-2xl bg-black/5 dark:bg-black/40 border-2 ${s.border} shadow-inner flex flex-col justify-center transition-all hover:-translate-y-1 hover:bg-black/10`}>
+          <div key={i} className={`p-6 rounded-2xl bg-black/5 dark:bg-black/40 border-2 ${s.border} shadow-inner flex flex-col items-center justify-center text-center transition-all hover:-translate-y-1 hover:bg-black/10`}>
             <div className={`text-4xl font-black drop-shadow-md ${s.color}`}>{s.value}</div>
             <div className="text-[10px] opacity-70 font-black uppercase tracking-widest mt-2 text-[var(--card-text)]">{s.label}</div>
           </div>
@@ -150,21 +177,36 @@ const ActivityHistory: React.FC<ActivityHistoryProps> = ({ division }) => {
 
       {/* Filtros */}
       <div className="flex gap-2 overflow-x-auto scrollbar-hide">
-        {([
-          { id: 'all' as const, label: 'Tudo' },
-          { id: 'copy' as const, label: 'Copies' },
-          { id: 'video' as const, label: 'Videos' },
-          { id: 'video_prompt' as const, label: 'Prompts' },
-        ]).map(f => (
-          <button
-            key={f.id}
-            onClick={() => setFilter(f.id)}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap
-              ${filter === f.id ? 'bg-[var(--primary-color)] text-[var(--card-bg)]' : 'bg-[var(--sub-bg)] text-slate-400 hover:text-white'}`}
-          >
-            {f.label} {f.id !== 'all' && `(${items.filter(i => i.type === f.id).length})`}
-          </button>
-        ))}
+        <button
+          onClick={() => setFilter('all')}
+          className={`px-4 py-2 rounded-full text-xs font-bold transition-all ${filter === 'all' ? 'bg-[var(--primary-color)] text-[var(--card-bg)]' : 'bg-[var(--sub-bg)] text-slate-400 hover:text-white'}`}
+        >
+          Tudo ({items.length})
+        </button>
+        <button
+          onClick={() => setFilter('copy')}
+          className={`px-4 py-2 rounded-full text-xs font-bold transition-all ${filter === 'copy' ? 'bg-purple-500 text-white' : 'bg-[var(--sub-bg)] text-slate-400 hover:text-white'}`}
+        >
+          Copies ({stats.copies})
+        </button>
+        <button
+          onClick={() => setFilter('video')}
+          className={`px-4 py-2 rounded-full text-xs font-bold transition-all ${filter === 'video' ? 'bg-emerald-500 text-white' : 'bg-[var(--sub-bg)] text-slate-400 hover:text-white'}`}
+        >
+          Videos ({stats.videos})
+        </button>
+        <button
+          onClick={() => setFilter('video_prompt')}
+          className={`px-4 py-2 rounded-full text-xs font-bold transition-all ${filter === 'video_prompt' ? 'bg-blue-500 text-white' : 'bg-[var(--sub-bg)] text-slate-400 hover:text-white'}`}
+        >
+          Prompts ({stats.prompts})
+        </button>
+        <button
+          onClick={() => setFilter('published')}
+          className={`px-4 py-2 rounded-full text-xs font-bold transition-all ${filter === 'published' ? 'bg-amber-500 text-white' : 'bg-[var(--sub-bg)] text-slate-400 hover:text-white'}`}
+        >
+          Publicações ({stats.published})
+        </button>
       </div>
 
       {/* Lista */}
@@ -182,7 +224,7 @@ const ActivityHistory: React.FC<ActivityHistoryProps> = ({ division }) => {
           {filtered.map(item => {
             const typeConfig = TYPE_CONFIG[item.type] || TYPE_CONFIG.copy;
             const { date, time, relative } = formatDate(item.created_at);
-            const platform = detectPlatform(item.prompt);
+            const platform = item.platform || (item.prompt ? detectPlatform(item.prompt) : 'instagram'); // Use item.platform for published, fallback to detectPlatform
             const isExpanded = expandedId === item.id;
 
             return (
@@ -212,6 +254,7 @@ const ActivityHistory: React.FC<ActivityHistoryProps> = ({ division }) => {
                       {item.type === 'copy' ? (item.result?.hook || 'Copy') :
                        item.type === 'video' ? 'Video gerado' :
                        item.type === 'video_prompt' ? (item.result?.prompt?.substring(0, 60) || 'Prompt') :
+                       item.type === 'published' ? (item.result?.hook || 'Publicação') :
                        'Registro'}
                     </p>
                   </div>

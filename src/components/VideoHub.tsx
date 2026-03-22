@@ -1,4 +1,4 @@
-import { useState, lazy, Suspense } from 'react';
+import { useState, useRef, lazy, Suspense } from 'react';
 import type { Division } from '../constants/Themes';
 import { Film, Clapperboard } from 'lucide-react';
 
@@ -13,6 +13,11 @@ type VideoMode = 'clip' | 'composer';
 
 export default function VideoHub({ division }: VideoHubProps) {
   const [mode, setMode] = useState<VideoMode>('clip');
+  // Track if each tab was ever opened (for lazy mounting)
+  const mountedRef = useRef({ clip: true, composer: false });
+
+  if (mode === 'composer') mountedRef.current.composer = true;
+  if (mode === 'clip') mountedRef.current.clip = true;
 
   return (
     <div className="animate-in fade-in duration-300">
@@ -42,11 +47,13 @@ export default function VideoHub({ division }: VideoHubProps) {
       </div>
 
       <Suspense fallback={<div className="text-center py-12 text-sm opacity-40">Carregando...</div>}>
-        {mode === 'clip' ? (
-          <VideoGenerator division={division} />
-        ) : (
-          <VideoComposer division={division} />
-        )}
+        {/* Ambos ficam montados — esconde com CSS pra nao perder estado */}
+        <div style={{ display: mode === 'clip' ? 'block' : 'none' }}>
+          {mountedRef.current.clip && <VideoGenerator division={division} />}
+        </div>
+        <div style={{ display: mode === 'composer' ? 'block' : 'none' }}>
+          {mountedRef.current.composer && <VideoComposer division={division} />}
+        </div>
       </Suspense>
     </div>
   );

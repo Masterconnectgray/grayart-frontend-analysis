@@ -3,7 +3,8 @@ import { Card, Button } from '../design-system';
 import { bffFetch } from '../services/BFFClient';
 import type { Division } from '../constants/Themes';
 import { DIVISIONS } from '../constants/Themes';
-import { Film, Clock, Play, Download, Loader2, Check, RefreshCw, Sliders, Mic } from 'lucide-react';
+import { useAppContext } from '../context/AppContext';
+import { Film, Clock, Download, Loader2, Check, RefreshCw, Mic, Sliders, Play } from 'lucide-react';
 
 interface VideoComposerProps {
   division: Division;
@@ -30,8 +31,20 @@ interface JobState {
 const SCENE_DURATION = 6;
 const MARKS = [6, 12, 18, 30, 60, 90];
 
+interface HistoryItem {
+  id: number;
+  prompt: string;
+  status: string;
+  provider: string;
+  videoUrl: string | null;
+  scenes: number;
+  duration: number;
+  createdAt: string;
+}
+
 export default function VideoComposer({ division }: VideoComposerProps) {
   const theme = DIVISIONS[division];
+  const { addNotification } = useAppContext();
   const [prompt, setPrompt] = useState('');
   const [duration, setDuration] = useState(30);
   const [format, setFormat] = useState<Format>('9:16');
@@ -39,10 +52,36 @@ export default function VideoComposer({ division }: VideoComposerProps) {
   const [previewScenes, setPreviewScenes] = useState<Scene[]>([]);
   const [job, setJob] = useState<JobState | null>(null);
   const [status, setStatus] = useState<JobStatus>('idle');
+  const [history, setHistory] = useState<HistoryItem[]>([]);
+  const [selectedVideo, setSelectedVideo] = useState<string | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
   const pollRef = useRef<ReturnType<typeof setInterval>>(undefined);
 
   const sceneCount = Math.max(1, Math.round(duration / SCENE_DURATION));
+
+  const fetchHistory = useCallback(async () => {
+    try {
+      const res = await bffFetch('/ai/jobs');
+      if (res.ok) {
+        const data = await res.json();
+        const items = (data.jobs || [])
+          .filter((j: any) => j.type === 'video_compose')
+          .map((j: any) => ({
+            id: j.id,
+            prompt: j.prompt || '',
+            status: j.status === 'completed' ? 'done' : j.status,
+            provider: 'Veo 3.1',
+            videoUrl: j.result?.videoUrl || null,
+            scenes: j.result?.scenes?.length || 0,
+            duration: (j.result?.scenes?.length || 0) * 6,
+            createdAt: j.created_at,
+          }));
+        setHistory(items);
+      }
+    } catch { /* silencioso */ }
+  }, []);
+
+  useEffect(() => { fetchHistory(); }, [fetchHistory]);
 
   const fetchPreview = useCallback(async (text: string) => {
     if (text.trim().length < 10) { setPreviewScenes([]); return; }
@@ -100,8 +139,14 @@ export default function VideoComposer({ division }: VideoComposerProps) {
       setJob({ id: jobId, status: jStatus, scenes, videoUrl: data.videoUrl, error: data.error, provider: data.provider });
       setStatus(jStatus);
 
-      if (jStatus === 'done' || jStatus === 'error') {
+      if (jStatus === 'done') {
         if (pollRef.current) clearInterval(pollRef.current);
+        addNotification('Video composto pronto! Salvo no historico.', 'success');
+        fetchHistory();
+      } else if (jStatus === 'error') {
+        if (pollRef.current) clearInterval(pollRef.current);
+        addNotification('Erro na composicao do video.', 'error');
+        fetchHistory();
       }
     } catch { /* keep polling */ }
   };
@@ -339,6 +384,68 @@ export default function VideoComposer({ division }: VideoComposerProps) {
           </div>
         </Card>
       )}
+
+      {/* Historico de videos compostos */}
+      <Card variant="elevated" padding="p-5" className="mt-6">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="font-bold text-sm">Historico de Videos Compostos</h3>
+          <button onClick={fetchHistory} className="text-slate-400 hover:text-white transition">
+            <RefreshCw size={14} />
+          </button>
+        </div>
+        {history.length === 0 ? (
+          <p className="text-center text-sm text-white/30 py-6">Nenhum video composto no historico</p>
+        ) : (
+          <div className="space-y-2 max-h-80 overflow-y-auto pr-1">
+            {history.map(item => {
+              const date = new Date(item.createdAt);
+              const dateStr = date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+              const timeStr = date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => item.videoUrl && setSelectedVideo(item.videoUrl)}
+                  className={`w-full flex items-center gap-3 p-3 rounded-xl text-left transition-all ${
+                    item.videoUrl ? 'bg-white/5 hover:bg-[var(--primary-color)]/10 cursor-pointer' : 'bg-white/5 opacity-50'
+                  }`}
+                >
+                  <div className="w-10 h-10 rounded-lg bg-[#25D366]/10 flex items-center justify-center shrink-0">
+                    <Film size={16} className="text-[#25D366]" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-bold truncate">{item.prompt.substring(0, 50)}...</p>
+                    <p className="text-[10px] text-white/40">{item.scenes} cenas — {item.duration}s — {item.provider}</p>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <div className="text-[10px] font-bold opacity-60">{dateStr}</div>
+                    <div className="text-[9px] opacity-30">{timeStr}</div>
+                  </div>
+                  <span className={`px-2 py-0.5 rounded text-[9px] font-bold shrink-0 ${
+                    item.status === 'done' ? 'bg-[#25D366]/15 text-[#25D366]' :
+                    item.status === 'failed' ? 'bg-red-500/15 text-red-400' :
+                    'bg-amber-500/15 text-amber-400 animate-pulse'
+                  }`}>
+                    {item.status === 'done' ? 'PRONTO' : item.status === 'failed' ? 'FALHOU' : 'GERANDO'}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        )}
+
+        {selectedVideo && (
+          <div className="mt-4 space-y-3">
+            <video src={selectedVideo} controls className="w-full rounded-xl bg-black max-h-[400px]" />
+            <a
+              href={selectedVideo}
+              download
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold bg-[#25D366] text-[#1a1a1a] hover:opacity-90 transition"
+            >
+              <Download size={14} /> Baixar
+            </a>
+          </div>
+        )}
+      </Card>
     </div>
   );
 }
