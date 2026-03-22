@@ -168,6 +168,13 @@ const EvolutionAPIService = {
     if (!resp.ok) return [];
     return resp.json();
   },
+
+  async fetchGroups(instanceName: string): Promise<Array<{ id: string; subject: string; size: number; creation: number }>> {
+    const resp = await evolutionFetch(`/group/fetchAllGroups/${instanceName}`, { method: 'GET' });
+    if (!resp.ok) return [];
+    const data = await resp.json();
+    return Array.isArray(data) ? data : [];
+  },
 };
 
 // ─── Componente Principal ─────────────────────────────────────────────────────
@@ -179,6 +186,8 @@ const WhatsAppConnect: React.FC<WhatsAppConnectProps> = ({ division }) => {
 
   const [customGroups, setCustomGroups] = useState<GroupConfig[]>([]);
   const groups = [...initialGroups, ...customGroups];
+
+  const [realStats, setRealStats] = useState<{ groups: number; members: number; sent: number } | null>(null);
 
   const [instance, setInstance] = useState<InstanceState>({
     name: `gray-${division}-${Date.now()}`,
@@ -263,6 +272,25 @@ const WhatsAppConnect: React.FC<WhatsAppConnectProps> = ({ division }) => {
 
     checkExisting();
   }, [division, stopPolling]);
+
+  // Buscar stats reais quando conectado
+  useEffect(() => {
+    if (instance.status !== 'open') {
+      setRealStats(null);
+      return;
+    }
+    const fetchStats = async () => {
+      try {
+        const apiGroups = await EvolutionAPIService.fetchGroups(instance.name);
+        const totalMembers = apiGroups.reduce((sum, g) => sum + (g.size || 0), 0);
+        const savedSent = Number(localStorage.getItem(`grayart_wa_sent_${division}`) || '0');
+        setRealStats({ groups: apiGroups.length, members: totalMembers, sent: savedSent });
+      } catch {
+        // Fallback para dados locais se API falhar
+      }
+    };
+    fetchStats();
+  }, [instance.status, instance.name, division]);
 
   // ── 1. Criar instância + obter QR ─────────────────────────────────────────
   const handleConnect = useCallback(async () => {
@@ -642,13 +670,13 @@ const WhatsAppConnect: React.FC<WhatsAppConnectProps> = ({ division }) => {
             )}
           </div>
 
-          {/* Stats */}
+          {/* Stats — dados reais da Evolution API */}
           <div className="grid grid-cols-2 gap-3">
             {[
-              { label: 'Grupos', value: groups.length, color: '#25D366' },
-              { label: 'Membros', value: groups.reduce((s, g) => s + g.members, 0), color: theme.colors.primary },
-              { label: 'Enviados', value: sentGroups.length, color: '#f59e0b' },
-              { label: 'Quota', value: '1.2k/5k', color: '#3b82f6' },
+              { label: 'Grupos', value: realStats?.groups ?? groups.length, color: '#25D366' },
+              { label: 'Membros', value: realStats?.members ?? groups.reduce((s, g) => s + g.members, 0), color: theme.colors.primary },
+              { label: 'Enviados', value: realStats?.sent ?? sentGroups.length, color: '#f59e0b' },
+              { label: 'Status', value: isConnected ? 'ON' : 'OFF', color: isConnected ? '#25D366' : '#ef4444' },
             ].map((s, i) => (
               <div key={i} className="p-3 rounded-xl text-center" style={{ background: cardBg }}>
                 <div className="text-xl font-black" style={{ color: s.color }}>{s.value}</div>
@@ -666,7 +694,6 @@ const WhatsAppConnect: React.FC<WhatsAppConnectProps> = ({ division }) => {
               { id: 'chat', label: 'Conversas' },
               { id: 'groups', label: 'Grupos' },
               { id: 'broadcast', label: 'Broadcast' },
-              { id: 'status', label: 'Status API' },
             ] as const).map(tab => (
               <button
                 key={tab.id}
@@ -790,48 +817,6 @@ const WhatsAppConnect: React.FC<WhatsAppConnectProps> = ({ division }) => {
             </div>
           )}
 
-          {/* ── STATUS API ────────────────────────────────────────────────────── */}
-          {activePanel === 'status' && (
-            <div className="animate-fade-in">
-              <div className="premium-card" style={{ backgroundColor: cardBg }}>
-                <h3 className="text-[0.9rem] font-extrabold mb-6">📊 EVOLUTION API · STATUS DO SISTEMA</h3>
-                <div className="flex flex-col gap-3">
-                  {[
-                    { label: 'Evolution API v1.8.2', status: 'online', detail: `$BFF Proxy` },
-                    { label: 'Baileys Core', status: 'online', detail: 'WhatsApp Web emulation ativo' },
-                    { label: 'Conexão', status: isConnected ? 'online' : 'idle', detail: isConnected ? `Instância: ${instance.name}` : 'Aguardando conexão' },
-                    { label: 'API Key', status: 'online', detail: 'Protegida via BFF' },
-                    { label: 'Multi-instância', status: 'online', detail: 'Docker container ativo' },
-                    { label: 'Webhook', status: 'idle', detail: 'Configure em: /webhook/set/{instance}' },
-                  ].map((item, i) => (
-                    <div key={i} className="flex justify-between items-center px-4 py-3 rounded-xl" style={{ background: subBg }}>
-                      <div>
-                        <div className="font-bold text-xs">{item.label}</div>
-                        <div className="text-[10px] opacity-40">{item.detail}</div>
-                      </div>
-                      <span className={`px-2.5 py-1 rounded-lg text-[10px] font-black ${
-                        item.status === 'online' ? 'bg-green-500/10 text-green-500' : 'bg-amber-500/10 text-amber-500'
-                      }`}>
-                        {item.status.toUpperCase()}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-
-                <div 
-                  className="mt-6 p-4 rounded-xl" 
-                  style={{ background: `${theme.colors.primary}10`, border: `1px solid ${theme.colors.primary}22` }}
-                >
-                  <div className="text-xs font-extrabold mb-2" style={{ color: theme.colors.primary }}>VPS EmersonGray1</div>
-                  <div className="text-[11px] opacity-65 leading-relaxed font-mono">
-                    Container: atendai/evolution-api:v1.8.2<br />
-                    Host: Proxy BFF (seguro)<br />
-                    Status: Docker ativo
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
         </div>
       </div>
     </div>

@@ -9,6 +9,8 @@ interface PublishActionsProps {
   publishSuccess: boolean;
   scheduleSuccess: boolean;
   selectedCount: number;
+  publishDisabled?: boolean;
+  scheduleDisabled?: boolean;
 }
 
 export const PublishActions: React.FC<PublishActionsProps> = ({
@@ -17,7 +19,9 @@ export const PublishActions: React.FC<PublishActionsProps> = ({
   isPublishing,
   publishSuccess,
   scheduleSuccess,
-  selectedCount
+  selectedCount,
+  publishDisabled = false,
+  scheduleDisabled = false,
 }) => {
   return (
     <div className="flex flex-col gap-3 mt-6">
@@ -25,6 +29,7 @@ export const PublishActions: React.FC<PublishActionsProps> = ({
         size="lg" 
         fullWidth
         loading={isPublishing}
+        disabled={publishDisabled}
         onClick={onPublishNow}
         className={publishSuccess ? '!bg-emerald-500 !text-white' : ''}
         icon={publishSuccess ? undefined : Send}
@@ -36,6 +41,7 @@ export const PublishActions: React.FC<PublishActionsProps> = ({
         variant="secondary"
         size="lg" 
         fullWidth
+        disabled={scheduleDisabled}
         onClick={onSchedule}
         className={scheduleSuccess ? '!bg-emerald-500/20 !text-emerald-400 !border-emerald-500/50' : ''}
         icon={scheduleSuccess ? undefined : CalendarClock}

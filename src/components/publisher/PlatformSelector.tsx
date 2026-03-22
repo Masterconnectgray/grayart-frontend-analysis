@@ -23,9 +23,18 @@ export const PLATFORMS: PlatformConfig[] = [
 interface PlatformSelectorProps {
   selectedPlatforms: string[];
   onChange: (platforms: string[]) => void;
+  isDark: boolean;
+  connectedPlatforms?: string[];
+  publishablePlatforms?: string[];
 }
 
-export const PlatformSelector: React.FC<PlatformSelectorProps> = ({ selectedPlatforms, onChange }) => {
+export const PlatformSelector: React.FC<PlatformSelectorProps> = ({
+  selectedPlatforms,
+  onChange,
+  isDark,
+  connectedPlatforms = [],
+  publishablePlatforms = [],
+}) => {
   const togglePlatform = (id: string) => {
     onChange(
       selectedPlatforms.includes(id) 
@@ -38,7 +47,8 @@ export const PlatformSelector: React.FC<PlatformSelectorProps> = ({ selectedPlat
   const selectNone = () => onChange([]);
 
   return (
-    <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-6 text-white mb-6">
+    <div className={`backdrop-blur-md rounded-2xl p-6 mb-6 border transition-colors duration-300
+      ${isDark ? 'bg-white/5 border-white/10 text-white' : 'bg-black/5 border-black/10 text-[#1a1a1a]'}`}>
       <div className="flex justify-between items-center mb-4">
         <h3 className="text-xs font-extrabold opacity-50 uppercase tracking-widest">
           Destinos da Publicação
@@ -52,7 +62,7 @@ export const PlatformSelector: React.FC<PlatformSelectorProps> = ({ selectedPlat
           </button>
           <button 
             onClick={selectNone} 
-            className="text-xs font-bold text-slate-400 hover:text-white transition-opacity"
+            className={`text-xs font-bold transition-opacity ${isDark ? 'text-slate-400 hover:text-white' : 'text-slate-500 hover:text-black'}`}
           >
             Limpar
           </button>
@@ -62,12 +72,21 @@ export const PlatformSelector: React.FC<PlatformSelectorProps> = ({ selectedPlat
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
         {PLATFORMS.map(p => {
           const isSelected = selectedPlatforms.includes(p.id);
+          const isConnected = connectedPlatforms.includes(p.id);
+          const canPublishNow = publishablePlatforms.includes(p.id);
+          const statusLabel = p.id === 'whatsapp'
+            ? 'Fluxo operacional'
+            : isConnected
+              ? (canPublishNow ? 'Conectada' : 'Disponível para agendar')
+              : 'Não conectada';
           return (
             <div
               key={p.id}
               onClick={() => togglePlatform(p.id)}
               className={`p-4 rounded-xl text-center cursor-pointer transition-all duration-300
-                ${isSelected ? 'bg-white/10 border-2 shadow-lg -translate-y-1' : 'bg-[#2d2d2d] bg-opacity-40 border-2 border-transparent hover:bg-white/5'}`}
+                ${isSelected ? (isDark ? 'bg-white/10 border-2 shadow-lg -translate-y-1' : 'bg-black/10 border-2 shadow-lg -translate-y-1') 
+                             : (isDark ? 'bg-[#2d2d2d] bg-opacity-40 border-2 border-transparent hover:bg-white/5' 
+                                       : 'bg-black/5 border-2 border-transparent hover:bg-black/10')}`}
               style={{
                 borderColor: isSelected ? p.color : 'transparent',
                 backgroundColor: isSelected ? `${p.color}18` : undefined,
@@ -86,6 +105,15 @@ export const PlatformSelector: React.FC<PlatformSelectorProps> = ({ selectedPlat
               </div>
               <div className="text-[10px] opacity-40 mt-1">
                 {p.maxDuration}
+              </div>
+              <div className={`mt-2 text-[10px] font-bold ${
+                p.id === 'whatsapp'
+                  ? 'text-emerald-500'
+                  : isConnected
+                    ? 'text-emerald-500'
+                    : 'text-amber-500'
+              }`}>
+                {statusLabel}
               </div>
             </div>
           );

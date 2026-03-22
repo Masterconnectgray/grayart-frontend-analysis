@@ -72,6 +72,11 @@ export interface PublishPayload {
   scheduleAt?: number;
 }
 
+export interface ScheduledSocialPost {
+  id: number;
+  status: string;
+}
+
 function waitForOAuthPopup(platform: PlatformKey, authUrl: string): Promise<void> {
   return new Promise((resolve, reject) => {
     const width = 600;
@@ -205,6 +210,10 @@ async function syncAccountsFromServer() {
   return accounts;
 }
 
+export async function fetchConnectedAccounts(): Promise<ConnectedAccount[]> {
+  return syncAccountsFromServer();
+}
+
 export async function publishToSocial(
   platform: PlatformKey,
   payload: PublishPayload
@@ -225,6 +234,36 @@ export async function publishToSocial(
 
   const data = await response.json() as { job_id: string; result?: { url?: string } };
   return { success: true, postId: String(data.job_id), url: data.result?.url };
+}
+
+export async function scheduleToSocial(
+  platform: string,
+  payload: PublishPayload
+): Promise<ScheduledSocialPost> {
+  if (!payload.scheduleAt) {
+    throw new Error('scheduleAt é obrigatório para agendamento.');
+  }
+
+  const response = await bffFetch('/social/schedule', {
+    method: 'POST',
+    body: JSON.stringify({
+      platform,
+      content: payload.caption,
+      media_url: payload.mediaUrl,
+      scheduled_at: new Date(payload.scheduleAt).toISOString(),
+    }),
+  });
+
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}));
+    throw new Error((err as { error?: string }).error || `Erro ao agendar no ${platform}`);
+  }
+
+  const data = await response.json() as { scheduled_post_id: number; status: string };
+  return {
+    id: data.scheduled_post_id,
+    status: data.status,
+  };
 }
 
 export function getConnectionStatus(platform: PlatformKey): 'connected' | 'expired' | 'disconnected' {

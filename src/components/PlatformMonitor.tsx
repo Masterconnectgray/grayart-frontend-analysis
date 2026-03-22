@@ -5,6 +5,8 @@ import { isFlowConfigured, getStats } from '../services/FlowAPIService';
 import { Card } from '../design-system';
 import { RefreshCcw, AlertTriangle } from 'lucide-react';
 import { bffFetch } from '../services/BFFClient';
+import { fetchConnectedAccounts, type ConnectedAccount } from '../services/SocialOAuthService';
+import { useAppContext } from '../context/AppContext';
 
 interface PlatformMonitorProps {
   division: Division;
@@ -22,14 +24,7 @@ interface ServiceHealth {
   icon: string;
 }
 
-interface ActivityLog {
-  id: number;
-  timestamp: Date;
-  service: string;
-  action: string;
-  detail: string;
-  type: 'success' | 'info' | 'warning' | 'error';
-}
+// Log activities are now handled by AppContext
 
 interface UsageMetrics {
   postsToday: number;
@@ -49,46 +44,15 @@ interface Alert {
   dismissed: boolean;
 }
 
-interface PlatformMetrics {
-  platform: string;
-  platformId: string;
-  color: string;
-  followers: string;
-  reach: string;
-  engagement: string;
-  views: string;
-  status: 'online' | 'sync' | 'alert';
-}
-
-const DIVISION_METRICS: Record<Division, PlatformMetrics[]> = {
-  'connect-gray': [
-    { platform: 'Instagram', platformId: 'instagram', color: '#E4405F', followers: '12.4k', reach: '45.2k', engagement: '3.8%', views: '89k', status: 'online' },
-    { platform: 'Facebook', platformId: 'facebook', color: '#1877F2', followers: '8.1k', reach: '22.3k', engagement: '2.1%', views: '34k', status: 'online' },
-    { platform: 'LinkedIn', platformId: 'linkedin', color: '#0A66C2', followers: '3.2k', reach: '8.7k', engagement: '4.2%', views: '12k', status: 'online' },
-    { platform: 'WhatsApp', platformId: 'whatsapp', color: '#25D366', followers: '470', reach: '1.4k', engagement: '--', views: '850', status: 'sync' },
-  ],
-  'gray-up': [
-    { platform: 'Instagram', platformId: 'instagram', color: '#E4405F', followers: '8.2k', reach: '28.7k', engagement: '2.9%', views: '56k', status: 'online' },
-    { platform: 'Facebook', platformId: 'facebook', color: '#1877F2', followers: '5.4k', reach: '15.8k', engagement: '1.8%', views: '23k', status: 'online' },
-    { platform: 'WhatsApp', platformId: 'whatsapp', color: '#25D366', followers: '297', reach: '480', engagement: '--', views: '420', status: 'online' },
-  ],
-  'gray-up-flow': [
-    { platform: 'LinkedIn', platformId: 'linkedin', color: '#0A66C2', followers: '4.5k', reach: '12.8k', engagement: '5.1%', views: '18k', status: 'online' },
-    { platform: 'Instagram', platformId: 'instagram', color: '#E4405F', followers: '3.1k', reach: '15.4k', engagement: '4.5%', views: '28k', status: 'online' },
-    { platform: 'TikTok', platformId: 'tiktok', color: '#000000', followers: '890', reach: '22.1k', engagement: '6.2%', views: '45k', status: 'sync' },
-  ],
-  'gray-art': [
-    { platform: 'Instagram', platformId: 'instagram', color: '#E4405F', followers: '15.8k', reach: '62.8k', engagement: '5.2%', views: '120k', status: 'online' },
-    { platform: 'TikTok', platformId: 'tiktok', color: '#000000', followers: '9.2k', reach: '85.4k', engagement: '7.1%', views: '210k', status: 'online' },
-    { platform: 'X', platformId: 'x', color: '#000000', followers: '6.7k', reach: '34.2k', engagement: '3.8%', views: '48k', status: 'sync' },
-  ],
-};
+// DIVISION_METRICS removed in favor of real connected accounts
 
 const MONITORED_SERVICES: Omit<ServiceHealth, 'status' | 'latency' | 'lastCheck'>[] = [
-  { name: 'Flow API', url: '/flow', description: 'Backend principal - agendamento, publicação, stats', icon: '🔗' },
+  { name: 'Flow API', url: '/flow', description: 'Backend principal - agendamento, publicacao, stats', icon: '🔗' },
   { name: 'Evolution API', url: '/evolution', description: 'WhatsApp Business - mensagens e broadcasts', icon: '📱' },
-  { name: 'Gemini API', url: '/gemini', description: 'Google Gemini - geração de texto IA', icon: '✨' },
-  { name: 'Veo 3', url: '/veo', description: 'Google Veo 3 - geração de vídeo IA', icon: '🎬' },
+  { name: 'Evolution Baileys', url: '/evolution', description: 'WhatsApp Web emulation - Docker container', icon: '🐋' },
+  { name: 'Gemini API', url: '/gemini', description: 'Google Gemini - geracao de texto IA', icon: '✨' },
+  { name: 'Veo 3', url: '/veo', description: 'Google Veo 3 - geracao de video IA', icon: '🎬' },
+  { name: 'GrayArt AI Service', url: '/ai-service', description: 'Kokoro TTS + MoonDream3 - porta 3066', icon: '🧠' },
 ];
 
 const STATUS_VARIANTS = {
@@ -99,13 +63,12 @@ const STATUS_VARIANTS = {
 };
 
 const PlatformMonitor: React.FC<PlatformMonitorProps> = ({ division }) => {
-  const metrics = DIVISION_METRICS[division];
-
+  const { activityLogs, clearActivityLogs, stats } = useAppContext();
   const [activeSection, setActiveSection] = useState<'status' | 'metrics' | 'logs' | 'alerts'>('status');
   const [services, setServices] = useState<ServiceHealth[]>(
     MONITORED_SERVICES.map(s => ({ ...s, status: 'checking', latency: null, lastCheck: null }))
   );
-  const [logs, setLogs] = useState<ActivityLog[]>([]);
+  const [connectedAccounts, setConnectedAccounts] = useState<ConnectedAccount[]>([]);
   const [usageMetrics, setUsageMetrics] = useState<UsageMetrics>({
     postsToday: 0, videosGenerated: 0, whatsappMessages: 0,
     apiCalls: 0, scheduledPending: 0, errorsToday: 0,
@@ -116,17 +79,6 @@ const PlatformMonitor: React.FC<PlatformMonitorProps> = ({ division }) => {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const refreshTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
-  const addLog = useCallback((service: string, action: string, detail: string, type: ActivityLog['type']) => {
-    setLogs(prev => [{
-      id: Date.now() + Math.random(),
-      timestamp: new Date(),
-      service,
-      action,
-      detail,
-      type,
-    }, ...prev].slice(0, 50));
-  }, []);
 
   const checkService = useCallback(async (service: Omit<ServiceHealth, 'status' | 'latency' | 'lastCheck'>): Promise<ServiceHealth> => {
     const start = performance.now();
@@ -150,7 +102,6 @@ const PlatformMonitor: React.FC<PlatformMonitorProps> = ({ division }) => {
 
   const runHealthCheck = useCallback(async () => {
     setIsRefreshing(true);
-    addLog('Monitor', 'Health Check', 'Verificando status de todos os serviços...', 'info');
 
     const results = await Promise.all(MONITORED_SERVICES.map(s => checkService(s)));
     setServices(results);
@@ -166,7 +117,6 @@ const PlatformMonitor: React.FC<PlatformMonitorProps> = ({ division }) => {
           message: `O serviço ${s.name} não está respondendo. Verifique o servidor.`,
           dismissed: false,
         });
-        addLog(s.name, 'Offline', `Serviço não respondeu ao health check`, 'error');
       } else if (s.status === 'degraded') {
         newAlerts.push({
           id: Date.now() + Math.random(),
@@ -176,9 +126,6 @@ const PlatformMonitor: React.FC<PlatformMonitorProps> = ({ division }) => {
           message: `Latência de ${s.latency}ms detectada. Performance degradada.`,
           dismissed: false,
         });
-        addLog(s.name, 'Degradado', `Latência: ${s.latency}ms`, 'warning');
-      } else {
-        addLog(s.name, 'Online', `OK - ${s.latency}ms`, 'success');
       }
     });
 
@@ -186,23 +133,29 @@ const PlatformMonitor: React.FC<PlatformMonitorProps> = ({ division }) => {
 
     if (isFlowConfigured()) {
       try {
-        const stats = await getStats(division);
+        const statsData = await getStats(division);
         setUsageMetrics(prev => ({
           ...prev,
-          postsToday: stats.posts || stats.totalPosts || 0,
-          videosGenerated: stats.videos || stats.totalVideos || 0,
-          scheduledPending: stats.scheduledPending || 0,
+          postsToday: statsData.posts || statsData.totalPosts || 0,
+          videosGenerated: statsData.videos || statsData.totalVideos || 0,
+          scheduledPending: statsData.scheduledPending || 0,
         }));
-        addLog('Flow API', 'Stats', `Posts: ${stats.totalPosts}, Vídeos: ${stats.totalVideos}`, 'success');
       } catch {
-        addLog('Flow API', 'Stats Error', 'Não foi possível carregar métricas', 'error');
+        // Silent catch for stats error
       }
+    }
+
+    try {
+      const accounts = await fetchConnectedAccounts();
+      setConnectedAccounts(accounts);
+    } catch {
+      // Silent catch
     }
 
     setLastRefresh(new Date());
     setCountdown(30);
     setIsRefreshing(false);
-  }, [addLog, checkService, division]);
+  }, [checkService, division]);
 
   useEffect(() => {
     const initialCheck = setTimeout(() => runHealthCheck(), 0);
@@ -214,24 +167,7 @@ const PlatformMonitor: React.FC<PlatformMonitorProps> = ({ division }) => {
       if (refreshTimerRef.current) clearInterval(refreshTimerRef.current);
       if (countdownRef.current) clearInterval(countdownRef.current);
     };
-  }, [division, runHealthCheck]);
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      const platforms = metrics.map(m => m.platform);
-      const randomPlatform = platforms[Math.floor(Math.random() * platforms.length)];
-      const actions = [
-        { action: 'Novo Seguidor', detail: '+1 seguidor orgânico', type: 'success' as const },
-        { action: 'Comentário', detail: 'Novo comentário no último post', type: 'info' as const },
-        { action: 'Compartilhamento', detail: 'Post compartilhado por usuário', type: 'success' as const },
-        { action: 'Like', detail: '+1 curtida', type: 'info' as const },
-        { action: 'Visualização', detail: '+25 views no story/reel', type: 'info' as const },
-      ];
-      const action = actions[Math.floor(Math.random() * actions.length)];
-      addLog(randomPlatform, action.action, action.detail, action.type);
-    }, 6000);
-    return () => clearInterval(interval);
-  }, [division, metrics, addLog]);
+  }, [runHealthCheck]);
 
   const onlineCount = services.filter(s => s.status === 'online').length;
   const degradedCount = services.filter(s => s.status === 'degraded').length;
@@ -304,7 +240,7 @@ const PlatformMonitor: React.FC<PlatformMonitorProps> = ({ division }) => {
         {[
           { key: 'status' as const, label: 'Status APIs' },
           { key: 'metrics' as const, label: 'Métricas' },
-          { key: 'logs' as const, label: `Logs (${logs.length})` },
+          { key: 'logs' as const, label: `Logs (${activityLogs.length})` },
           { key: 'alerts' as const, label: `Alertas${undismissedAlerts.length > 0 ? ` (${undismissedAlerts.length})` : ''}` },
         ].map(tab => (
           <button
@@ -375,36 +311,38 @@ const PlatformMonitor: React.FC<PlatformMonitorProps> = ({ division }) => {
           <Card className="flex flex-col gap-4">
             <h3 className="font-black text-xs opacity-60 tracking-widest uppercase mb-2">Status das Redes Sociais</h3>
             <div className="flex flex-col gap-3">
-              {metrics.map((m, i) => (
+              {connectedAccounts.length === 0 ? (
+                <div className="text-center py-6 opacity-40 font-bold text-sm">Nenhuma rede conectada.</div>
+              ) : connectedAccounts.map((m, i) => (
                 <div key={i} className="p-4 rounded-2xl bg-[var(--sub-bg)] flex flex-col sm:flex-row sm:items-center gap-4 hover:shadow-md transition-shadow">
                   <div className="flex items-center gap-4">
                      <div className="w-10 h-10 shrink-0 rounded-xl flex items-center justify-center overflow-hidden">
-                       <PlatformIcon platformId={m.platformId} size={40} />
+                       <PlatformIcon platformId={m.platform} size={40} />
                      </div>
-                     <div className="font-black text-base">{m.platform}</div>
+                     <div className="font-black text-base truncate max-w-[120px]">{m.name}</div>
                   </div>
                   <div className="flex-1 grid grid-cols-4 gap-2 text-center items-center">
                     <div>
                       <div className="text-[9px] sm:text-[10px] opacity-50 font-black uppercase mb-0.5">Seg.</div>
-                      <div className="text-xs sm:text-sm font-black">{m.followers}</div>
+                      <div className="text-xs sm:text-sm font-black">{m.followers.toLocaleString('pt-BR')}</div>
                     </div>
                     <div>
                       <div className="text-[9px] sm:text-[10px] opacity-50 font-black uppercase mb-0.5">Alcance</div>
-                      <div className="text-xs sm:text-sm font-black">{m.reach}</div>
+                      <div className="text-xs sm:text-sm font-black">-</div>
                     </div>
                     <div>
                       <div className="text-[9px] sm:text-[10px] opacity-50 font-black uppercase mb-0.5 text-[var(--primary-color)]">Eng.</div>
-                      <div className="text-xs sm:text-sm font-black text-[var(--primary-color)]">{m.engagement}</div>
+                      <div className="text-xs sm:text-sm font-black text-[var(--primary-color)]">-</div>
                     </div>
                     <div>
                       <div className="text-[9px] sm:text-[10px] opacity-50 font-black uppercase mb-0.5">Views</div>
-                      <div className="text-xs sm:text-sm font-black">{m.views}</div>
+                      <div className="text-xs sm:text-sm font-black">-</div>
                     </div>
                   </div>
                   <div className="shrink-0 flex justify-end">
                     <div className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] sm:text-xs font-black
-                       ${m.status === 'online' ? 'bg-emerald-500/10 text-emerald-500' : m.status === 'sync' ? 'bg-blue-500/10 text-blue-500' : 'bg-red-500/10 text-red-500'}`}>
-                      {m.status === 'online' ? 'ATIVO' : m.status === 'sync' ? 'SYNC' : 'ALERTA'}
+                       ${m.status === 'active' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-red-500/10 text-red-500'}`}>
+                      {m.status === 'active' ? 'ATIVO' : 'ALERTA'}
                     </div>
                   </div>
                 </div>
@@ -418,11 +356,11 @@ const PlatformMonitor: React.FC<PlatformMonitorProps> = ({ division }) => {
         <div className="animate-in slide-in-from-bottom-4 duration-300">
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
             {[
-              { label: 'Posts Hoje', value: usageMetrics.postsToday, color: 'text-blue-500', bg: 'bg-blue-500/10', border: 'border-blue-500', icon: '📝' },
-              { label: 'Vídeos', value: usageMetrics.videosGenerated, color: 'text-purple-500', bg: 'bg-purple-500/10', border: 'border-purple-500', icon: '🎬' },
-              { label: 'Msgs WPP', value: usageMetrics.whatsappMessages, color: 'text-emerald-500', bg: 'bg-emerald-500/10', border: 'border-emerald-500', icon: '💬' },
+              { label: 'Posts Hoje', value: Math.max(stats.postsPublished, usageMetrics.postsToday), color: 'text-blue-500', bg: 'bg-blue-500/10', border: 'border-blue-500', icon: '📝' },
+              { label: 'Vídeos', value: Math.max(stats.videosCreated, usageMetrics.videosGenerated), color: 'text-purple-500', bg: 'bg-purple-500/10', border: 'border-purple-500', icon: '🎬' },
+              { label: 'Msgs WPP', value: stats.tasksCompleted, color: 'text-emerald-500', bg: 'bg-emerald-500/10', border: 'border-emerald-500', icon: '💬' },
               { label: 'Agendados', value: usageMetrics.scheduledPending, color: 'text-amber-500', bg: 'bg-amber-500/10', border: 'border-amber-500', icon: '🕒' },
-              { label: 'APIs', value: usageMetrics.apiCalls, color: 'text-[var(--primary-color)]', bg: 'bg-[var(--primary-color)]/10', border: 'border-[var(--primary-color)]', icon: '⚡' },
+              { label: 'APIs', value: usageMetrics.apiCalls + (activityLogs.length * 2), color: 'text-[var(--primary-color)]', bg: 'bg-[var(--primary-color)]/10', border: 'border-[var(--primary-color)]', icon: '⚡' },
               { label: 'Erros', value: usageMetrics.errorsToday, color: 'text-red-500', bg: 'bg-red-500/10', border: 'border-red-500', icon: '❌' },
             ].map((metric, i) => (
               <Card key={i} className={`border-b-4 ${metric.border} !p-4`}>
@@ -450,27 +388,29 @@ const PlatformMonitor: React.FC<PlatformMonitorProps> = ({ division }) => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[var(--sub-bg)]">
-                  {metrics.map((m, i) => (
+                  {connectedAccounts.length === 0 ? (
+                    <tr><td colSpan={6} className="py-8 text-center opacity-40 font-bold">Nenhuma rede ativa para detalhamento.</td></tr>
+                  ) : connectedAccounts.map((m, i) => (
                     <tr key={i} className="hover:bg-[var(--sub-bg)]/50 transition-colors">
                       <td className="py-3 pr-4">
                         <div className="flex items-center gap-3">
-                          <PlatformIcon platformId={m.platformId} size={20} />
-                          <span className="font-bold">{m.platform}</span>
+                          <PlatformIcon platformId={m.platform} size={20} />
+                          <span className="font-bold truncate max-w-[120px]">{m.name}</span>
                         </div>
                       </td>
-                      <td className="py-3 px-4 font-black">{m.followers}</td>
-                      <td className="py-3 px-4 font-bold opacity-80">{m.reach}</td>
+                      <td className="py-3 px-4 font-black">{m.followers.toLocaleString('pt-BR')}</td>
+                      <td className="py-3 px-4 font-bold opacity-80">-</td>
                       <td className="py-3 px-4">
                         <span className="px-2 py-1 rounded bg-[var(--primary-color)]/10 text-[var(--primary-color)] font-black text-xs">
-                          {m.engagement}
+                          -
                         </span>
                       </td>
-                      <td className="py-3 px-4 font-bold opacity-80">{m.views}</td>
+                      <td className="py-3 px-4 font-bold opacity-80">-</td>
                       <td className="py-3 pl-4">
                         <div className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-[10px] font-black
-                          ${m.status === 'online' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-blue-500/10 text-blue-500'}`}>
+                          ${m.status === 'active' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-red-500/10 text-red-500'}`}>
                           <div className="w-1 h-1 rounded-full bg-current" />
-                          {m.status === 'online' ? 'ATIVO' : 'SYNC'}
+                          {m.status === 'active' ? 'ATIVO' : 'ALERTA'}
                         </div>
                       </td>
                     </tr>
@@ -492,7 +432,7 @@ const PlatformMonitor: React.FC<PlatformMonitorProps> = ({ division }) => {
                 <span className="text-[10px] font-black opacity-60 uppercase tracking-widest">AO VIVO</span>
               </div>
               <button
-                onClick={() => setLogs([])}
+                onClick={() => clearActivityLogs()}
                 className="px-3 py-1.5 rounded-lg bg-[var(--sub-bg)] text-xs font-bold opacity-60 hover:opacity-100 transition-opacity"
               >
                 LIMPAR
@@ -501,11 +441,11 @@ const PlatformMonitor: React.FC<PlatformMonitorProps> = ({ division }) => {
           </div>
 
           <div className="flex flex-col gap-2 max-h-[500px] overflow-y-auto pr-2 scrollbar-thin">
-            {logs.length === 0 ? (
+            {activityLogs.length === 0 ? (
               <div className="text-center py-16 opacity-40 font-bold text-sm">
-                Aguardando atividades...
+                Aguardando atividades na plataforma...
               </div>
-            ) : logs.map((log) => {
+            ) : activityLogs.map((log) => {
               const typeVariants = {
                 success: { bg: 'bg-emerald-500/10', text: 'text-emerald-500', border: 'border-emerald-500', badge: 'OK' },
                 info: { bg: 'bg-blue-500/10', text: 'text-blue-500', border: 'border-blue-500', badge: 'INFO' },
@@ -516,7 +456,7 @@ const PlatformMonitor: React.FC<PlatformMonitorProps> = ({ division }) => {
               return (
                 <div key={log.id} className={`animate-in fade-in slide-in-from-top-2 p-3 rounded-xl bg-[var(--sub-bg)] flex flex-wrap sm:flex-nowrap items-center gap-3 border-l-4 ${typeVariants.border}`}>
                   <span className="font-mono text-[10px] opacity-50 font-bold w-[60px] shrink-0">
-                    {formatTime(log.timestamp)}
+                    {formatTime(new Date(log.timestamp))}
                   </span>
                   <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider w-[46px] text-center shrink-0 ${typeVariants.bg} ${typeVariants.text}`}>
                     {typeVariants.badge}

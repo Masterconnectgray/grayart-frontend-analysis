@@ -46,6 +46,7 @@ interface ScheduleCalendarProps {
   scheduleTime: string;
   postContent: string;
   scheduleSuccess: boolean;
+  isScheduling: boolean;
   onDateChange: (val: string) => void;
   onTimeChange: (val: string) => void;
   onContentChange: (val: string) => void;
@@ -58,6 +59,7 @@ export const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({
   scheduleTime,
   postContent,
   scheduleSuccess,
+  isScheduling,
   onDateChange,
   onTimeChange,
   onContentChange,
@@ -100,6 +102,7 @@ export const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({
         <Button 
           fullWidth
           size="lg"
+          loading={isScheduling}
           onClick={onSchedule}
           className={scheduleSuccess ? '!bg-emerald-500 !text-white' : ''}
           icon={scheduleSuccess ? undefined : CalendarClock}

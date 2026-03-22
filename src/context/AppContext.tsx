@@ -10,6 +10,15 @@ interface Notification {
     type: 'success' | 'error' | 'info';
 }
 
+export interface ActivityLog {
+    id: number;
+    timestamp: string;
+    service: string;
+    action: string;
+    detail: string;
+    type: 'success' | 'info' | 'warning' | 'error';
+}
+
 export interface GeneratedCopy {
     hook: string;
     body: string;
@@ -29,6 +38,10 @@ interface AppContextType {
     notifications: Notification[];
     addNotification: (message: string, type?: Notification['type']) => void;
     removeNotification: (id: number) => void;
+    
+    activityLogs: ActivityLog[];
+    addActivityLog: (service: string, action: string, detail: string, type: ActivityLog['type']) => void;
+    clearActivityLogs: () => void;
     // Stats
     stats: {
         videosCreated: number;
@@ -58,6 +71,11 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     });
 
     const [notifications, setNotifications] = useState<Notification[]>([]);
+    const [activityLogs, setActivityLogs] = useState<ActivityLog[]>(() => {
+        try {
+            return JSON.parse(localStorage.getItem('activityLogs') || '[]');
+        } catch { return []; }
+    });
     const [stats, setStats] = useState({
         videosCreated: Number(localStorage.getItem('stats_videos')) || 0,
         tasksCompleted: Number(localStorage.getItem('stats_tasks')) || 0,
@@ -71,7 +89,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         localStorage.setItem('activeDivision', activeDivision);
         localStorage.setItem('activeTab', activeTab);
         localStorage.setItem('marketingView', marketingView);
-    }, [activeDivision, activeTab, marketingView]);
+        localStorage.setItem('activityLogs', JSON.stringify(activityLogs));
+    }, [activeDivision, activeTab, marketingView, activityLogs]);
 
     useEffect(() => {
         localStorage.setItem('stats_videos', stats.videosCreated.toString());
@@ -90,6 +109,19 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         setNotifications(prev => [...prev, { id, message, type }]);
         setTimeout(() => removeNotification(id), 4000);
     }, [removeNotification]);
+
+    const addActivityLog = useCallback((service: string, action: string, detail: string, type: ActivityLog['type']) => {
+        setActivityLogs(prev => [{
+            id: Date.now() + Math.random(),
+            timestamp: new Date().toISOString(),
+            service,
+            action,
+            detail,
+            type,
+        }, ...prev].slice(0, 100));
+    }, []);
+
+    const clearActivityLogs = useCallback(() => setActivityLogs([]), []);
 
     const incrementVideos = () => setStats(s => ({ ...s, videosCreated: s.videosCreated + 1 }));
     const incrementTasks = () => setStats(s => ({ ...s, tasksCompleted: s.tasksCompleted + 1 }));
@@ -110,6 +142,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
             notifications, addNotification, removeNotification,
             stats, incrementVideos, incrementTasks, incrementPosts,
             generatedCopy, setGeneratedCopy, sendCopyToVideoLab,
+            activityLogs, addActivityLog, clearActivityLogs,
         }}>
             {children}
         </AppContext.Provider>

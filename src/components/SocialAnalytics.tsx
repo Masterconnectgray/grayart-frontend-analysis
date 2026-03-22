@@ -224,11 +224,12 @@ const SocialAnalytics: React.FC<SocialAnalyticsProps> = ({ division }) => {
   const [activeSection, setActiveSection] = useState<'overview' | 'content' | 'audience'>('overview');
   const [chartType, setChartType] = useState<ChartType>('area');
 
-  const animKey = `${division}-${activeSection}`;
-
   const monthly = MONTHLY_DATA[division];
   const lastMonth = monthly[monthly.length - 1];
   const prevMonth = monthly[monthly.length - 2];
+  
+  const animKey = `${division}-${activeSection}`;
+  
   const growthAlcance = Math.round(((lastMonth.alcance - prevMonth.alcance) / prevMonth.alcance) * 100);
   const growthSeg = Math.round(((lastMonth.seguidores - prevMonth.seguidores) / prevMonth.seguidores) * 100);
   const growthEng = +((lastMonth.engajamento - prevMonth.engajamento).toFixed(1));
@@ -296,6 +297,18 @@ const SocialAnalytics: React.FC<SocialAnalyticsProps> = ({ division }) => {
 
   return (
     <div className="animate-in fade-in duration-300">
+      
+      <div className={`p-4 rounded-xl mb-6 border ${isDark ? 'bg-amber-500/10 border-amber-500/20 text-amber-500' : 'bg-amber-50/80 border-amber-500/30 text-amber-700'} flex items-start gap-4 shadow-sm`}>
+        <div className="text-xl bg-amber-500/20 p-2 rounded-lg">📊</div>
+        <div>
+          <h4 className="font-black text-xs mb-1 uppercase tracking-widest opacity-90">Interface de Demonstração</h4>
+          <p className="text-xs font-bold opacity-80 leading-relaxed max-w-4xl">
+            Os indicadores visuais abaixo são dados de modelo demonstrativos. Assim que os dados reais da plataforma e integrações de redes sociais (Instagram, Facebook, etc.) forem sincronizados pelo backend, 
+            estes relatórios serão substituídos automaticamente pelas suas estatísticas e crescimentos reais ao longo do tempo.
+          </p>
+        </div>
+      </div>
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         {metrics.map((s, i) => (
           <KPICard
@@ -464,7 +477,7 @@ const SocialAnalytics: React.FC<SocialAnalyticsProps> = ({ division }) => {
             <div className="flex flex-wrap gap-4 mt-6 justify-center">
               {AUDIENCE_DATA[division].map((d, i) => (
                 <div key={i} className="flex items-center gap-2 text-xs font-bold">
-                  <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: PIE_COLORS[i] }} />
+                  <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: PIE_COLORS[i % PIE_COLORS.length] }} />
                   <span className="opacity-70">{d.name}</span>
                 </div>
               ))}
@@ -478,10 +491,10 @@ const SocialAnalytics: React.FC<SocialAnalyticsProps> = ({ division }) => {
                 <div key={i}>
                   <div className="flex justify-between items-center mb-2">
                     <span className="font-bold text-sm">{seg.name}</span>
-                    <span className="font-black text-sm" style={{ color: PIE_COLORS[i] }}>{seg.value}%</span>
+                    <span className="font-black text-sm" style={{ color: PIE_COLORS[i % PIE_COLORS.length] }}>{seg.value}%</span>
                   </div>
                   <div className="h-2.5 rounded-full overflow-hidden bg-[var(--sub-bg)]">
-                    <div className="h-full rounded-full transition-all duration-1000 ease-out" style={{ width: `${seg.value}%`, background: `linear-gradient(90deg, ${PIE_COLORS[i]}, ${PIE_COLORS[i]}cc)` }} />
+                    <div className="h-full rounded-full transition-all duration-1000 ease-out" style={{ width: `${seg.value}%`, background: `linear-gradient(90deg, ${PIE_COLORS[i % PIE_COLORS.length]}, ${PIE_COLORS[i % PIE_COLORS.length]}cc)` }} />
                   </div>
                 </div>
               ))}

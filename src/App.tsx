@@ -2,6 +2,7 @@ import React, { useEffect, useState, lazy, Suspense } from 'react';
 import { useAppContext, type MarketingView } from './context/AppContext';
 import { DIVISIONS, type Division } from './constants/Themes';
 import { ModuleSkeleton, AnalyticsSkeleton, FeedSkeleton } from './components/SkeletonLoader';
+import ErrorBoundary from './components/ErrorBoundary';
 
 // ─── Lazy Loading: reduz bundle inicial de 1.25MB ─────────────────────────────
 const ReelsGenerator = lazy(() => import('./components/ReelsGenerator'));
@@ -14,7 +15,7 @@ const MonitorJourney = lazy(() => import('./components/journeys/MonitorJourney')
 const PhotoAnalyzer = lazy(() => import('./components/PhotoAnalyzer'));
 const OAuthCallback = lazy(() => import('./components/OAuthCallback'));
 import { DIVISION_LOGOS, GrupoGrayLogo } from './constants/DivisionLogos';
-import { PenTool, Video, Link2, Send, BarChart3, Sparkles, FileText, Users, Upload, Camera } from 'lucide-react';
+import { PenTool, Video, Link2, Send, BarChart3, Sparkles, FileText, Users } from 'lucide-react';
 import { useDashboardStats } from './hooks/useDashboardStats';
 import './index.css';
 
@@ -203,9 +204,7 @@ const App: React.FC = () => {
           ${activeDivision === 'gray-art' ? 'bg-white border-black/5' : 'bg-[#1a1a1a] border-white/5'}`}>
           {[
             { id: 'create', label: 'Criar Conteúdo', icon: PenTool },
-            { id: 'media', label: 'Mídia + IA', icon: Upload },
-            { id: 'video', label: 'Vídeo IA', icon: Video },
-            { id: 'photo', label: 'Análise Foto', icon: Camera },
+            { id: 'video', label: 'Gerar Vídeo', icon: Video },
             { id: 'connect', label: 'Conectar Contas', icon: Link2 },
             { id: 'publish', label: 'Publicar', icon: Send },
             { id: 'monitor', label: 'Monitorar', icon: BarChart3 }
@@ -238,21 +237,23 @@ const App: React.FC = () => {
           </div>
         ) : (
           <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <Suspense fallback={<ModuleSkeleton isDark={isDark} primary={DIVISIONS[activeDivision].colors.primary} />}>
-              {activeTab === 'marketing' ? (
-                <div>
-                  {marketingView === 'create' && <ReelsGenerator division={activeDivision} />}
-                  {marketingView === 'media' && <MediaUpload division={activeDivision} />}
-                  {marketingView === 'video' && <AIVideoLab division={activeDivision} />}
-                  {marketingView === 'photo' && <PhotoAnalyzer division={activeDivision} />}
-                  {marketingView === 'connect' && <ConnectJourney division={activeDivision} />}
-                  {marketingView === 'publish' && <PublishJourney division={activeDivision} />}
-                  {marketingView === 'monitor' && <MonitorJourney division={activeDivision} />}
-                </div>
-              ) : (
-                <OperationsDashboard division={activeDivision} />
-              )}
-            </Suspense>
+            <ErrorBoundary>
+              <Suspense fallback={<ModuleSkeleton isDark={isDark} primary={DIVISIONS[activeDivision].colors.primary} />}>
+                {activeTab === 'marketing' ? (
+                  <div>
+                    {marketingView === 'create' && <ReelsGenerator division={activeDivision} />}
+                    {marketingView === 'media' && <MediaUpload division={activeDivision} />}
+                    {marketingView === 'video' && <AIVideoLab division={activeDivision} />}
+                    {marketingView === 'photo' && <PhotoAnalyzer division={activeDivision} />}
+                    {marketingView === 'connect' && <ConnectJourney division={activeDivision} />}
+                    {marketingView === 'publish' && <PublishJourney division={activeDivision} />}
+                    {marketingView === 'monitor' && <MonitorJourney division={activeDivision} />}
+                  </div>
+                ) : (
+                  <OperationsDashboard division={activeDivision} />
+                )}
+              </Suspense>
+            </ErrorBoundary>
           </div>
         )}
       </main>
