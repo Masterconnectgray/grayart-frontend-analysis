@@ -45,54 +45,44 @@ const PROVIDERS: Provider[] = [
     url: 'https://piapi.ai',
   },
   {
-    name: 'Seedance 2.0 (Dreamina/CapCut)',
-    tier: 'Creditos diarios gratuitos',
-    api: 'beta',
+    name: 'Seedance 2.0 (PiAPI)',
+    tier: 'Creditos via PiAPI',
+    api: 'integrado',
     quality: 5,
-    bestFor: 'Testes manuais — qualidade excelente',
-    status: 'pendente',
+    bestFor: 'Fallback 3 — danca e movimento corporal',
+    status: 'ativo',
     color: '#f59e0b',
-    url: 'https://dreamina.capcut.com',
+    url: 'https://piapi.ai',
   },
   {
-    name: 'Luma Dream Machine',
-    tier: '30 videos/mes gratis',
-    api: 'pago',
+    name: 'Luma Dream Machine (PiAPI)',
+    tier: 'Creditos via PiAPI',
+    api: 'integrado',
     quality: 4,
-    bestFor: 'Testes manuais — estilo cinematico',
-    status: 'manual',
+    bestFor: 'Fallback 4 — estilo cinematico e transicoes',
+    status: 'ativo',
     color: '#6366f1',
-    url: 'https://lumalabs.ai/dream-machine',
+    url: 'https://piapi.ai',
   },
   {
-    name: 'Wan 2.1 (Open Source)',
-    tier: 'Gratuito se auto-hospedado',
-    api: 'self-host',
+    name: 'Wan 2.1 (PiAPI)',
+    tier: 'Creditos via PiAPI',
+    api: 'integrado',
     quality: 4,
-    bestFor: 'Servidor proprio — sem limites',
-    status: 'pendente',
+    bestFor: 'Fallback 5 — open source, boa qualidade geral',
+    status: 'ativo',
     color: '#10b981',
-    url: 'https://github.com/Wan-Video/wan2.1',
+    url: 'https://piapi.ai',
   },
   {
-    name: 'HunyuanVideo (Tencent)',
-    tier: 'Gratuito se auto-hospedado',
-    api: 'self-host',
+    name: 'HunyuanVideo (PiAPI)',
+    tier: 'Creditos via PiAPI',
+    api: 'integrado',
     quality: 4,
-    bestFor: 'Servidor proprio — sem limites',
-    status: 'pendente',
+    bestFor: 'Fallback 6 — ultimo recurso, estilo Tencent',
+    status: 'ativo',
     color: '#06b6d4',
-    url: 'https://github.com/Tencent/HunyuanVideo',
-  },
-  {
-    name: 'Google AI Studio',
-    tier: 'Acesso manual gratuito (UI)',
-    api: 'manual',
-    quality: 5,
-    bestFor: 'Testes manuais via interface web',
-    status: 'manual',
-    color: '#4285f4',
-    url: 'https://aistudio.google.com',
+    url: 'https://piapi.ai',
   },
 ];
 
@@ -217,8 +207,8 @@ export default function VideoHub({ division }: VideoHubProps) {
               <Clock size={16} className="text-amber-400 shrink-0 mt-0.5" />
               <div className="text-xs opacity-60">
                 <p className="font-bold text-amber-400 mb-1">Quotas diarias</p>
-                <p>Veo 3.1: reseta meia-noite Pacific Time. Kling: reseta diariamente.
-                Modo "Automatico" tenta Veo primeiro e cai pro Kling se quota esgotar.</p>
+                <p>Veo 3.1: reseta meia-noite Pacific Time. PiAPI (Kling, Seedance, Luma, Wan, Hunyuan): creditos compartilhados.
+                Modo "Automatico" tenta todos em cadeia: Veo → Kling → Seedance → Luma → Wan → Hunyuan.</p>
               </div>
             </div>
           </Card>
@@ -229,21 +219,21 @@ export default function VideoHub({ division }: VideoHubProps) {
                 <Check size={14} className="text-emerald-400" />
                 <span className="text-xs font-bold">Integrados no GrayArt</span>
               </div>
-              <p className="text-[11px] text-white/60">Veo 3.1 + Kling 3.0 funcionam automaticamente. Selecione "Automatico" pra fallback inteligente.</p>
+              <p className="text-[11px] text-white/60">6 providers integrados com fallback automatico. Veo (Google) + 5 via PiAPI (Kling, Seedance, Luma, Wan, Hunyuan).</p>
             </Card>
             <Card padding="p-4">
               <div className="flex items-center gap-2 mb-2">
                 <Clock size={14} className="text-amber-400" />
-                <span className="text-xs font-bold">Proximos a integrar</span>
+                <span className="text-xs font-bold">Fallback automatico</span>
               </div>
-              <p className="text-[11px] text-white/60">Seedance 2.0 e Wan 2.1 estao na fila. Self-host no VPS quando necessario.</p>
+              <p className="text-[11px] text-white/60">Todos os 6 providers estao ativos. Cadeia de fallback garante que pelo menos um gera o video.</p>
             </Card>
             <Card padding="p-4">
               <div className="flex items-center gap-2 mb-2">
                 <XIcon size={14} className="text-slate-400" />
-                <span className="text-xs font-bold">Acesso manual</span>
+                <span className="text-xs font-bold">Cooldown inteligente</span>
               </div>
-              <p className="text-[11px] text-white/60">Luma e Google AI Studio: use direto no site deles pra testes rapidos sem API.</p>
+              <p className="text-[11px] text-white/60">Cooldown de 10min por provider com quota esgotada. Providers sao tentados em ordem ate um funcionar.</p>
             </Card>
           </div>
         </div>

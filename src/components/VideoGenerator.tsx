@@ -317,7 +317,7 @@ export default function VideoGenerator({ division: _division }: VideoGeneratorPr
             </div>
             <p className="text-[11px] text-slate-500 mt-1.5">
               <Clock size={11} className="inline mr-1" />
-              Veo 3: 6s ou 8s | Kling/Seedance: 5s no plano gratuito
+              Veo 3: 6s ou 8s | Demais providers: 5s via PiAPI
             </p>
           </div>
 
