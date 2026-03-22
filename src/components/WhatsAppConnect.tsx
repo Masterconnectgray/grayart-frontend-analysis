@@ -209,18 +209,56 @@ const WhatsAppConnect: React.FC<WhatsAppConnectProps> = ({ division }) => {
     if (qrTimerRef.current) { clearInterval(qrTimerRef.current); qrTimerRef.current = null; }
   }, []);
 
-  // Reset ao trocar divisão
+  // Ao montar ou trocar divisão: verificar se já tem instância conectada
   useEffect(() => {
     stopPolling();
-    setInstance({
-      name: `gray-${division}-${Date.now()}`,
-      key: '', status: 'idle', qrCode: null, qrRawData: null, phoneNumber: null, connectedSince: null,
-    });
     setPairingCode(null);
     setSentGroups([]);
     setSendingGroup(null);
     setPollingAttempts(0);
     setQrExpiry(0);
+
+    // Verificar instância existente na Evolution API
+    const checkExisting = async () => {
+      try {
+        const existing = await EvolutionAPIService.fetchInstances();
+        const divPrefix = `gray-${division}`;
+        const found = existing.find(e => e.instance?.instanceName?.startsWith(divPrefix));
+
+        if (found) {
+          const instanceName = found.instance.instanceName;
+          try {
+            const state = await EvolutionAPIService.getConnectionState(instanceName);
+            if (state.instance?.state === 'open') {
+              // Já está conectado — restaurar estado
+              const savedTime = localStorage.getItem(`grayart_wa_connected_${division}`);
+              setInstance({
+                name: instanceName,
+                key: '',
+                status: 'open',
+                qrCode: null,
+                qrRawData: null,
+                phoneNumber: null,
+                connectedSince: savedTime || new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+              });
+              return;
+            }
+          } catch {
+            // Instância existe mas não responde — tratar como desconectada
+          }
+        }
+      } catch {
+        // Sem acesso à API — manter idle
+      }
+
+      // Nenhuma instância conectada encontrada
+      setInstance({
+        name: `gray-${division}-${Date.now()}`,
+        key: '', status: 'idle', qrCode: null, qrRawData: null, phoneNumber: null, connectedSince: null,
+      });
+    };
+
+    checkExisting();
   }, [division, stopPolling]);
 
   // ── 1. Criar instância + obter QR ─────────────────────────────────────────
@@ -310,6 +348,7 @@ const WhatsAppConnect: React.FC<WhatsAppConnectProps> = ({ division }) => {
           if (state.instance?.state === 'open') {
             stopPolling();
             const now = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+            localStorage.setItem(`grayart_wa_connected_${division}`, now);
             setInstance(p => ({ ...p, status: 'open', connectedSince: now }));
             addNotification('WhatsApp conectado com sucesso!', 'success');
           } else if (attempts >= 40) {
@@ -337,10 +376,11 @@ const WhatsAppConnect: React.FC<WhatsAppConnectProps> = ({ division }) => {
     } catch {
       // Ignora erro no logout — limpa estado local mesmo assim
     }
+    localStorage.removeItem(`grayart_wa_connected_${division}`);
     setInstance(p => ({ ...p, status: 'idle', qrCode: null, qrRawData: null, phoneNumber: null, connectedSince: null }));
     setSentGroups([]);
     addNotification('WhatsApp desconectado.', 'info');
-  }, [instance.name, addNotification, stopPolling]);
+  }, [instance.name, division, addNotification, stopPolling]);
 
   // ── Disparar para grupo (via Evolution API real) ──────────────────────────
   const sendToGroup = useCallback(async (idx: number) => {
