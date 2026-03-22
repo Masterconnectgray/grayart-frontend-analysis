@@ -392,21 +392,21 @@ const ReelsGenerator: React.FC<ReelsGeneratorProps> = ({ division }) => {
               Conteúdo estratégico otimizado para o algoritmo.
             </p>
 
-            <div className="mb-4">
-              <div className="text-[10px] font-bold opacity-40 mb-1.5 uppercase tracking-wider">Público-Alvo</div>
-              <div className="p-3.5 rounded-xl bg-[var(--sub-bg)] text-sm font-medium">
+            <div className="mb-5">
+              <div className="text-[11px] font-black opacity-90 mb-2 uppercase tracking-widest text-[var(--primary-color)] shadow-sm">Público-Alvo</div>
+              <div className="p-4 rounded-xl bg-black/5 dark:bg-black/40 border-2 border-[var(--primary-color)]/20 shadow-inner text-sm font-bold opacity-90">
                 {template.audience}
               </div>
             </div>
 
-            <div className="mb-4">
-              <div className="text-[10px] font-bold opacity-40 mb-1.5 uppercase tracking-wider">Tema / Assunto (opcional)</div>
+            <div className="mb-6">
+              <div className="text-[11px] font-black opacity-90 mb-2 uppercase tracking-widest text-[var(--primary-color)] shadow-sm">Tema / Assunto (opcional)</div>
               <input
                 type="text"
                 value={customTopic}
                 onChange={e => setCustomTopic(e.target.value)}
                 placeholder="Ex: Coffee Meet de março..."
-                className="w-full p-3.5 rounded-xl bg-[var(--sub-bg)] border-none text-[var(--card-text)] text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[var(--primary-color)]/50 transition-all"
+                className="w-full p-4 rounded-xl bg-black/5 dark:bg-black/40 border-2 border-[var(--primary-color)]/20 text-[var(--card-text)] text-sm font-bold shadow-inner focus:outline-none focus:border-[var(--primary-color)] focus:ring-4 focus:ring-[var(--primary-color)]/20 transition-all placeholder:opacity-40"
               />
             </div>
 
@@ -446,7 +446,7 @@ const ReelsGenerator: React.FC<ReelsGeneratorProps> = ({ division }) => {
                      onChange={e => setRefinementFeedback(e.target.value)}
                      placeholder="Ex: Deixe o gancho mais intimidador, reduza para 3 linhas, foque em preço..."
                      rows={3}
-                     className="w-full p-3 rounded-xl bg-[var(--card-bg)] text-sm font-medium border border-[var(--primary-color)]/30 focus:outline-none focus:ring-2 focus:ring-[var(--primary-color)] transition-all resize-y mb-3"
+                     className="w-full p-4 rounded-xl bg-black/5 dark:bg-black/40 text-sm font-bold border-2 border-[var(--primary-color)]/40 focus:outline-none focus:border-[var(--primary-color)] focus:ring-4 focus:ring-[var(--primary-color)]/20 shadow-inner transition-all resize-y mb-4 placeholder:opacity-40"
                      autoFocus
                    />
                    <div className="flex gap-2">

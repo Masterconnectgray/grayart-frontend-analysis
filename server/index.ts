@@ -19,6 +19,7 @@ import { videoComposerRouter } from './routes/video-composer';
 import { processScheduledPosts } from './utils/scheduler';
 
 const app = express();
+app.set('trust proxy', 1);
 
 const allowedOrigins = new Set([
   'http://localhost:5173',
