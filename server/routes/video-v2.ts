@@ -10,7 +10,7 @@ const PIAPI_BASE = 'https://api.piapi.ai/api/v1/task';
 
 type VideoFormat = '9:16' | '16:9' | '1:1';
 type VideoDuration = 5 | 8;
-type VideoProvider = 'veo' | 'kling' | 'seedance' | 'auto';
+type VideoProvider = 'veo' | 'kling' | 'seedance' | 'luma' | 'wan' | 'hunyuan' | 'auto';
 
 function ensureUser(userId: number) {
   const exists = db.prepare('SELECT id FROM users WHERE id = ?').get(userId);
@@ -113,7 +113,7 @@ videoV2Router.post('/generate', async (req, res) => {
   }
 
   const userId = req.user!.userId;
-  let usedProvider: 'veo' | 'kling' | 'seedance' | null = null;
+  let usedProvider: 'veo' | 'kling' | 'seedance' | 'luma' | 'wan' | 'hunyuan' | null = null;
   let jobId: number | null = null;
 
   // Try Veo 3.1 (skip if quota recently failed)
@@ -244,13 +244,142 @@ videoV2Router.post('/generate', async (req, res) => {
       logAudit({ userId, action: 'video_v2.generate', details: { jobId, provider: 'seedance', format, fallback: provider === 'auto' }, ipAddress: req.ip });
     } catch (error) {
       const errMsg = error instanceof Error ? error.message : 'Erro interno';
-      updateJob(jobId!, { status: 'failed', result: { error: errMsg, provider: 'seedance' } });
+      if (isQuotaError(errMsg) && provider === 'auto') {
+        markProviderQuotaFail('seedance');
+        updateJob(jobId!, { status: 'failed', result: { error: 'QUOTA_EXCEEDED', provider: 'seedance' } });
+        jobId = null;
+      } else {
+        updateJob(jobId!, { status: 'failed', result: { error: errMsg, provider: 'seedance' } });
+        return res.status(502).json({ error: errMsg });
+      }
+    }
+  }
+
+  // Try Luma Dream Machine (explicit or fallback)
+  if (!usedProvider && (provider === 'luma' || provider === 'auto') && !isProviderCoolingDown('luma')) {
+    jobId = createJob(userId, prompt, 'luma-dream');
+    try {
+      const response = await fetch(PIAPI_BASE, {
+        method: 'POST',
+        headers: piApiHeaders(),
+        body: JSON.stringify({
+          model: 'luma',
+          task_type: 'video_generation',
+          input: {
+            prompt,
+            aspect_ratio: format,
+            duration: 5,
+          },
+        }),
+      });
+
+      const data = await response.json() as { code?: number; data?: { task_id?: string }; message?: string };
+      if (data.code !== 200 || !data.data?.task_id) {
+        throw new Error(data.message || `Luma erro: ${JSON.stringify(data)}`);
+      }
+
+      updateJob(jobId, {
+        status: 'processing',
+        result: { task_id: data.data.task_id, provider: 'luma' },
+      });
+
+      usedProvider = 'luma';
+      logAudit({ userId, action: 'video_v2.generate', details: { jobId, provider: 'luma', format, fallback: provider === 'auto' }, ipAddress: req.ip });
+    } catch (error) {
+      const errMsg = error instanceof Error ? error.message : 'Erro interno';
+      if (isQuotaError(errMsg) && provider === 'auto') {
+        markProviderQuotaFail('luma');
+        updateJob(jobId!, { status: 'failed', result: { error: 'QUOTA_EXCEEDED', provider: 'luma' } });
+        jobId = null;
+      } else {
+        updateJob(jobId!, { status: 'failed', result: { error: errMsg, provider: 'luma' } });
+        return res.status(502).json({ error: errMsg });
+      }
+    }
+  }
+
+  // Try Wan 2.1 (explicit or fallback)
+  if (!usedProvider && (provider === 'wan' || provider === 'auto') && !isProviderCoolingDown('wan')) {
+    jobId = createJob(userId, prompt, 'wan-2.1');
+    try {
+      const response = await fetch(PIAPI_BASE, {
+        method: 'POST',
+        headers: piApiHeaders(),
+        body: JSON.stringify({
+          model: 'wan',
+          task_type: 'video_generation',
+          input: {
+            prompt,
+            aspect_ratio: format,
+            duration: 5,
+          },
+        }),
+      });
+
+      const data = await response.json() as { code?: number; data?: { task_id?: string }; message?: string };
+      if (data.code !== 200 || !data.data?.task_id) {
+        throw new Error(data.message || `Wan erro: ${JSON.stringify(data)}`);
+      }
+
+      updateJob(jobId, {
+        status: 'processing',
+        result: { task_id: data.data.task_id, provider: 'wan' },
+      });
+
+      usedProvider = 'wan';
+      logAudit({ userId, action: 'video_v2.generate', details: { jobId, provider: 'wan', format, fallback: provider === 'auto' }, ipAddress: req.ip });
+    } catch (error) {
+      const errMsg = error instanceof Error ? error.message : 'Erro interno';
+      if (isQuotaError(errMsg) && provider === 'auto') {
+        markProviderQuotaFail('wan');
+        updateJob(jobId!, { status: 'failed', result: { error: 'QUOTA_EXCEEDED', provider: 'wan' } });
+        jobId = null;
+      } else {
+        updateJob(jobId!, { status: 'failed', result: { error: errMsg, provider: 'wan' } });
+        return res.status(502).json({ error: errMsg });
+      }
+    }
+  }
+
+  // Try Hunyuan Video (explicit or fallback)
+  if (!usedProvider && (provider === 'hunyuan' || provider === 'auto') && !isProviderCoolingDown('hunyuan')) {
+    jobId = createJob(userId, prompt, 'hunyuan-video');
+    try {
+      const response = await fetch(PIAPI_BASE, {
+        method: 'POST',
+        headers: piApiHeaders(),
+        body: JSON.stringify({
+          model: 'hunyuan',
+          task_type: 'video_generation',
+          input: {
+            prompt,
+            aspect_ratio: format,
+            duration: 5,
+          },
+        }),
+      });
+
+      const data = await response.json() as { code?: number; data?: { task_id?: string }; message?: string };
+      if (data.code !== 200 || !data.data?.task_id) {
+        throw new Error(data.message || `Hunyuan erro: ${JSON.stringify(data)}`);
+      }
+
+      updateJob(jobId, {
+        status: 'processing',
+        result: { task_id: data.data.task_id, provider: 'hunyuan' },
+      });
+
+      usedProvider = 'hunyuan';
+      logAudit({ userId, action: 'video_v2.generate', details: { jobId, provider: 'hunyuan', format, fallback: provider === 'auto' }, ipAddress: req.ip });
+    } catch (error) {
+      const errMsg = error instanceof Error ? error.message : 'Erro interno';
+      updateJob(jobId!, { status: 'failed', result: { error: errMsg, provider: 'hunyuan' } });
       return res.status(502).json({ error: errMsg });
     }
   }
 
   if (!usedProvider || !jobId) {
-    const coolingDown = ['veo', 'kling', 'seedance'].filter(p => isProviderCoolingDown(p));
+    const coolingDown = ['veo', 'kling', 'seedance', 'luma', 'wan', 'hunyuan'].filter(p => isProviderCoolingDown(p));
     const msg = coolingDown.length > 0
       ? `Quotas esgotadas (${coolingDown.join(', ')}). Aguarde 10min ou tente outro provider.`
       : 'Nenhum provider disponivel';
@@ -279,7 +408,7 @@ videoV2Router.get('/status/:jobId', async (req, res) => {
     return res.json({
       job_id: jobId,
       status: row.status,
-      provider: row.model === 'veo-3.1' ? 'veo' : row.model === 'seedance-2.0' ? 'seedance' : 'kling',
+      provider: row.model === 'veo-3.1' ? 'veo' : row.model === 'seedance-2.0' ? 'seedance' : row.model === 'luma-dream' ? 'luma' : row.model === 'wan-2.1' ? 'wan' : row.model === 'hunyuan-video' ? 'hunyuan' : 'kling',
       videoUrl: (parsed as any).videoUrl || null,
       error: (parsed as any).error || null,
       done: true,
@@ -425,6 +554,123 @@ videoV2Router.get('/status/:jobId', async (req, res) => {
       return res.json({ job_id: jobId, status: 'completed', provider: 'seedance', videoUrl, done: true });
     } catch (error) {
       return res.status(502).json({ error: error instanceof Error ? error.message : 'Erro ao consultar status Seedance' });
+    }
+  }
+
+  // Poll Luma Dream Machine
+  if (row.model === 'luma-dream') {
+    const taskId = parsed.task_id as string | undefined;
+    if (!taskId) {
+      return res.json({ job_id: jobId, status: 'failed', provider: 'luma', error: 'Job sem task_id registrado', done: true });
+    }
+
+    try {
+      const response = await fetch(`${PIAPI_BASE}/${taskId}`, { headers: piApiHeaders() });
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        throw new Error((err as { error?: { message?: string } }).error?.message || `HTTP ${response.status}`);
+      }
+
+      const data = await response.json() as { code?: number; data?: any };
+      const lumaStatus = data.data?.status || 'processing';
+
+      if (lumaStatus === 'pending' || lumaStatus === 'processing') {
+        return res.json({ job_id: jobId, status: 'processing', provider: 'luma', done: false });
+      }
+      if (lumaStatus === 'failed') {
+        const errMsg = data.data?.error?.message || 'Luma generation failed';
+        updateJob(jobId, { status: 'failed', result: { ...parsed, error: errMsg } });
+        logAudit({ userId: req.user!.userId, action: 'video_v2.failed', details: { jobId, provider: 'luma' }, ipAddress: req.ip });
+        sendWhatsAppNotification(`Video IA falhou (Luma). Erro: ${errMsg}`);
+        return res.json({ job_id: jobId, status: 'failed', provider: 'luma', error: errMsg, done: true });
+      }
+
+      const works = data.data?.output?.works || [];
+      const videoUrl = works[0]?.video?.resource || works[0]?.video?.resource_without_watermark || works[0]?.video?.url || null;
+      updateJob(jobId, { status: 'completed', result: { ...parsed, videoUrl } });
+      logAudit({ userId: req.user!.userId, action: 'video_v2.completed', details: { jobId, provider: 'luma' }, ipAddress: req.ip });
+      sendWhatsAppNotification(`Video IA pronto! Gerado com luma. Acesse o GrayArt para ver e baixar.`);
+      return res.json({ job_id: jobId, status: 'completed', provider: 'luma', videoUrl, done: true });
+    } catch (error) {
+      return res.status(502).json({ error: error instanceof Error ? error.message : 'Erro ao consultar status Luma' });
+    }
+  }
+
+  // Poll Wan 2.1
+  if (row.model === 'wan-2.1') {
+    const taskId = parsed.task_id as string | undefined;
+    if (!taskId) {
+      return res.json({ job_id: jobId, status: 'failed', provider: 'wan', error: 'Job sem task_id registrado', done: true });
+    }
+
+    try {
+      const response = await fetch(`${PIAPI_BASE}/${taskId}`, { headers: piApiHeaders() });
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        throw new Error((err as { error?: { message?: string } }).error?.message || `HTTP ${response.status}`);
+      }
+
+      const data = await response.json() as { code?: number; data?: any };
+      const wanStatus = data.data?.status || 'processing';
+
+      if (wanStatus === 'pending' || wanStatus === 'processing') {
+        return res.json({ job_id: jobId, status: 'processing', provider: 'wan', done: false });
+      }
+      if (wanStatus === 'failed') {
+        const errMsg = data.data?.error?.message || 'Wan generation failed';
+        updateJob(jobId, { status: 'failed', result: { ...parsed, error: errMsg } });
+        logAudit({ userId: req.user!.userId, action: 'video_v2.failed', details: { jobId, provider: 'wan' }, ipAddress: req.ip });
+        sendWhatsAppNotification(`Video IA falhou (Wan). Erro: ${errMsg}`);
+        return res.json({ job_id: jobId, status: 'failed', provider: 'wan', error: errMsg, done: true });
+      }
+
+      const works = data.data?.output?.works || [];
+      const videoUrl = works[0]?.video?.resource || works[0]?.video?.resource_without_watermark || works[0]?.video?.url || null;
+      updateJob(jobId, { status: 'completed', result: { ...parsed, videoUrl } });
+      logAudit({ userId: req.user!.userId, action: 'video_v2.completed', details: { jobId, provider: 'wan' }, ipAddress: req.ip });
+      sendWhatsAppNotification(`Video IA pronto! Gerado com wan. Acesse o GrayArt para ver e baixar.`);
+      return res.json({ job_id: jobId, status: 'completed', provider: 'wan', videoUrl, done: true });
+    } catch (error) {
+      return res.status(502).json({ error: error instanceof Error ? error.message : 'Erro ao consultar status Wan' });
+    }
+  }
+
+  // Poll Hunyuan Video
+  if (row.model === 'hunyuan-video') {
+    const taskId = parsed.task_id as string | undefined;
+    if (!taskId) {
+      return res.json({ job_id: jobId, status: 'failed', provider: 'hunyuan', error: 'Job sem task_id registrado', done: true });
+    }
+
+    try {
+      const response = await fetch(`${PIAPI_BASE}/${taskId}`, { headers: piApiHeaders() });
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        throw new Error((err as { error?: { message?: string } }).error?.message || `HTTP ${response.status}`);
+      }
+
+      const data = await response.json() as { code?: number; data?: any };
+      const hunyuanStatus = data.data?.status || 'processing';
+
+      if (hunyuanStatus === 'pending' || hunyuanStatus === 'processing') {
+        return res.json({ job_id: jobId, status: 'processing', provider: 'hunyuan', done: false });
+      }
+      if (hunyuanStatus === 'failed') {
+        const errMsg = data.data?.error?.message || 'Hunyuan generation failed';
+        updateJob(jobId, { status: 'failed', result: { ...parsed, error: errMsg } });
+        logAudit({ userId: req.user!.userId, action: 'video_v2.failed', details: { jobId, provider: 'hunyuan' }, ipAddress: req.ip });
+        sendWhatsAppNotification(`Video IA falhou (Hunyuan). Erro: ${errMsg}`);
+        return res.json({ job_id: jobId, status: 'failed', provider: 'hunyuan', error: errMsg, done: true });
+      }
+
+      const works = data.data?.output?.works || [];
+      const videoUrl = works[0]?.video?.resource || works[0]?.video?.resource_without_watermark || works[0]?.video?.url || null;
+      updateJob(jobId, { status: 'completed', result: { ...parsed, videoUrl } });
+      logAudit({ userId: req.user!.userId, action: 'video_v2.completed', details: { jobId, provider: 'hunyuan' }, ipAddress: req.ip });
+      sendWhatsAppNotification(`Video IA pronto! Gerado com hunyuan. Acesse o GrayArt para ver e baixar.`);
+      return res.json({ job_id: jobId, status: 'completed', provider: 'hunyuan', videoUrl, done: true });
+    } catch (error) {
+      return res.status(502).json({ error: error instanceof Error ? error.message : 'Erro ao consultar status Hunyuan' });
     }
   }
 

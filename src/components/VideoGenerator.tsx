@@ -12,7 +12,7 @@ interface VideoGeneratorProps {
   division: Division;
 }
 
-type Provider = 'auto' | 'veo' | 'kling' | 'seedance';
+type Provider = 'auto' | 'veo' | 'kling' | 'seedance' | 'luma' | 'wan' | 'hunyuan';
 type Format = '9:16' | '16:9' | '1:1';
 type Duration = 6 | 8;
 
@@ -42,6 +42,9 @@ const PROVIDER_COLORS: Record<string, string> = {
   veo: '#3b82f6',
   kling: '#8B5CF6',
   seedance: '#f97316',
+  luma: '#6366f1',
+  wan: '#10b981',
+  hunyuan: '#06b6d4',
   auto: '#25D366',
 };
 
@@ -49,13 +52,20 @@ const PROVIDER_LABELS: Record<string, string> = {
   veo: 'Veo 3.1',
   kling: 'Kling 3.0',
   seedance: 'Seedance 2.0',
+  luma: 'Luma',
+  wan: 'Wan 2.1',
+  hunyuan: 'Hunyuan',
   auto: 'Automatico',
 };
 
 function ProviderBadge({ provider }: { provider: string }) {
-  const key = provider.toLowerCase().includes('veo') ? 'veo'
-    : provider.toLowerCase().includes('kling') ? 'kling'
-    : provider.toLowerCase().includes('seedance') ? 'seedance' : 'auto';
+  const lower = provider.toLowerCase();
+  const key = lower.includes('veo') ? 'veo'
+    : lower.includes('kling') ? 'kling'
+    : lower.includes('seedance') ? 'seedance'
+    : lower.includes('luma') ? 'luma'
+    : lower.includes('wan') ? 'wan'
+    : lower.includes('hunyuan') ? 'hunyuan' : 'auto';
   return (
     <span
       className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold text-white"
@@ -94,7 +104,7 @@ export default function VideoGenerator({ division: _division }: VideoGeneratorPr
         id: item.id,
         prompt: item.prompt || '',
         status: item.status === 'completed' ? 'done' : item.status,
-        provider: item.model?.includes('seedance') ? 'seedance' : item.model?.includes('kling') ? 'kling' : 'veo',
+        provider: item.model?.includes('seedance') ? 'seedance' : item.model?.includes('luma') ? 'luma' : item.model?.includes('wan') ? 'wan' : item.model?.includes('hunyuan') ? 'hunyuan' : item.model?.includes('kling') ? 'kling' : 'veo',
         videoUrl: item.result?.videoUrl || null,
         createdAt: item.created_at || item.createdAt,
       })));
@@ -193,11 +203,16 @@ export default function VideoGenerator({ division: _division }: VideoGeneratorPr
     }
   };
 
-  const providerOptions: { value: Provider; label: string }[] = [
+  const providerRow1: { value: Provider; label: string }[] = [
     { value: 'auto', label: 'Automatico' },
     { value: 'veo', label: 'Veo 3.1' },
     { value: 'kling', label: 'Kling 3.0' },
-    { value: 'seedance', label: 'Seedance 2.0' },
+  ];
+  const providerRow2: { value: Provider; label: string }[] = [
+    { value: 'seedance', label: 'Seedance' },
+    { value: 'luma', label: 'Luma' },
+    { value: 'wan', label: 'Wan 2.1' },
+    { value: 'hunyuan', label: 'Hunyuan' },
   ];
 
   const formatOptions: { value: Format; label: string; sub: string }[] = [
@@ -210,7 +225,7 @@ export default function VideoGenerator({ division: _division }: VideoGeneratorPr
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
       {/* Left — Controls */}
       <div className="space-y-5">
-        <Card title="Gerar Video" subtitle="Multi-provider: Veo 3.1 + Kling 3.0 + Seedance 2.0">
+        <Card title="Gerar Video" subtitle="6 providers: Veo + Kling + Seedance + Luma + Wan + Hunyuan">
           {/* Prompt */}
           <textarea
             className="w-full p-4 rounded-xl bg-[var(--input-bg)] text-[var(--text-color)] text-sm font-bold border-2 border-[var(--primary-color)]/20 shadow-inner focus:outline-none focus:border-[var(--primary-color)] focus:ring-4 focus:ring-[var(--primary-color)]/20 transition-all resize-none min-h-[120px] placeholder:opacity-50"
@@ -224,12 +239,29 @@ export default function VideoGenerator({ division: _division }: VideoGeneratorPr
           <div className="mt-4">
             <label className="text-xs text-[var(--text-color)] opacity-60 uppercase tracking-wide mb-2 block">Provider</label>
             <div className="flex gap-2">
-              {providerOptions.map((opt) => (
+              {providerRow1.map((opt) => (
                 <button
                   key={opt.value}
                   onClick={() => setProvider(opt.value)}
                   disabled={generating}
                   className={`flex-1 px-3 py-2 rounded-xl text-sm font-semibold transition-all border ${
+                    provider === opt.value
+                      ? 'text-white border-transparent'
+                      : 'bg-[var(--input-bg)] text-[var(--text-color)] opacity-60 border-[var(--card-border)] hover:bg-black/5 dark:hover:bg-white/5'
+                  }`}
+                  style={provider === opt.value ? { backgroundColor: PROVIDER_COLORS[opt.value] } : undefined}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+            <div className="flex gap-2 mt-2">
+              {providerRow2.map((opt) => (
+                <button
+                  key={opt.value}
+                  onClick={() => setProvider(opt.value)}
+                  disabled={generating}
+                  className={`flex-1 px-3 py-2 rounded-xl text-xs font-semibold transition-all border ${
                     provider === opt.value
                       ? 'text-white border-transparent'
                       : 'bg-[var(--input-bg)] text-[var(--text-color)] opacity-60 border-[var(--card-border)] hover:bg-black/5 dark:hover:bg-white/5'
