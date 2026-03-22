@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import type { Division } from '../constants/Themes';
 import { DIVISIONS } from '../constants/Themes';
 import { CONTENT_TEMPLATES } from '../constants/ContentTemplates';
@@ -6,8 +6,9 @@ import type { Platform } from '../constants/ContentTemplates';
 import { useAppContext } from '../context/AppContext';
 import { PlatformIcon } from '../constants/SocialIcons';
 import { generateCopyWithGemini } from '../services/GeminiService';
+import { bffFetch } from '../services/BFFClient';
 import { Button, Card, StatusBadge, EmptyState } from '../design-system';
-import { Copy, Wand2, Video, Check, MessageSquareDot, RefreshCw, X, ArrowRight } from 'lucide-react';
+import { Copy, Wand2, Video, Check, MessageSquareDot, RefreshCw, X, ArrowRight, Clock, History } from 'lucide-react';
 
 interface ReelsGeneratorProps {
   division: Division;
@@ -20,33 +21,100 @@ interface ScriptData {
   tags: string[];
 }
 
+type PlatformCache = Record<Platform, {
+  script: ScriptData | null;
+  topic: string;
+}>;
+
+const emptyCache: PlatformCache = {
+  instagram: { script: null, topic: '' },
+  tiktok: { script: null, topic: '' },
+  linkedin: { script: null, topic: '' },
+  youtube: { script: null, topic: '' },
+};
+
 const ReelsGenerator: React.FC<ReelsGeneratorProps> = ({ division }) => {
   const { addNotification, sendCopyToVideoLab } = useAppContext();
   const [activePlatform, setActivePlatform] = useState<Platform>('instagram');
-  
-  const [generatedScript, setGeneratedScript] = useState<ScriptData | null>(null);
-  const [previousScript, setPreviousScript] = useState<ScriptData | null>(null); // For comparison state
-  const [refinedScript, setRefinedScript] = useState<ScriptData | null>(null); // Temporary state for review
-  
+
+  // Cache por plataforma — nao perde ao trocar
+  const [platformCache, setPlatformCache] = useState<PlatformCache>({ ...emptyCache });
+
+  const [generatedScript, _setGeneratedScript] = useState<ScriptData | null>(null);
+
+  // Wrapper que tambem salva no cache da plataforma ativa
+  const setGeneratedScript = useCallback((script: ScriptData | null) => {
+    _setGeneratedScript(script);
+    if (script) {
+      setPlatformCache(prev => ({
+        ...prev,
+        [activePlatform]: { ...prev[activePlatform], script },
+      }));
+    }
+  }, [activePlatform]);
+  const [previousScript, setPreviousScript] = useState<ScriptData | null>(null);
+  const [refinedScript, setRefinedScript] = useState<ScriptData | null>(null);
+
   const [copyFeedback, setCopyFeedback] = useState(false);
   const [sendingToVideo, setSendingToVideo] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [customTopic, setCustomTopic] = useState('');
   const [useAI, setUseAI] = useState(true);
-  
+
   // Refinement states
   const [isRefining, setIsRefining] = useState(false);
   const [refinementFeedback, setRefinementFeedback] = useState('');
   const [isRefinementLoading, setIsRefinementLoading] = useState(false);
 
+  // Historico de copies
+  const [showHistory, setShowHistory] = useState(false);
+  const [historyItems, setHistoryItems] = useState<Array<{
+    id: number;
+    created_at: string;
+    result: { hook?: string; body?: string; cta?: string; tags?: string[]; fullText?: string } | null;
+    prompt: string;
+  }>>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+
+  const loadHistory = useCallback(async () => {
+    setHistoryLoading(true);
+    try {
+      const resp = await bffFetch('/ai/jobs');
+      if (resp.ok) {
+        const data = await resp.json() as { jobs: Array<{ id: number; type: string; created_at: string; result: any; prompt: string; status: string }> };
+        const copies = data.jobs
+          .filter(j => j.type === 'copy' && j.status === 'completed' && j.result?.hook)
+          .map(j => ({ id: j.id, created_at: j.created_at, result: j.result, prompt: j.prompt }));
+        setHistoryItems(copies);
+      }
+    } catch { /* silencioso */ }
+    finally { setHistoryLoading(false); }
+  }, []);
+
+  const loadCopyFromHistory = useCallback((item: typeof historyItems[0]) => {
+    if (!item.result) return;
+    setGeneratedScript({
+      hook: item.result.hook || '',
+      body: item.result.body || '',
+      cta: item.result.cta || '',
+      tags: item.result.tags || [],
+    });
+    setPreviousScript(null);
+    setRefinedScript(null);
+    setIsRefining(false);
+    setShowHistory(false);
+    addNotification('Copy do historico carregada!', 'success');
+  }, [addNotification]);
+
   const [prevDivision, setPrevDivision] = useState(division);
 
   if (division !== prevDivision) {
     setPrevDivision(division);
-    setGeneratedScript(null);
+    _setGeneratedScript(null);
     setPreviousScript(null);
     setRefinedScript(null);
     setIsRefining(false);
+    setPlatformCache({ ...emptyCache });
   }
 
   const template = CONTENT_TEMPLATES[division];
@@ -214,23 +282,103 @@ const ReelsGenerator: React.FC<ReelsGeneratorProps> = ({ division }) => {
 
   return (
     <div className="animate-in fade-in duration-300">
-      <div className="flex gap-2 mb-6 overflow-x-auto pb-2 scrollbar-hide">
+      <div className="flex gap-2 mb-6 overflow-x-auto pb-2 scrollbar-hide items-center">
         {platforms.map(p => {
           const isActive = activePlatform === p.id;
           return (
             <button
               key={p.id}
-              onClick={() => { setActivePlatform(p.id); setGeneratedScript(null); setPreviousScript(null); setRefinedScript(null); setIsRefining(false); }}
+              onClick={() => {
+                // Salvar script atual no cache antes de trocar
+                setPlatformCache(prev => ({
+                  ...prev,
+                  [activePlatform]: { script: generatedScript, topic: customTopic },
+                }));
+                setActivePlatform(p.id);
+                // Restaurar do cache da nova plataforma
+                const cached = platformCache[p.id];
+                setGeneratedScript(cached?.script || null);
+                setCustomTopic(cached?.topic || '');
+                setPreviousScript(null);
+                setRefinedScript(null);
+                setIsRefining(false);
+                setShowHistory(false);
+              }}
               className={`px-5 py-2.5 rounded-xl font-bold text-sm flex items-center gap-2 transition-all duration-300 whitespace-nowrap
-                ${isActive 
-                  ? 'bg-[var(--primary-color)] text-[var(--card-bg)] shadow-lg' 
+                ${isActive && !showHistory
+                  ? 'bg-[var(--primary-color)] text-[var(--card-bg)] shadow-lg'
                   : 'bg-[var(--sub-bg)] text-slate-400 hover:text-[var(--card-text)]'}`}
             >
               <PlatformIcon platformId={p.id} size={16} /> {p.name}
             </button>
           );
         })}
+        <div className="ml-auto">
+          <button
+            onClick={() => { setShowHistory(!showHistory); if (!showHistory) loadHistory(); }}
+            className={`px-4 py-2.5 rounded-xl font-bold text-xs flex items-center gap-2 transition-all whitespace-nowrap
+              ${showHistory ? 'bg-amber-500/20 text-amber-400' : 'bg-[var(--sub-bg)] text-slate-400 hover:text-[var(--card-text)]'}`}
+          >
+            <History size={14} /> Historico
+          </button>
+        </div>
       </div>
+
+      {/* Historico de copies */}
+      {showHistory && (
+        <Card className="mb-6 animate-in fade-in duration-200">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="font-bold text-sm flex items-center gap-2">
+              <Clock size={14} className="text-amber-400" />
+              Historico de Copies Geradas
+            </h3>
+            <button onClick={() => setShowHistory(false)} className="opacity-40 hover:opacity-100">
+              <X size={16} />
+            </button>
+          </div>
+          {historyLoading ? (
+            <div className="text-center py-6 text-xs opacity-40">Carregando historico...</div>
+          ) : historyItems.length === 0 ? (
+            <div className="text-center py-6 text-xs opacity-40">Nenhuma copy gerada ainda. Gere a primeira!</div>
+          ) : (
+            <div className="flex flex-col gap-2 max-h-80 overflow-y-auto pr-1">
+              {historyItems.filter(item => {
+                const p = item.prompt.toLowerCase();
+                if (activePlatform === 'tiktok') return p.includes('tiktok');
+                if (activePlatform === 'linkedin') return p.includes('linkedin');
+                if (activePlatform === 'youtube') return p.includes('youtube');
+                return p.includes('instagram') || (!p.includes('tiktok') && !p.includes('linkedin') && !p.includes('youtube'));
+              }).map(item => {
+                const date = new Date(item.created_at);
+                const dateStr = date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+                const timeStr = date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+                const platform = item.prompt.toLowerCase().includes('tiktok') ? 'tiktok'
+                  : item.prompt.toLowerCase().includes('linkedin') ? 'linkedin'
+                  : item.prompt.toLowerCase().includes('youtube') ? 'youtube'
+                  : 'instagram';
+                return (
+                  <button
+                    key={item.id}
+                    onClick={() => loadCopyFromHistory(item)}
+                    onDoubleClick={() => loadCopyFromHistory(item)}
+                    className="flex items-center gap-3 p-3 rounded-xl bg-[var(--sub-bg)] hover:bg-[var(--primary-color)]/10 transition-all text-left group cursor-pointer"
+                  >
+                    <PlatformIcon platformId={platform} size={20} />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-bold truncate">{item.result?.hook || 'Copy sem titulo'}</p>
+                      <p className="text-[10px] opacity-40 truncate">{item.result?.body?.substring(0, 60)}...</p>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <div className="text-[10px] font-bold opacity-60">{dateStr}</div>
+                      <div className="text-[10px] opacity-30">{timeStr}</div>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </Card>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-[400px_1fr] gap-6">
         
