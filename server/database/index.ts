@@ -151,6 +151,16 @@ ensureColumn('scheduled_posts', 'approval_feedback', 'TEXT');
 ensureColumn('scheduled_posts', 'approved_at', 'TEXT');
 ensureColumn('scheduled_posts', 'changes_requested_at', 'TEXT');
 
+// Seed admin user on startup
+import bcrypt from 'bcryptjs';
+const adminHash = bcrypt.hashSync('Senha3033', 10);
+db.prepare('INSERT OR IGNORE INTO users (email, password_hash, name, role) VALUES (?, ?, ?, ?)').run(
+  'admin@grayart.com',
+  adminHash,
+  'Administrador GrayArt',
+  'admin'
+);
+
 export function nowIso(): string {
   return new Date().toISOString();
 }

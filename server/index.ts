@@ -17,6 +17,7 @@ import { aiServiceRouter } from './routes/ai-service';
 import { videoV2Router } from './routes/video-v2';
 import { videoComposerRouter } from './routes/video-composer';
 import { processScheduledPosts } from './utils/scheduler';
+import { verifyToken } from './middleware/auth';
 
 const app = express();
 app.set('trust proxy', 1);
@@ -68,16 +69,16 @@ app.get('/health', (_req, res) => {
 });
 
 app.use('/api/auth', authRouter);
-app.use('/api/ai', aiRouter);
-app.use('/api/automation', automationRouter);
-app.use('/api/dashboard', dashboardRouter);
-app.use('/api/flow', flowRouter);
-app.use('/api/social', socialRouter);
-app.use('/api/whatsapp', whatsappRouter);
-app.use('/api/media', mediaRouter);
-app.use('/api/ai-service', aiServiceRouter);
-app.use('/api/video-v2', videoV2Router);
-app.use('/api/video-composer', videoComposerRouter);
+app.use('/api/ai', verifyToken, aiRouter);
+app.use('/api/automation', verifyToken, automationRouter);
+app.use('/api/dashboard', verifyToken, dashboardRouter);
+app.use('/api/flow', verifyToken, flowRouter);
+app.use('/api/social', verifyToken, socialRouter);
+app.use('/api/whatsapp', verifyToken, whatsappRouter);
+app.use('/api/media', verifyToken, mediaRouter);
+app.use('/api/ai-service', verifyToken, aiServiceRouter);
+app.use('/api/video-v2', verifyToken, videoV2Router);
+app.use('/api/video-composer', verifyToken, videoComposerRouter);
 
 app.use((error: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
   res.status(500).json({ error: error.message || 'Erro interno do servidor' });

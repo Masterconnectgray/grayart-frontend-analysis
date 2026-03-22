@@ -1,8 +1,11 @@
-import React, { useEffect, useState, lazy, Suspense } from 'react';
+import React, { useEffect, useState, useCallback, lazy, Suspense } from 'react';
 import { useAppContext, type MarketingView } from './context/AppContext';
 import { DIVISIONS, type Division } from './constants/Themes';
 import { ModuleSkeleton, AnalyticsSkeleton, FeedSkeleton } from './components/SkeletonLoader';
 import ErrorBoundary from './components/ErrorBoundary';
+import LoginPage from './components/LoginPage';
+import { isAuthenticated, clearBffSession } from './services/BFFClient';
+import { LogOut } from 'lucide-react';
 
 // ─── Lazy Loading: reduz bundle inicial de 1.25MB ─────────────────────────────
 const ReelsGenerator = lazy(() => import('./components/ReelsGenerator'));
@@ -112,12 +115,25 @@ const App: React.FC = () => {
     marketingView, setMarketingView
   } = useAppContext();
 
-  const theme = DIVISIONS[activeDivision];
-  const isDark = activeDivision !== 'gray-art';
+  const [authed, setAuthed] = useState(isAuthenticated());
 
   // Skeleton de transição ao trocar divisão
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [stableDivision, setStableDivision] = useState<Division>(activeDivision);
+
+  const handleLogout = useCallback(() => {
+    clearBffSession();
+    setAuthed(false);
+  }, []);
+
+  useEffect(() => {
+    const onForceLogout = () => handleLogout();
+    window.addEventListener('grayart:logout', onForceLogout);
+    return () => window.removeEventListener('grayart:logout', onForceLogout);
+  }, [handleLogout]);
+
+  const theme = DIVISIONS[activeDivision];
+  const isDark = activeDivision !== 'gray-art';
 
   if (activeDivision !== stableDivision && !isTransitioning) {
     setIsTransitioning(true);
@@ -155,6 +171,11 @@ const App: React.FC = () => {
     };
     root.style.setProperty('--primary-color-rgb', hexToRgb(theme.colors.primary));
   }, [theme]);
+
+  // ── Login gate ────────────────────────────────────────────────────────
+  if (!authed) {
+    return <LoginPage onLogin={() => setAuthed(true)} />;
+  }
 
   // ── OAuth callback: renderiza só a página de retorno ────────────────────
   if (isOAuthCallback) return <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><ModuleSkeleton isDark={false} primary="#00C896" /></div>}><OAuthCallback /></Suspense>;
@@ -217,6 +238,14 @@ const App: React.FC = () => {
               </button>
             );
           })}
+          <button
+            onClick={handleLogout}
+            className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ml-2
+              ${isDark ? 'text-white/40 hover:text-red-400 hover:bg-white/5' : 'text-black/40 hover:text-red-500 hover:bg-black/5'}`}
+            title="Sair"
+          >
+            <LogOut className="w-4 h-4" />
+          </button>
         </div>
       </header>
 
