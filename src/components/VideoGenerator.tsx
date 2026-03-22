@@ -17,7 +17,7 @@ type Duration = 5 | 8;
 
 interface JobStatus {
   id: string;
-  status: 'queued' | 'processing' | 'done' | 'failed';
+  status: 'queued' | 'processing' | 'done' | 'completed' | 'failed';
   progress: number;
   step: string;
   provider: string;
