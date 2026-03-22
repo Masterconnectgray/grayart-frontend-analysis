@@ -7,13 +7,15 @@ import ErrorBoundary from './components/ErrorBoundary';
 // ─── Lazy Loading: reduz bundle inicial de 1.25MB ─────────────────────────────
 const ReelsGenerator = lazy(() => import('./components/ReelsGenerator'));
 const OperationsDashboard = lazy(() => import('./components/OperationsDashboard'));
-const AIVideoLab = lazy(() => import('./components/AIVideoLab'));
+// AIVideoLab mantido como fallback mas substituido por VideoGenerator na UI
+// const AIVideoLab = lazy(() => import('./components/AIVideoLab'));
 const MediaUpload = lazy(() => import('./components/MediaUpload'));
 const ConnectJourney = lazy(() => import('./components/journeys/ConnectJourney'));
 const PublishJourney = lazy(() => import('./components/journeys/PublishJourney'));
 const MonitorJourney = lazy(() => import('./components/journeys/MonitorJourney'));
 const PhotoAnalyzer = lazy(() => import('./components/PhotoAnalyzer'));
 const ActivityHistory = lazy(() => import('./components/ActivityHistory'));
+const VideoGenerator = lazy(() => import('./components/VideoGenerator'));
 const OAuthCallback = lazy(() => import('./components/OAuthCallback'));
 import { DIVISION_LOGOS, GrupoGrayLogo } from './constants/DivisionLogos';
 import { PenTool, Video, Link2, Send, BarChart3, Sparkles, FileText, Users, Clock } from 'lucide-react';
@@ -205,7 +207,7 @@ const App: React.FC = () => {
           ${activeDivision === 'gray-art' ? 'bg-white border-black/5' : 'bg-[#1a1a1a] border-white/5'}`}>
           {[
             { id: 'create', label: 'Criar Conteúdo', icon: PenTool },
-            { id: 'video', label: 'Gerar Vídeo', icon: Video },
+            { id: 'video', label: 'Videos IA', icon: Video },
             { id: 'connect', label: 'Conectar Contas', icon: Link2 },
             { id: 'publish', label: 'Publicar', icon: Send },
             { id: 'history', label: 'Historico', icon: Clock },
@@ -245,7 +247,7 @@ const App: React.FC = () => {
                   <div>
                     {marketingView === 'create' && <ReelsGenerator division={activeDivision} />}
                     {marketingView === 'media' && <MediaUpload division={activeDivision} />}
-                    {marketingView === 'video' && <AIVideoLab division={activeDivision} />}
+                    {marketingView === 'video' && <VideoGenerator division={activeDivision} />}
                     {marketingView === 'photo' && <PhotoAnalyzer division={activeDivision} />}
                     {marketingView === 'connect' && <ConnectJourney division={activeDivision} />}
                     {marketingView === 'publish' && <PublishJourney division={activeDivision} />}
