@@ -172,38 +172,38 @@ export default function VideoHub({ division }: VideoHubProps) {
               const apiBadge = API_BADGE[p.api];
               const statusBadge = STATUS_BADGE[p.status];
               return (
-                <Card key={i} variant="elevated" padding="p-5" className="hover:border-white/10 transition-all">
-                  <div className="flex items-start gap-4">
-                    <div className="w-2 h-full min-h-[80px] rounded-full shrink-0" style={{ backgroundColor: p.color }} />
-                    <div className="flex-1 space-y-3">
-                      <div className="flex items-center justify-between">
+                <div key={i} className="rounded-2xl overflow-hidden border border-white/10 hover:border-white/20 transition-all">
+                  {/* Header colorido */}
+                  <div className="px-5 py-4 flex items-center justify-between" style={{ backgroundColor: `${p.color}20`, borderBottom: `2px solid ${p.color}40` }}>
+                    <div className="flex items-center gap-3">
+                      <div className="w-3 h-10 rounded-full" style={{ backgroundColor: p.color }} />
+                      <div>
                         <div className="flex items-center gap-2">
-                          <span className="font-bold text-base text-white">{p.name}</span>
+                          <span className="font-black text-lg" style={{ color: p.color }}>{p.name}</span>
                           {p.url && (
-                            <a href={p.url} target="_blank" rel="noopener noreferrer" className="opacity-30 hover:opacity-70 transition">
+                            <a href={p.url} target="_blank" rel="noopener noreferrer" className="opacity-40 hover:opacity-80 transition">
                               <ExternalLink size={12} />
                             </a>
                           )}
                         </div>
-                        <span className={`px-2.5 py-1 rounded text-[10px] font-bold ${statusBadge.class}`}>
-                          {statusBadge.label}
-                        </span>
-                      </div>
-
-                      <div className="flex items-center gap-3">
-                        <span className={`px-2 py-1 rounded border text-[9px] font-bold ${apiBadge.class}`}>
-                          {apiBadge.label}
-                        </span>
-                        <Stars count={p.quality} />
-                      </div>
-
-                      <div className="space-y-1.5">
-                        <p className="text-sm font-medium text-white">{p.tier}</p>
-                        <p className="text-xs text-white/60">{p.bestFor}</p>
                       </div>
                     </div>
+                    <span className={`px-3 py-1.5 rounded-lg text-[10px] font-black ${statusBadge.class}`}>
+                      {statusBadge.label}
+                    </span>
                   </div>
-                </Card>
+                  {/* Body */}
+                  <div className="px-5 py-4 bg-[#1e1e1e] space-y-3">
+                    <div className="flex items-center gap-3">
+                      <span className={`px-2.5 py-1 rounded border text-[10px] font-bold ${apiBadge.class}`}>
+                        {apiBadge.label}
+                      </span>
+                      <Stars count={p.quality} />
+                    </div>
+                    <p className="text-sm font-bold text-white">{p.tier}</p>
+                    <p className="text-sm text-white/70">{p.bestFor}</p>
+                  </div>
+                </div>
               );
             })}
           </div>

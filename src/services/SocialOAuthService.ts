@@ -107,8 +107,13 @@ function waitForOAuthPopup(platform: PlatformKey, authUrl: string): Promise<void
     };
 
     const handler = (event: MessageEvent) => {
-      if (event.origin !== window.location.origin) return;
+      if (event.source !== popup) return;
       if (event.data?.type !== 'oauth_callback') return;
+      if (event.data?.success === false) {
+        cleanup();
+        reject(new Error(event.data?.error || 'Falha ao concluir autenticação.'));
+        return;
+      }
       cleanup();
       resolve();
     };

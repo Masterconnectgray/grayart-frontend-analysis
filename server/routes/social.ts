@@ -177,7 +177,22 @@ socialRouter.get('/callback', async (req, res) => {
       </html>
     `);
   } catch (error) {
-    return res.status(400).send(error instanceof Error ? error.message : 'Erro no callback OAuth');
+    const message = error instanceof Error ? error.message : 'Erro no callback OAuth';
+    return res.status(400).type('html').send(`
+      <!doctype html>
+      <html lang="pt-BR">
+        <head><meta charset="utf-8"><title>Erro na conexão</title></head>
+        <body style="font-family: sans-serif; padding: 32px;">
+          <h2>Falha ao conectar a conta</h2>
+          <p>${message}</p>
+          <script>
+            if (window.opener) {
+              window.opener.postMessage({ type: 'oauth_callback', platform: ${JSON.stringify(platform || null)}, success: false, error: ${JSON.stringify(message)} }, '*');
+            }
+          </script>
+        </body>
+      </html>
+    `);
   }
 });
 
