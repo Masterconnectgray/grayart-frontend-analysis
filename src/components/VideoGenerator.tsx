@@ -412,7 +412,22 @@ export default function VideoGenerator({ division: _division }: VideoGeneratorPr
                     )}
                   </div>
                   {item.status === 'done' && (
-                    <Check size={16} className="text-[#25D366] flex-shrink-0 mt-1" />
+                    <div className="flex flex-col gap-1 shrink-0">
+                      <Check size={16} className="text-[#25D366]" />
+                      {item.videoUrl && (
+                        <a href={item.videoUrl} download onClick={e => e.stopPropagation()} className="text-[9px] font-bold text-white/40 hover:text-white transition">
+                          <Download size={12} />
+                        </a>
+                      )}
+                    </div>
+                  )}
+                  {item.status === 'failed' && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setPrompt(item.prompt); handleGenerate(); }}
+                      className="px-2.5 py-1.5 rounded-lg bg-amber-500/15 text-amber-400 text-[10px] font-bold hover:bg-amber-500/25 transition shrink-0 flex items-center gap-1"
+                    >
+                      <RefreshCw size={10} /> Refazer
+                    </button>
                   )}
                 </button>
               ))}

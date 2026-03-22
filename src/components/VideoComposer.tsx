@@ -420,6 +420,19 @@ export default function VideoComposer({ division }: VideoComposerProps) {
                     <div className="text-[10px] font-bold opacity-60">{dateStr}</div>
                     <div className="text-[9px] opacity-30">{timeStr}</div>
                   </div>
+                  {item.status === 'done' && item.videoUrl && (
+                    <a href={item.videoUrl} download onClick={e => e.stopPropagation()} className="p-1.5 rounded-lg bg-[#25D366]/15 text-[#25D366] hover:bg-[#25D366]/25 transition shrink-0">
+                      <Download size={12} />
+                    </a>
+                  )}
+                  {item.status === 'failed' && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setPrompt(item.prompt); setDuration(item.duration || 30); }}
+                      className="px-2.5 py-1.5 rounded-lg bg-amber-500/15 text-amber-400 text-[10px] font-bold hover:bg-amber-500/25 transition shrink-0 flex items-center gap-1"
+                    >
+                      <RefreshCw size={10} /> Refazer
+                    </button>
+                  )}
                   <span className={`px-2 py-0.5 rounded text-[9px] font-bold shrink-0 ${
                     item.status === 'done' ? 'bg-[#25D366]/15 text-[#25D366]' :
                     item.status === 'failed' ? 'bg-red-500/15 text-red-400' :
