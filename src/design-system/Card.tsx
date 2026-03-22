@@ -22,13 +22,13 @@ export const Card: React.FC<CardProps> = ({
   ...props
 }) => {
   const variants = {
-    default: "bg-white/5 backdrop-blur-md border border-white/10",
-    elevated: "bg-[#1e1e1e] shadow-xl shadow-black/40 border border-white/5",
-    bordered: "bg-transparent border-2 border-white/10"
+    default: "bg-[var(--card-bg)] backdrop-blur-md border border-[var(--card-border)]",
+    elevated: "bg-[var(--card-bg)] shadow-xl shadow-black/20 border border-[var(--card-border)]",
+    bordered: "bg-transparent border-2 border-[var(--card-border)]"
   };
 
   const classes = [
-    "rounded-2xl overflow-hidden text-white flex flex-col",
+    "rounded-2xl overflow-hidden text-[var(--text-color)] flex flex-col transition-colors duration-300",
     variants[variant],
     className
   ].filter(Boolean).join(" ");

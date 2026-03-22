@@ -326,6 +326,22 @@ export async function loginWithPlatform(
   return account;
 }
 
+export async function simulateLoginWithPlatform(platform: PlatformKey): Promise<ConnectedAccount> {
+  const mockAccount: ConnectedAccount = {
+    platform,
+    handle: `@grayart_${platform}_test`,
+    name: `Gray Art ${PLATFORM_CONFIGS[platform].name} (Simulado)`,
+    followers: 1250,
+    userId: `mock_${platform}_${Date.now()}`,
+    connectedAt: Date.now(),
+    status: 'active',
+  };
+  
+  AccountStore.save(mockAccount);
+  
+  return new Promise(resolve => setTimeout(() => resolve(mockAccount), 1000));
+}
+
 export async function loginWithGoogle(onStatus: (msg: string) => void): Promise<ConnectedAccount> {
   return loginWithPlatform('youtube', onStatus);
 }

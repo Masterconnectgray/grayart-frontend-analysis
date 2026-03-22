@@ -189,51 +189,69 @@ const ActivityHistory: React.FC<ActivityHistoryProps> = ({ division }) => {
         });
         const providers = [
           { key: 'veo', label: 'Veo', color: 'bg-blue-500' },
-          { key: 'kling', label: 'Kling', color: 'bg-orange-500' },
-          { key: 'seedance', label: 'Seedance', color: 'bg-teal-500' },
-        ].map(p => ({ ...p, count: items.filter(i => i.type === 'video' && i.model?.toLowerCase().includes(p.key)).length }));
+          { key: 'kling', label: 'Kling', color: 'bg-purple-500' },
+          { key: 'seedance', label: 'Seedance', color: 'bg-orange-500' },
+          { key: 'luma', label: 'Luma', color: 'bg-indigo-500' },
+          { key: 'wan', label: 'Wan', color: 'bg-emerald-500' },
+          { key: 'hunyuan', label: 'Hunyuan', color: 'bg-cyan-500' },
+          { key: 'studio', label: 'AI Studio', color: 'bg-blue-400' },
+        ].map(p => ({ ...p, count: items.filter(i => i.type === 'video' && (i.model?.toLowerCase().includes(p.key) || (p.key === 'studio' && i.model?.toLowerCase().includes('gemini')))).length }));
         const maxProv = Math.max(1, ...providers.map(p => p.count));
 
         return (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
             {/* Line chart */}
-            <div className="lg:col-span-2 rounded-2xl bg-black/40 border border-white/5 p-4">
-              <p className="text-[10px] font-bold uppercase tracking-widest opacity-40 mb-3">Producao ultimos 14 dias</p>
+            <div className="lg:col-span-2 rounded-2xl bg-[var(--input-bg)] border border-[var(--card-border)] p-6 shadow-sm">
+              <p className="text-[10px] font-black uppercase tracking-widest opacity-30 mb-5">Producao ultimos 14 dias</p>
               <ResponsiveContainer width="100%" height={140}>
                 <AreaChart data={chartData}>
                   <defs>
-                    <linearGradient id="gCopy" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#a855f7" stopOpacity={0.3}/><stop offset="100%" stopColor="#a855f7" stopOpacity={0}/></linearGradient>
-                    <linearGradient id="gVideo" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#10b981" stopOpacity={0.3}/><stop offset="100%" stopColor="#10b981" stopOpacity={0}/></linearGradient>
+                    <linearGradient id="gCopy" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#a855f7" stopOpacity={0.4}/><stop offset="100%" stopColor="#a855f7" stopOpacity={0}/></linearGradient>
+                    <linearGradient id="gVideo" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#10b981" stopOpacity={0.4}/><stop offset="100%" stopColor="#10b981" stopOpacity={0}/></linearGradient>
                   </defs>
-                  <XAxis dataKey="day" tick={{ fontSize: 9, fill: 'rgba(255,255,255,0.35)' }} axisLine={false} tickLine={false} />
-                  <YAxis allowDecimals={false} tick={{ fontSize: 9, fill: 'rgba(255,255,255,0.35)' }} axisLine={false} tickLine={false} width={20} />
-                  <Tooltip contentStyle={{ background: '#1a1a2e', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, fontSize: 11 }} />
-                  <Area type="monotone" dataKey="copies" stroke="#a855f7" fill="url(#gCopy)" strokeWidth={2} name="Copies" />
-                  <Area type="monotone" dataKey="videos" stroke="#10b981" fill="url(#gVideo)" strokeWidth={2} name="Videos" />
+                  <XAxis dataKey="day" tick={{ fontSize: 9, fill: 'var(--text-color)', opacity: 0.4 }} axisLine={false} tickLine={false} />
+                  <YAxis allowDecimals={false} tick={{ fontSize: 9, fill: 'var(--text-color)', opacity: 0.4 }} axisLine={false} tickLine={false} width={20} />
+                  <Tooltip 
+                    contentStyle={{ 
+                      background: 'var(--card-bg)', 
+                      border: '1px solid var(--card-border)', 
+                      borderRadius: 12, 
+                      fontSize: 11,
+                      boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)'
+                    }} 
+                    itemStyle={{ fontWeight: 'bold' }}
+                  />
+                  <Area type="monotone" dataKey="copies" stroke="#a855f7" fill="url(#gCopy)" strokeWidth={3} name="Copies" />
+                  <Area type="monotone" dataKey="videos" stroke="#10b981" fill="url(#gVideo)" strokeWidth={3} name="Videos" />
                 </AreaChart>
               </ResponsiveContainer>
             </div>
             {/* Right column: providers + cost */}
             <div className="flex flex-col gap-4">
-              <div className="rounded-2xl bg-black/40 border border-white/5 p-4 flex-1">
-                <p className="text-[10px] font-bold uppercase tracking-widest opacity-40 mb-3">Videos por provider</p>
-                <div className="space-y-2">
+              <div className="rounded-2xl bg-[var(--input-bg)] border border-[var(--card-border)] p-5 flex-1 shadow-sm">
+                <p className="text-[10px] font-black uppercase tracking-widest opacity-30 mb-4">Videos por provider</p>
+                <div className="space-y-3">
                   {providers.map(p => (
-                    <div key={p.key} className="flex items-center gap-2">
-                      <span className="text-[10px] font-bold w-16 opacity-60">{p.label}</span>
-                      <div className="flex-1 h-3 rounded-full bg-white/5 overflow-hidden">
-                        <div className={`h-full rounded-full ${p.color} transition-all`} style={{ width: `${(p.count / maxProv) * 100}%` }} />
+                    <div key={p.key} className="flex items-center gap-3">
+                      <span className="text-[10px] font-black w-14 opacity-50 uppercase tracking-tighter truncate">{p.label}</span>
+                      <div className="flex-1 h-2 rounded-full bg-black/5 dark:bg-white/5 overflow-hidden">
+                        <div 
+                          className={`h-full rounded-full ${p.color} transition-all duration-1000 ease-out`} 
+                          style={{ width: `${p.count > 0 ? (p.count / maxProv) * 100 : 0}%`, boxShadow: p.count > 0 ? `0 0 10px ${p.color}40` : 'none' }} 
+                        />
                       </div>
-                      <span className="text-xs font-black w-6 text-right opacity-70">{p.count}</span>
+                      <span className="text-xs font-black w-6 text-right opacity-40">{p.count}</span>
                     </div>
                   ))}
                 </div>
               </div>
-              <div className="rounded-2xl bg-black/40 border border-white/5 p-4 flex items-center gap-3">
-                <div className="p-2 rounded-xl bg-red-500/10"><DollarSign size={18} className="text-red-400" /></div>
-                <div>
-                  <p className="text-[10px] font-bold uppercase tracking-widest opacity-40">Custo total IA</p>
-                  <p className="text-xl font-black text-red-400">${stats.totalCost.toFixed(4)}</p>
+              <div className="rounded-2xl bg-[var(--input-bg)] border border-[var(--card-border)] p-6 flex items-center justify-between shadow-sm">
+                <div className="flex items-center gap-4">
+                  <div className="p-3 rounded-2xl bg-red-500/10 shadow-inner"><DollarSign size={20} className="text-red-500" /></div>
+                  <div>
+                    <p className="text-[10px] font-black uppercase tracking-widest opacity-30">Custo Total IA</p>
+                    <p className="text-2xl font-black text-red-500 tracking-tighter">${stats.totalCost.toFixed(4)}</p>
+                  </div>
                 </div>
               </div>
             </div>

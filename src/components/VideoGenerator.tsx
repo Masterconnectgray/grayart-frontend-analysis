@@ -213,7 +213,7 @@ export default function VideoGenerator({ division: _division }: VideoGeneratorPr
         <Card title="Gerar Video" subtitle="Multi-provider: Veo 3.1 + Kling 3.0 + Seedance 2.0">
           {/* Prompt */}
           <textarea
-            className="w-full p-4 rounded-xl bg-black/5 dark:bg-black/40 text-[var(--card-text)] text-sm font-bold border-2 border-[var(--primary-color)]/20 shadow-inner focus:outline-none focus:border-[var(--primary-color)] focus:ring-4 focus:ring-[var(--primary-color)]/20 transition-all resize-none min-h-[120px] placeholder:opacity-40"
+            className="w-full p-4 rounded-xl bg-[var(--input-bg)] text-[var(--text-color)] text-sm font-bold border-2 border-[var(--primary-color)]/20 shadow-inner focus:outline-none focus:border-[var(--primary-color)] focus:ring-4 focus:ring-[var(--primary-color)]/20 transition-all resize-none min-h-[120px] placeholder:opacity-50"
             placeholder="Descreva o video que voce quer gerar..."
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}
@@ -222,7 +222,7 @@ export default function VideoGenerator({ division: _division }: VideoGeneratorPr
 
           {/* Provider */}
           <div className="mt-4">
-            <label className="text-xs text-slate-400 uppercase tracking-wide mb-2 block">Provider</label>
+            <label className="text-xs text-[var(--text-color)] opacity-60 uppercase tracking-wide mb-2 block">Provider</label>
             <div className="flex gap-2">
               {providerOptions.map((opt) => (
                 <button
@@ -232,7 +232,7 @@ export default function VideoGenerator({ division: _division }: VideoGeneratorPr
                   className={`flex-1 px-3 py-2 rounded-xl text-sm font-semibold transition-all border ${
                     provider === opt.value
                       ? 'text-white border-transparent'
-                      : 'bg-white/5 text-slate-400 border-white/10 hover:bg-white/10'
+                      : 'bg-[var(--input-bg)] text-[var(--text-color)] opacity-60 border-[var(--card-border)] hover:bg-black/5 dark:hover:bg-white/5'
                   }`}
                   style={provider === opt.value ? { backgroundColor: PROVIDER_COLORS[opt.value] } : undefined}
                 >
@@ -244,7 +244,7 @@ export default function VideoGenerator({ division: _division }: VideoGeneratorPr
 
           {/* Format */}
           <div className="mt-4">
-            <label className="text-xs text-slate-400 uppercase tracking-wide mb-2 block">Formato</label>
+            <label className="text-xs text-[var(--text-color)] opacity-60 uppercase tracking-wide mb-2 block">Formato</label>
             <div className="flex gap-2">
               {formatOptions.map((opt) => (
                 <button
@@ -254,7 +254,7 @@ export default function VideoGenerator({ division: _division }: VideoGeneratorPr
                   className={`flex-1 px-3 py-2 rounded-xl text-sm font-semibold transition-all border ${
                     format === opt.value
                       ? 'bg-[var(--primary-color)] text-[#1a1a1a] border-transparent'
-                      : 'bg-white/5 text-slate-400 border-white/10 hover:bg-white/10'
+                      : 'bg-[var(--input-bg)] text-[var(--text-color)] opacity-60 border-[var(--card-border)] hover:bg-black/5 dark:hover:bg-white/5'
                   }`}
                 >
                   <div>{opt.label}</div>
@@ -266,7 +266,7 @@ export default function VideoGenerator({ division: _division }: VideoGeneratorPr
 
           {/* Duration */}
           <div className="mt-4">
-            <label className="text-xs text-slate-400 uppercase tracking-wide mb-2 block">Duracao</label>
+            <label className="text-xs text-[var(--text-color)] opacity-60 uppercase tracking-wide mb-2 block">Duracao</label>
             <div className="flex gap-2">
               {([6, 8] as Duration[]).map((d) => (
                 <button
@@ -276,7 +276,7 @@ export default function VideoGenerator({ division: _division }: VideoGeneratorPr
                   className={`flex-1 px-3 py-2 rounded-xl text-sm font-semibold transition-all border ${
                     duration === d
                       ? 'bg-[var(--primary-color)] text-[#1a1a1a] border-transparent'
-                      : 'bg-white/5 text-slate-400 border-white/10 hover:bg-white/10'
+                      : 'bg-[var(--input-bg)] text-[var(--text-color)] opacity-60 border-[var(--card-border)] hover:bg-black/5 dark:hover:bg-white/5'
                   }`}
                 >
                   {d}s
@@ -319,7 +319,7 @@ export default function VideoGenerator({ division: _division }: VideoGeneratorPr
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <ProviderBadge provider={job.provider} />
-                <span className="text-xs text-slate-400">{Math.round(job.progress)}%</span>
+                <span className="text-xs text-[var(--text-color)] opacity-40">{Math.round(job.progress)}%</span>
               </div>
               <div className="w-full h-2 bg-white/10 rounded-full overflow-hidden">
                 <div
@@ -330,7 +330,7 @@ export default function VideoGenerator({ division: _division }: VideoGeneratorPr
                   }}
                 />
               </div>
-              <div className="flex items-center gap-2 text-sm text-slate-400">
+              <div className="flex items-center gap-2 text-sm text-[var(--text-color)] opacity-40">
                 <Loader2 size={14} className="animate-spin" />
                 {job.step}
               </div>
@@ -404,10 +404,10 @@ export default function VideoGenerator({ division: _division }: VideoGeneratorPr
                     )}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm text-white truncate">{item.prompt}</p>
+                    <p className="text-sm text-[var(--text-color)] truncate">{item.prompt}</p>
                     <div className="flex items-center gap-2 mt-1">
                       <ProviderBadge provider={item.provider} />
-                      <span className="text-[10px] text-slate-500">
+                      <span className="text-[10px] text-[var(--text-color)] opacity-40">
                         {new Date(item.createdAt).toLocaleDateString('pt-BR')}
                       </span>
                     </div>

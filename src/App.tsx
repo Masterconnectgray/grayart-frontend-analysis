@@ -139,6 +139,12 @@ const App: React.FC = () => {
     root.style.setProperty('--bg-color', theme.colors.background);
     root.style.setProperty('--text-color', theme.colors.text);
 
+    // Card and component specific variables
+    const isGrayArt = activeDivision === 'gray-art';
+    root.style.setProperty('--card-bg', isGrayArt ? '#ffffff' : '#1e1e1e');
+    root.style.setProperty('--card-border', isGrayArt ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.08)');
+    root.style.setProperty('--input-bg', isGrayArt ? 'rgba(0,0,0,0.03)' : 'rgba(255,255,255,0.05)');
+
     // Add RGB version for rgba usage
     const hexToRgb = (hex: string) => {
       const r = parseInt(hex.slice(1, 3), 16);

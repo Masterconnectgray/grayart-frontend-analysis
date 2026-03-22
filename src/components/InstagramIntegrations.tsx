@@ -14,6 +14,7 @@ import {
   disconnectPlatform,
   fetchConnectedAccounts,
   loginWithPlatform,
+  simulateLoginWithPlatform,
   type ConnectedAccount,
   type PlatformKey,
 } from '../services/SocialOAuthService';
@@ -37,6 +38,66 @@ const PLATFORM_INFO: Record<ManageablePlatformKey, { label: string; color: strin
 };
 
 const OAUTH_PLATFORMS = new Set<PlatformKey>(['instagram', 'facebook', 'linkedin', 'tiktok', 'youtube', 'pinterest']);
+const CALLBACK_BASE = 'http://localhost:3060/api/social/callback';
+
+const OAUTH_GUIDE: Partial<Record<ManageablePlatformKey, { callback: string; note: string }>> = {
+  instagram: {
+    callback: `${CALLBACK_BASE}?platform=instagram`,
+    note: 'Instagram e Facebook usam a mesma credencial Meta.',
+  },
+  facebook: {
+    callback: `${CALLBACK_BASE}?platform=facebook`,
+    note: 'Use o mesmo App ID e App Secret da Meta usados no Instagram.',
+  },
+  youtube: {
+    callback: `${CALLBACK_BASE}?platform=youtube`,
+    note: 'No Google Cloud, habilite YouTube Data API e adicione este redirect URI.',
+  },
+  linkedin: {
+    callback: `${CALLBACK_BASE}?platform=linkedin`,
+    note: 'No LinkedIn Developer, cadastre este callback exatamente igual.',
+  },
+  tiktok: {
+    callback: `${CALLBACK_BASE}?platform=tiktok`,
+    note: 'No TikTok for Developers, o redirect URI deve bater 100% com este valor.',
+  },
+};
+
+function usesSharedMetaCredential(platform: ManageablePlatformKey) {
+  return platform === 'instagram' || platform === 'facebook';
+}
+
+function getPlatformDiagnostic(platform: ManageablePlatformKey, configured: boolean) {
+  if (!PLATFORM_INFO[platform].supportsOAuth) {
+    return {
+      tone: 'text-slate-400',
+      label: 'Sem suporte',
+      detail: 'Esta plataforma ainda não possui fluxo OAuth implementado neste app.',
+    };
+  }
+
+  if (!configured) {
+    return {
+      tone: 'text-amber-500',
+      label: 'Falta configuração',
+      detail: 'Salve App ID e App Secret válidos antes de tentar conectar.',
+    };
+  }
+
+  const detailMap: Partial<Record<ManageablePlatformKey, string>> = {
+    instagram: 'Confirme também se o app Meta tem permissões para Instagram e callback correto.',
+    facebook: 'Use a mesma credencial Meta do Instagram e valide o callback do Facebook Login.',
+    youtube: 'Verifique YouTube Data API habilitada e redirect URI no Google Cloud.',
+    linkedin: 'Confirme callback idêntico e produto/permissão social habilitado no LinkedIn.',
+    tiktok: 'O redirect URI precisa bater exatamente com o valor configurado no TikTok.',
+  };
+
+  return {
+    tone: 'text-emerald-500',
+    label: 'Pronto para teste',
+    detail: detailMap[platform] || 'A plataforma está pronta para iniciar o fluxo de conexão.',
+  };
+}
 
 function normalizeAccounts(accounts: ConnectedAccount[]): ConnectedAccount[] {
   return accounts.sort((a, b) => {
@@ -97,20 +158,26 @@ const InstagramIntegrations: React.FC<InstagramIntegrationsProps> = ({ division 
     });
   }, [loadAccounts, loadPlatformConfig, loadSavedCreds]);
 
-  const handleConnect = useCallback(async (platform: ManageablePlatformKey) => {
+  const handleConnect = useCallback(async (platform: ManageablePlatformKey, simulate = false) => {
     if (!OAUTH_PLATFORMS.has(platform as PlatformKey)) {
       addNotification(`OAuth para ${PLATFORM_INFO[platform].label} ainda não está habilitado no backend.`, 'info');
       return;
     }
 
-    if (!platformConfig[platform]) {
+    if (!platformConfig[platform] && !simulate) {
       addNotification(`Falta configurar OAuth de ${PLATFORM_INFO[platform].label} no backend antes de conectar.`, 'error');
       return;
     }
 
     setConnectingPlatform(platform);
     try {
-      const account = await loginWithPlatform(platform as PlatformKey, () => undefined);
+      let account: ConnectedAccount;
+      if (simulate) {
+        addNotification(`Simulando conexão para ${PLATFORM_INFO[platform].label}...`, 'info');
+        account = await simulateLoginWithPlatform(platform as PlatformKey);
+      } else {
+        account = await loginWithPlatform(platform as PlatformKey, () => undefined);
+      }
       await loadAccounts();
       addNotification(`${PLATFORM_INFO[platform].label} conectado: ${account.handle}`, 'success');
     } catch (error) {
@@ -199,6 +266,7 @@ const InstagramIntegrations: React.FC<InstagramIntegrationsProps> = ({ division 
             const isDisconnecting = disconnectingPlatform === platform;
             const hasActiveAccount = platformAccounts.some((account) => account.status === 'active');
             const isConfigured = !!platformConfig[platform];
+            const diagnostic = getPlatformDiagnostic(platform, isConfigured);
 
             return (
               <Card key={platform}>
@@ -213,6 +281,11 @@ const InstagramIntegrations: React.FC<InstagramIntegrationsProps> = ({ division 
                         <span className="text-[10px] opacity-40 font-bold">
                           {platformAccounts.length} conta{platformAccounts.length !== 1 ? 's' : ''}
                         </span>
+                        {usesSharedMetaCredential(platform) && (
+                          <span className="text-[10px] font-bold text-sky-400">
+                            META COMPARTILHADO
+                          </span>
+                        )}
                         <span className={`text-[10px] font-bold ${
                           hasActiveAccount ? 'text-emerald-500' : info.supportsOAuth && isConfigured ? 'text-amber-500' : 'text-slate-400'
                         }`}>
@@ -225,16 +298,29 @@ const InstagramIntegrations: React.FC<InstagramIntegrationsProps> = ({ division 
                   <div className="flex items-center gap-2">
                     {info.supportsOAuth ? (
                       <>
-                        <Button
-                          size="sm"
-                          variant={hasActiveAccount ? 'secondary' : 'primary'}
-                          onClick={() => handleConnect(platform)}
-                          loading={isConnecting}
-                          disabled={isDisconnecting || !isConfigured}
-                          icon={isConnecting ? undefined : Link2}
-                        >
-                          {hasActiveAccount ? 'Reconectar' : 'Conectar'}
-                        </Button>
+                        {!isConfigured ? (
+                          <Button
+                            size="sm"
+                            variant="primary"
+                            onClick={() => handleConnect(platform, true)}
+                            loading={isConnecting}
+                            disabled={isDisconnecting}
+                            className="bg-[var(--primary-color)]/10 hover:bg-[var(--primary-color)]/20 text-[var(--primary-color)] border border-[var(--primary-color)]/30"
+                          >
+                            Conectar (Simulado)
+                          </Button>
+                        ) : (
+                          <Button
+                            size="sm"
+                            variant={hasActiveAccount ? 'secondary' : 'primary'}
+                            onClick={() => handleConnect(platform)}
+                            loading={isConnecting}
+                            disabled={isDisconnecting}
+                            icon={isConnecting ? undefined : Link2}
+                          >
+                            {hasActiveAccount ? 'Reconectar' : 'Conectar'}
+                          </Button>
+                        )}
                         <Button
                           size="sm"
                           variant="danger"
@@ -261,6 +347,11 @@ const InstagramIntegrations: React.FC<InstagramIntegrationsProps> = ({ division 
                     OAuth ainda não configurado para {info.label}. Salve as credenciais na área administrativa.
                   </div>
                 )}
+
+                <div className={`mb-4 text-[11px] leading-relaxed ${diagnostic.tone}`}>
+                  <div className="font-bold uppercase tracking-wide">{diagnostic.label}</div>
+                  <div className="opacity-80">{diagnostic.detail}</div>
+                </div>
 
                 {loadingAccounts ? (
                   <div className="text-[11px] opacity-40 font-bold py-2 flex items-center gap-2">
@@ -310,6 +401,21 @@ const InstagramIntegrations: React.FC<InstagramIntegrationsProps> = ({ division 
             <p className="text-xs opacity-40 mb-4">
               Configure App ID e Secret no backend para habilitar conexão OAuth real.
             </p>
+            {usesSharedMetaCredential(credPlatform) && (
+              <div className="mb-4 rounded-xl border border-sky-500/20 bg-sky-500/5 p-4 text-xs leading-relaxed">
+                <div className="font-bold text-sky-400 mb-1">Credencial compartilhada Meta</div>
+                <div className="opacity-80">
+                  O mesmo App ID e App Secret serão usados tanto para Instagram quanto para Facebook.
+                </div>
+              </div>
+            )}
+            {OAUTH_GUIDE[credPlatform] && (
+              <div className="mb-4 rounded-xl border border-[var(--primary-color)]/20 bg-[var(--primary-color)]/5 p-4 text-xs leading-relaxed">
+                <div className="font-bold text-[var(--primary-color)] mb-1">Configuração de Callback</div>
+                <div className="break-all font-mono opacity-80">{OAUTH_GUIDE[credPlatform].callback}</div>
+                <div className="mt-2 opacity-70">{OAUTH_GUIDE[credPlatform].note}</div>
+              </div>
+            )}
             <div className="flex flex-col gap-3 mb-6">
               <select
                 value={credPlatform}

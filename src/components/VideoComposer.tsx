@@ -169,7 +169,7 @@ export default function VideoComposer({ division }: VideoComposerProps) {
       {/* Controls */}
       <Card variant="elevated">
         <div className="space-y-5">
-          <div className="flex items-center gap-2 text-white/60 text-xs uppercase tracking-wider font-medium">
+          <div className="flex items-center gap-2 text-[var(--text-color)] opacity-60 text-xs uppercase tracking-wider font-medium">
             <Film className="w-4 h-4" /> Video Composer — {theme.name}
           </div>
 
@@ -179,12 +179,12 @@ export default function VideoComposer({ division }: VideoComposerProps) {
             placeholder="Descreva o conceito do video..."
             rows={4}
             disabled={isGenerating}
-            className="w-full p-4 rounded-xl bg-black/5 dark:bg-black/40 text-[var(--card-text)] text-sm font-bold border-2 border-[var(--primary-color)]/20 shadow-inner focus:outline-none focus:border-[var(--primary-color)] focus:ring-4 focus:ring-[var(--primary-color)]/20 transition-all resize-none min-h-[120px] placeholder:opacity-40"
+            className="w-full p-4 rounded-xl bg-[var(--input-bg)] text-[var(--text-color)] text-sm font-bold border-2 border-[var(--primary-color)]/20 shadow-inner focus:outline-none focus:border-[var(--primary-color)] focus:ring-4 focus:ring-[var(--primary-color)]/20 transition-all resize-none min-h-[120px] placeholder:opacity-50"
           />
 
           <div>
             <div className="flex items-center justify-between mb-2">
-              <span className="text-sm text-white/60 flex items-center gap-1.5">
+              <span className="text-sm text-[var(--text-color)] opacity-60 flex items-center gap-1.5">
                 <Clock className="w-4 h-4" /> Duracao
               </span>
               <span className="text-sm font-bold" style={{ color: theme.colors.primary }}>{duration}s</span>
@@ -196,10 +196,10 @@ export default function VideoComposer({ division }: VideoComposerProps) {
               className="w-full h-2 rounded-full appearance-none cursor-pointer bg-white/10"
               style={{ accentColor: theme.colors.primary }}
             />
-            <div className="flex justify-between mt-1 text-[10px] text-white/30">
+            <div className="flex justify-between mt-1 text-[10px] text-[var(--text-color)] opacity-30">
               {MARKS.map(m => <span key={m}>{m}s</span>)}
             </div>
-            <p className="text-xs text-white/40 mt-2">
+            <p className="text-xs text-[var(--text-color)] opacity-40 mt-2">
               {sceneCount} cena{sceneCount > 1 ? 's' : ''} de {SCENE_DURATION}s cada — tempo estimado: ~{sceneCount * 40}s ({Math.ceil(sceneCount * 40 / 60)}min)
             </p>
           </div>
@@ -213,7 +213,7 @@ export default function VideoComposer({ division }: VideoComposerProps) {
                 className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${
                   format === f
                     ? 'text-[#1a1a1a] font-bold'
-                    : 'bg-white/5 text-white/60 hover:bg-white/10'
+                    : 'bg-[var(--input-bg)] text-[var(--text-color)] opacity-60 hover:opacity-100 hover:bg-black/5 dark:hover:bg-white/5'
                 }`}
                 style={format === f ? { backgroundColor: theme.colors.primary } : undefined}
               >
@@ -223,7 +223,7 @@ export default function VideoComposer({ division }: VideoComposerProps) {
           </div>
 
           <div className="flex items-center justify-between">
-            <label className="flex items-center gap-2 cursor-pointer text-sm text-white/60">
+            <label className="flex items-center gap-2 cursor-pointer text-sm text-[var(--text-color)] opacity-60">
               <Mic className="w-4 h-4" />
               <span>Adicionar narracao</span>
               <div
@@ -414,7 +414,7 @@ export default function VideoComposer({ division }: VideoComposerProps) {
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-xs font-bold truncate">{item.prompt.substring(0, 50)}...</p>
-                    <p className="text-[10px] text-white/40">{item.scenes} cenas — {item.duration}s — {item.provider}</p>
+                    <p className="text-[10px] text-[var(--text-color)] opacity-40">{item.scenes} cenas — {item.duration}s — {item.provider}</p>
                   </div>
                   <div className="text-right shrink-0">
                     <div className="text-[10px] font-bold opacity-60">{dateStr}</div>

@@ -133,10 +133,10 @@ export default function VideoEditor({ division, videoUrl }: VideoEditorProps) {
   const renderUploadArea = () => (
     <div className="flex-1 flex items-center justify-center p-8">
       <div
-        className={`relative w-full max-w-lg border-2 border-dashed rounded-2xl p-12 text-center transition-all cursor-pointer ${
+        className={`relative w-full max-w-xl border-2 border-dashed rounded-[2.5rem] p-16 text-center transition-all duration-500 cursor-pointer group shadow-2xl ${
           isDragging
-            ? 'border-white/60 bg-white/10 scale-[1.02]'
-            : 'border-white/20 bg-white/5 hover:border-white/40 hover:bg-white/8'
+            ? 'border-[var(--primary-color)] bg-[var(--primary-color)]/5 scale-[1.02]'
+            : 'border-[var(--card-border)] bg-[var(--input-bg)] hover:border-[var(--primary-color)]/40 hover:bg-[var(--primary-color)]/5'
         }`}
         onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
         onDragLeave={() => setIsDragging(false)}
@@ -150,16 +150,18 @@ export default function VideoEditor({ division, videoUrl }: VideoEditorProps) {
           className="hidden"
           onChange={onFileInput}
         />
-        <Upload className="mx-auto mb-4 text-white/40" size={48} />
-        <p className="text-lg font-medium text-white/80 mb-2">
+        <Upload className="mx-auto mb-6 text-[var(--primary-color)] opacity-40 group-hover:opacity-100 transition-all duration-500" size={56} />
+        <p className="text-xl font-black text-[var(--text-color)] mb-3 tracking-tight">
           Arraste um video aqui
         </p>
-        <p className="text-sm text-white/40">
+        <p className="text-sm text-[var(--text-color)] opacity-50 font-medium">
           ou clique para selecionar um arquivo
         </p>
-        <p className="text-xs text-white/30 mt-4">
-          MP4, WebM, MOV — ate 500MB
-        </p>
+        <div className="mt-8 pt-6 border-t border-[var(--card-border)]">
+          <p className="text-[10px] text-[var(--text-color)] opacity-30 font-bold uppercase tracking-widest">
+            MP4 • WebM • MOV — ate 500MB
+          </p>
+        </div>
       </div>
     </div>
   );
@@ -173,10 +175,10 @@ export default function VideoEditor({ division, videoUrl }: VideoEditorProps) {
           <button
             key={ratio}
             onClick={() => setAspect(ratio)}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
               isActive
-                ? 'bg-white/20 text-white'
-                : 'bg-white/5 text-white/50 hover:bg-white/10 hover:text-white/70'
+                ? 'bg-[var(--primary-color)] text-[#1a1a1a]'
+                : 'bg-[var(--input-bg)] text-[var(--text-color)] opacity-50 hover:opacity-100 hover:bg-black/5 dark:hover:bg-white/5'
             }`}
             title={ASPECT_CONFIGS[ratio].label}
           >
@@ -192,7 +194,7 @@ export default function VideoEditor({ division, videoUrl }: VideoEditorProps) {
     if (!TwickComponents) {
       return (
         <div className="flex-1 flex items-center justify-center">
-          <Loader2 className="animate-spin text-white/40" size={32} />
+          <Loader2 className="animate-spin text-[var(--text-color)] opacity-40" size={32} />
         </div>
       );
     }
@@ -283,8 +285,8 @@ export default function VideoEditor({ division, videoUrl }: VideoEditorProps) {
   const renderLoading = () => (
     <div className="flex-1 flex items-center justify-center">
       <div className="text-center">
-        <Loader2 className="mx-auto mb-4 animate-spin text-white/40" size={40} />
-        <p className="text-white/60 text-sm">Carregando editor...</p>
+        <Loader2 className="mx-auto mb-4 animate-spin text-[var(--text-color)] opacity-40" size={40} />
+        <p className="text-[var(--text-color)] opacity-60 text-sm font-medium">Carregando editor...</p>
       </div>
     </div>
   );
@@ -292,29 +294,29 @@ export default function VideoEditor({ division, videoUrl }: VideoEditorProps) {
   return (
     <div
       ref={containerRef}
-      className="flex flex-col h-full min-h-0 bg-[#1a1a1a] text-white"
+      className="flex flex-col h-full min-h-0 bg-[var(--card-bg)] text-[var(--text-color)] transition-colors duration-500"
     >
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-white/10 bg-black/30 shrink-0">
+      <div className="flex items-center justify-between px-6 py-4 border-b border-[var(--card-border)] bg-[var(--input-bg)] backdrop-blur-md shrink-0">
         <div className="flex items-center gap-3">
           <button
             onClick={() => { setState('idle'); setLoadedVideoUrl(null); setError(null); }}
-            className="p-1.5 rounded-lg hover:bg-white/10 transition-colors text-white/60 hover:text-white"
+            className="p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/10 transition-colors text-[var(--text-color)] opacity-50 hover:opacity-100"
             title="Voltar"
           >
             <ArrowLeft size={18} />
           </button>
           <div className="flex items-center gap-2">
             <Film size={18} style={{ color: theme.colors.primary }} />
-            <span className="font-semibold text-sm">Editor de Video</span>
-            <span className="text-xs text-white/30 ml-1">— {theme.name}</span>
+            <span className="font-black text-sm tracking-tight">Editor de Video</span>
+            <span className="text-[10px] text-[var(--text-color)] opacity-30 ml-2 font-bold uppercase tracking-widest">— {theme.name}</span>
           </div>
         </div>
         <div className="flex items-center gap-3">
           {state === 'ready' && renderFormatSelector()}
           <button
             onClick={toggleFullscreen}
-            className="p-1.5 rounded-lg hover:bg-white/10 transition-colors text-white/50 hover:text-white"
+            className="p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/10 transition-colors text-[var(--text-color)] opacity-40 hover:opacity-100"
             title={isFullscreen ? 'Sair da tela cheia' : 'Tela cheia'}
           >
             <Maximize2 size={16} />

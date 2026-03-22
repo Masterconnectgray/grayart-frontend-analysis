@@ -174,56 +174,66 @@ const EditingToolsConnect: React.FC<EditingToolsConnectProps> = ({ division }) =
 
       {/* Login Modal */}
       {loginModal && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={() => setLoginModal(null)}>
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 shadow-2xl backdrop-blur-sm px-4" onClick={() => setLoginModal(null)}>
           <div
-            className="bg-[#1e1e1e] rounded-2xl p-6 w-full max-w-sm shadow-2xl border border-white/10"
+            className="bg-[var(--card-bg)] rounded-3xl p-8 w-full max-w-sm shadow-[0_32px_64px_-12px_rgba(0,0,0,0.3)] border border-[var(--card-border)] animate-in zoom-in-95 duration-300"
             onClick={e => e.stopPropagation()}
           >
-            <div className="flex items-center gap-3 mb-4">
-              {tools.find(t => t.id === loginModal)?.logo}
+            <div className="flex items-center gap-4 mb-6">
+              <div className="p-3 rounded-2xl bg-black/5 dark:bg-white/5 border border-[var(--card-border)]">
+                {tools.find(t => t.id === loginModal)?.logo}
+              </div>
               <div>
-                <h3 className="font-bold text-lg">
+                <h3 className="font-black text-xl tracking-tight text-[var(--text-color)]">
                   Conectar {tools.find(t => t.id === loginModal)?.name}
                 </h3>
-                <p className="text-xs opacity-70">
-                  Informe o e-mail da sua conta.
+                <p className="text-xs opacity-50 font-bold">
+                  Informe o e-mail da sua conta para integrar.
                 </p>
               </div>
             </div>
-            <input
-              type="email"
-              value={emailInput}
-              onChange={e => setEmailInput(e.target.value)}
-              placeholder="seu@email.com"
-              className="w-full px-4 py-3 rounded-xl bg-white/10 border border-white/20 text-sm font-medium focus:outline-none focus:border-[var(--primary-color)] transition-colors placeholder:text-white/30"
-              autoFocus
-              onKeyDown={e => e.key === 'Enter' && handleSaveLogin()}
-            />
-            <div className="flex gap-2 mt-4">
-              <button
-                onClick={() => setLoginModal(null)}
-                className="flex-1 px-4 py-2.5 rounded-xl text-sm font-bold bg-white/5 hover:bg-white/10 transition-all"
+            
+            <div className="space-y-4">
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-black uppercase tracking-widest opacity-40 ml-1">E-mail de acesso</label>
+                <input
+                  type="email"
+                  value={emailInput}
+                  onChange={e => setEmailInput(e.target.value)}
+                  placeholder="seu@email.com"
+                  className="w-full px-5 py-4 rounded-2xl bg-[var(--input-bg)] border border-[var(--card-border)] text-sm font-bold text-[var(--text-color)] focus:outline-none focus:ring-2 focus:ring-[var(--primary-color)]/20 focus:border-[var(--primary-color)] transition-all placeholder:opacity-20"
+                  autoFocus
+                  onKeyDown={e => e.key === 'Enter' && handleSaveLogin()}
+                />
+              </div>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setLoginModal(null)}
+                  className="flex-1 px-4 py-3.5 rounded-2xl text-[13px] font-black uppercase tracking-wider bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 text-[var(--text-color)] opacity-60 transition-all border border-[var(--card-border)]"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={handleSaveLogin}
+                  disabled={!emailInput.trim()}
+                  className="flex-1 px-4 py-3.5 rounded-2xl text-[13px] font-black uppercase tracking-wider text-black disabled:opacity-40 transition-all hover:scale-[1.02] active:scale-[0.98] shadow-lg shadow-[var(--primary-color)]/20"
+                  style={{ backgroundColor: theme.colors.primary }}
+                >
+                  Confirmar
+                </button>
+              </div>
+
+              <a
+                href={tools.find(t => t.id === loginModal)?.loginUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-center gap-2 pt-2 text-[10px] font-black uppercase tracking-widest opacity-40 hover:opacity-100 transition-opacity"
               >
-                Cancelar
-              </button>
-              <button
-                onClick={handleSaveLogin}
-                disabled={!emailInput.trim()}
-                className="flex-1 px-4 py-2.5 rounded-xl text-sm font-bold text-black disabled:opacity-40 transition-all hover:brightness-110"
-                style={{ backgroundColor: theme.colors.primary }}
-              >
-                Conectar
-              </button>
+                <ExternalLink className="w-3 h-3" />
+                Validar no site oficial
+              </a>
             </div>
-            <a
-              href={tools.find(t => t.id === loginModal)?.loginUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center justify-center gap-1 mt-3 text-[11px] font-bold opacity-60 hover:opacity-100 transition-opacity"
-            >
-              <ExternalLink className="w-3 h-3" />
-              Abrir {tools.find(t => t.id === loginModal)?.name} no navegador
-            </a>
           </div>
         </div>
       )}

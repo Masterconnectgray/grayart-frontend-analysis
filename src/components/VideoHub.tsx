@@ -114,7 +114,7 @@ function Stars({ count }: { count: number }) {
   return (
     <div className="flex gap-0.5">
       {Array.from({ length: 5 }).map((_, i) => (
-        <div key={i} className={`w-3 h-3 rounded-sm ${i < count ? 'bg-amber-400' : 'bg-white/10'}`} />
+        <div key={i} className={`w-3 h-3 rounded-sm ${i < count ? 'bg-amber-400' : 'bg-black/10 dark:bg-white/10'}`} />
       ))}
     </div>
   );
@@ -172,36 +172,40 @@ export default function VideoHub({ division }: VideoHubProps) {
               const apiBadge = API_BADGE[p.api];
               const statusBadge = STATUS_BADGE[p.status];
               return (
-                <div key={i} className="rounded-2xl overflow-hidden border border-black/10 dark:border-white/10 hover:border-black/20 dark:hover:border-white/20 transition-all">
-                  {/* Header colorido */}
-                  <div className="px-5 py-4 flex items-center justify-between" style={{ backgroundColor: `${p.color}20`, borderBottom: `2px solid ${p.color}40` }}>
-                    <div className="flex items-center gap-3">
-                      <div className="w-3 h-10 rounded-full" style={{ backgroundColor: p.color }} />
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <span className="font-black text-lg" style={{ color: p.color }}>{p.name}</span>
-                          {p.url && (
-                            <a href={p.url} target="_blank" rel="noopener noreferrer" className="opacity-40 hover:opacity-80 transition">
-                              <ExternalLink size={12} />
-                            </a>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                    <span className={`px-3 py-1.5 rounded-lg text-[10px] font-black ${statusBadge.class}`}>
+                <div key={i} className="rounded-[3rem] overflow-hidden bg-[var(--card-bg)] border border-[var(--card-border)] hover:shadow-[0_30px_60px_rgba(0,0,0,0.12)] transition-all duration-700 group flex flex-col items-center text-center p-12">
+                  {/* Status Badge Top Right */}
+                  <div className="absolute top-8 right-8">
+                    <span className={`px-4 py-1.5 rounded-xl text-[9px] font-black shadow-sm uppercase tracking-widest ${statusBadge.class}`}>
                       {statusBadge.label}
                     </span>
                   </div>
-                  {/* Body */}
-                  <div className="px-5 py-4 bg-[var(--card-bg)] space-y-3">
-                    <div className="flex items-center gap-3">
-                      <span className={`px-2.5 py-1 rounded border text-[10px] font-bold ${apiBadge.class}`}>
+
+                  {/* Icon/Pill Indicator */}
+                  <div className="w-16 h-1.5 rounded-full mb-8 opacity-40" style={{ backgroundColor: p.color, boxShadow: `0 0 20px ${p.color}60` }} />
+
+                  {/* Title and Badge Row */}
+                  <div className="space-y-4 w-full flex flex-col items-center">
+                    <div className="flex items-center justify-center gap-3">
+                      <span className="font-black text-4xl tracking-tighter" style={{ color: p.color, textShadow: `0 0 30px ${p.color}20` }}>{p.name}</span>
+                      {p.url && (
+                        <a href={p.url} target="_blank" rel="noopener noreferrer" className="opacity-20 hover:opacity-100 transition-all p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-2xl">
+                          <ExternalLink size={20} />
+                        </a>
+                      )}
+                    </div>
+                    
+                    <div className="flex items-center justify-center gap-4">
+                      <span className={`px-4 py-1 rounded-lg border-2 text-[10px] font-black tracking-[0.2em] uppercase ${apiBadge.class}`}>
                         {apiBadge.label}
                       </span>
                       <Stars count={p.quality} />
                     </div>
-                    <p className="text-sm font-bold text-[var(--card-text)]">{p.tier}</p>
-                    <p className="text-sm text-[var(--card-text)] opacity-60">{p.bestFor}</p>
+                  </div>
+
+                  {/* Info Section */}
+                  <div className="mt-10 pt-8 border-t border-[var(--card-border)] w-full max-w-sm space-y-3">
+                    <p className="text-xl font-black text-[var(--text-color)] leading-tight tracking-tight">{p.tier}</p>
+                    <p className="text-sm text-[var(--text-color)] opacity-40 font-bold italic tracking-wide">{p.bestFor}</p>
                   </div>
                 </div>
               );
