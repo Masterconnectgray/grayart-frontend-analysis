@@ -15,7 +15,7 @@ dashboardRouter.get('/stats', (req, res) => {
   `).get(userId) as { count: number }).count;
 
   const userVideos = (db.prepare(`
-    SELECT COUNT(*) as count FROM ai_jobs WHERE user_id = ? AND type = 'video' AND status IN ('completed', 'processing')
+    SELECT COUNT(*) as count FROM ai_jobs WHERE user_id = ? AND type IN ('video', 'video_v2', 'video_compose') AND status IN ('completed', 'processing')
   `).get(userId) as { count: number }).count;
 
   const userPublished = (db.prepare(`

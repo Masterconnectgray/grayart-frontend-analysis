@@ -682,7 +682,7 @@ videoV2Router.get('/history', async (req, res) => {
   const rows = db.prepare(`
     SELECT id, type, prompt, result, model, tokens_used, cost_estimate, status, created_at, updated_at
     FROM ai_jobs
-    WHERE user_id = ? AND type IN ('video', 'video_v2')
+    WHERE user_id = ? AND type IN ('video', 'video_v2', 'video_compose')
     ORDER BY datetime(created_at) DESC, id DESC
     LIMIT 50
   `).all(req.user!.userId) as Array<{
