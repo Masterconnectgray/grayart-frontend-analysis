@@ -1,9 +1,9 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Card, Button } from '../design-system';
-import { bffFetch } from '../services/BFFClient';
-import type { Division } from '../constants/Themes';
-import { DIVISIONS } from '../constants/Themes';
-import { useAppContext } from '../context/AppContext';
+import { Card, Button } from '../../design-system';
+import { bffFetch } from '../../services/BFFClient';
+import type { Division } from '../../constants/Themes';
+import { DIVISIONS } from '../../constants/Themes';
+import { useAppContext } from '../../context/AppContext';
 import { Film, Clock, Download, Loader2, Check, RefreshCw, Mic, Sliders, Play } from 'lucide-react';
 
 interface VideoComposerProps {

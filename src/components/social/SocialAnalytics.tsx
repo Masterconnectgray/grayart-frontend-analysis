@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-import type { Division } from '../constants/Themes';
-import { DIVISIONS } from '../constants/Themes';
-import { useAppContext } from '../context/AppContext';
-import { Card } from '../design-system';
+import type { Division } from '../../constants/Themes';
+import { DIVISIONS } from '../../constants/Themes';
+import { useAppContext } from '../../context/AppContext';
+import { Card } from '../../design-system';
 import {
   AreaChart, Area, BarChart, Bar,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,

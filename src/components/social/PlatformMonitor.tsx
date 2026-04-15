@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import type { Division } from '../constants/Themes';
-import { PlatformIcon } from '../constants/SocialIcons';
-import { isFlowConfigured, getStats } from '../services/FlowAPIService';
-import { Card } from '../design-system';
+import type { Division } from '../../constants/Themes';
+import { PlatformIcon } from '../../constants/SocialIcons';
+import { isFlowConfigured, getStats } from '../../services/FlowAPIService';
+import { Card } from '../../design-system';
 import { RefreshCcw, AlertTriangle } from 'lucide-react';
-import { bffFetch } from '../services/BFFClient';
-import { fetchConnectedAccounts, type ConnectedAccount } from '../services/SocialOAuthService';
-import { useAppContext } from '../context/AppContext';
+import { bffFetch } from '../../services/BFFClient';
+import { fetchConnectedAccounts, type ConnectedAccount } from '../../services/SocialOAuthService';
+import { useAppContext } from '../../context/AppContext';
 
 interface PlatformMonitorProps {
   division: Division;

@@ -13,6 +13,7 @@ import { flowRouter } from './routes/flow';
 import { socialRouter } from './routes/social';
 import { whatsappRouter } from './routes/whatsapp';
 import { mediaRouter } from './routes/media';
+import { agentsHubRouter } from './routes/agents-hub';
 import { aiServiceRouter } from './routes/ai-service';
 import { videoV2Router } from './routes/video-v2';
 import { videoComposerRouter } from './routes/video-composer';
@@ -76,11 +77,13 @@ app.use('/api/flow', verifyToken, flowRouter);
 app.use('/api/social', verifyToken, socialRouter);
 app.use('/api/whatsapp', verifyToken, whatsappRouter);
 app.use('/api/media', verifyToken, mediaRouter);
+app.use('/api/agents-hub', verifyToken, agentsHubRouter);
 app.use('/api/ai-service', verifyToken, aiServiceRouter);
 app.use('/api/video-v2', verifyToken, videoV2Router);
 app.use('/api/video-composer', verifyToken, videoComposerRouter);
 
-app.use((error: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+app.use((error: Error, _req: express.Request, res: express.Response, next: express.NextFunction) => {
+  void next;
   res.status(500).json({ error: error.message || 'Erro interno do servidor' });
 });
 

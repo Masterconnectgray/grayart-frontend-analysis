@@ -1,13 +1,13 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import type { Division } from '../constants/Themes';
-import { useAppContext } from '../context/AppContext';
-import { listScheduledPosts } from '../services/FlowAPIService';
-import { fetchConnectedAccounts, publishToSocial, scheduleToSocial, type PlatformKey } from '../services/SocialOAuthService';
-import { PlatformSelector, PLATFORMS } from './publisher/PlatformSelector';
-import { PostEditor } from './publisher/PostEditor';
-import { PublishActions } from './publisher/PublishActions';
-import { ScheduleCalendar } from './publisher/ScheduleCalendar';
-import { PostPreview } from './publisher/PostPreview';
+import type { Division } from '../../constants/Themes';
+import { useAppContext } from '../../context/AppContext';
+import { listScheduledPosts } from '../../services/FlowAPIService';
+import { fetchConnectedAccounts, publishToSocial, scheduleToSocial, type PlatformKey } from '../../services/SocialOAuthService';
+import { PlatformSelector, PLATFORMS } from '../publisher/PlatformSelector';
+import { PostEditor } from '../publisher/PostEditor';
+import { PublishActions } from '../publisher/PublishActions';
+import { ScheduleCalendar } from '../publisher/ScheduleCalendar';
+import { PostPreview } from '../publisher/PostPreview';
 
 interface ScheduledPost {
   id: number;

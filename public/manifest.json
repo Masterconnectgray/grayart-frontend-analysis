@@ -1,0 +1,17 @@
+{
+  "name": "GrayArt",
+  "short_name": "GrayArt",
+  "description": "Central de Marketing e Operacao - Grupo Gray",
+  "start_url": "/",
+  "display": "standalone",
+  "theme_color": "#111827",
+  "background_color": "#111827",
+  "icons": [
+    {
+      "src": "/vite.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

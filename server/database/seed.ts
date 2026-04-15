@@ -18,6 +18,15 @@ function isoOffsetDays(days: number, hour = 12, minute = 0) {
 
 function truncateTables() {
   db.exec(`
+    DELETE FROM ai_events;
+    DELETE FROM ai_failures;
+    DELETE FROM ai_reports;
+    DELETE FROM ai_learning_entries;
+    DELETE FROM ai_tasks;
+    DELETE FROM ai_messages;
+    DELETE FROM ai_threads;
+    DELETE FROM ai_agents;
+
     DELETE FROM whatsapp_approvals;
     DELETE FROM audit_logs;
     DELETE FROM scheduled_posts;

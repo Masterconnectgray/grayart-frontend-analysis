@@ -1,9 +1,9 @@
 
 import React, { useState, useEffect, useRef, useCallback, lazy, Suspense } from 'react';
 import QRCode from 'qrcode';
-import type { Division } from '../constants/Themes';
-import { DIVISIONS } from '../constants/Themes';
-import { useAppContext } from '../context/AppContext';
+import type { Division } from '../../constants/Themes';
+import { DIVISIONS } from '../../constants/Themes';
+import { useAppContext } from '../../context/AppContext';
 
 
 const WhatsAppChat = lazy(() => import('./WhatsAppChat'));
@@ -85,7 +85,7 @@ const BROADCAST_TEMPLATES = [
 ];
 
 // ─── WhatsApp via BFF (seguro) ────────────────────────────────────────────
-import { bffFetch } from '../services/BFFClient';
+import { bffFetch } from '../../services/BFFClient';
 
 const evolutionFetch = async (path: string, options: RequestInit = {}): Promise<Response> => {
   return bffFetch(`/whatsapp${path}`, {

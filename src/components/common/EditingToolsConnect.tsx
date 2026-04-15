@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import type { Division } from '../constants/Themes';
-import { DIVISIONS } from '../constants/Themes';
-import { useAppContext } from '../context/AppContext';
-import { Card } from '../design-system';
+import type { Division } from '../../constants/Themes';
+import { DIVISIONS } from '../../constants/Themes';
+import { useAppContext } from '../../context/AppContext';
+import { Card } from '../../design-system';
 import { Check, ExternalLink, LogIn, LogOut } from 'lucide-react';
 
 interface EditingToolsConnectProps {

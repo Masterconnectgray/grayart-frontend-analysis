@@ -1,27 +1,27 @@
 import React, { useEffect, useState, useCallback, lazy, Suspense } from 'react';
 import { useAppContext, type MarketingView } from './context/AppContext';
 import { DIVISIONS, type Division } from './constants/Themes';
-import { ModuleSkeleton, AnalyticsSkeleton, FeedSkeleton } from './components/SkeletonLoader';
-import ErrorBoundary from './components/ErrorBoundary';
-import LoginPage from './components/LoginPage';
-import { isAuthenticated, clearBffSession } from './services/BFFClient';
+import { ModuleSkeleton, AnalyticsSkeleton, FeedSkeleton } from './components/common/SkeletonLoader';
+import ErrorBoundary from './components/common/ErrorBoundary';
+import LoginPage from './components/common/LoginPage';
+import { clearBffSession, isAuthenticated } from './services/BFFClient';
 import { LogOut } from 'lucide-react';
 
 // ─── Lazy Loading: reduz bundle inicial de 1.25MB ─────────────────────────────
-const ReelsGenerator = lazy(() => import('./components/ReelsGenerator'));
-const OperationsDashboard = lazy(() => import('./components/OperationsDashboard'));
+const ReelsGenerator = lazy(() => import('./components/video/ReelsGenerator'));
+const OperationsDashboard = lazy(() => import('./components/dashboard/OperationsDashboard'));
 // AIVideoLab mantido como fallback mas substituido por VideoGenerator na UI
-// const AIVideoLab = lazy(() => import('./components/AIVideoLab'));
-const MediaUpload = lazy(() => import('./components/MediaUpload'));
+// const AIVideoLab = lazy(() => import('./components/video/AIVideoLab'));
+const MediaUpload = lazy(() => import('./components/content/MediaUpload'));
 const ConnectJourney = lazy(() => import('./components/journeys/ConnectJourney'));
 const PublishJourney = lazy(() => import('./components/journeys/PublishJourney'));
 const MonitorJourney = lazy(() => import('./components/journeys/MonitorJourney'));
-const PhotoAnalyzer = lazy(() => import('./components/PhotoAnalyzer'));
-const ActivityHistory = lazy(() => import('./components/ActivityHistory'));
-const VideoEditor = lazy(() => import('./components/VideoEditor'));
-const ExternalTool = lazy(() => import('./components/ExternalTool'));
-const VideoHub = lazy(() => import('./components/VideoHub'));
-const OAuthCallback = lazy(() => import('./components/OAuthCallback'));
+const PhotoAnalyzer = lazy(() => import('./components/content/PhotoAnalyzer'));
+const ActivityHistory = lazy(() => import('./components/dashboard/ActivityHistory'));
+const VideoEditor = lazy(() => import('./components/video/VideoEditor'));
+const ExternalTool = lazy(() => import('./components/common/ExternalTool'));
+const VideoHub = lazy(() => import('./components/video/VideoHub'));
+const OAuthCallback = lazy(() => import('./components/common/OAuthCallback'));
 import { DIVISION_LOGOS, GrupoGrayLogo } from './constants/DivisionLogos';
 import { PenTool, Video, Link2, Send, BarChart3, Sparkles, FileText, Users, Clock, Film, Palette, Scissors } from 'lucide-react';
 import { useDashboardStats } from './hooks/useDashboardStats';

@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import type { Division } from '../constants/Themes';
-import { DIVISIONS } from '../constants/Themes';
-import { Card } from '../design-system';
-import { PlatformIcon } from '../constants/SocialIcons';
-import { bffFetch } from '../services/BFFClient';
-import { useAppContext } from '../context/AppContext';
+import type { Division } from '../../constants/Themes';
+import { DIVISIONS } from '../../constants/Themes';
+import { Card } from '../../design-system';
+import { PlatformIcon } from '../../constants/SocialIcons';
+import { bffFetch } from '../../services/BFFClient';
+import { useAppContext } from '../../context/AppContext';
 import { Clock, Video, FileText, Send, Copy, Wand2, DollarSign } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 

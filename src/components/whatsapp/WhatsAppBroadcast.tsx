@@ -1,8 +1,8 @@
 import React, { useState, useRef, useCallback, useMemo } from 'react';
 import { Search, Send, Square, CheckSquare, Clock, Users, AlertCircle, CheckCircle2, XCircle, MinusSquare } from 'lucide-react';
-import { Card } from '../design-system/Card';
-import type { Division } from '../constants/Themes';
-import { bffFetch } from '../services/BFFClient';
+import { Card } from '../../design-system/Card';
+import type { Division } from '../../constants/Themes';
+import { bffFetch } from '../../services/BFFClient';
 
 interface GroupInfo {
   id: string;

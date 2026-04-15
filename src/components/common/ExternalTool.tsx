@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import type { Division } from '../constants/Themes';
-import { Card } from '../design-system';
+import type { Division } from '../../constants/Themes';
+import { Card } from '../../design-system';
 import { ExternalLink, Maximize2, ArrowLeft } from 'lucide-react';
 
 interface ExternalToolProps {

@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import type { Division } from '../../constants/Themes';
-import InstagramIntegrations from '../InstagramIntegrations';
-import WhatsAppConnect from '../WhatsAppConnect';
-import EditingToolsConnect from '../EditingToolsConnect';
+import InstagramIntegrations from '../social/InstagramIntegrations';
+import WhatsAppConnect from '../whatsapp/WhatsAppConnect';
+import EditingToolsConnect from '../common/EditingToolsConnect';
 import { Link2, MessageCircle, Scissors } from 'lucide-react';
 
 type ConnectTab = 'instagram' | 'whatsapp' | 'editing';

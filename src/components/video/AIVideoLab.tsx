@@ -1,16 +1,16 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import type { Division } from '../constants/Themes';
-import { DIVISIONS } from '../constants/Themes';
-import { SOCIAL_FORMATS } from '../constants/VideoTemplates';
-import { useAppContext } from '../context/AppContext';
-import { Card } from '../design-system';
+import type { Division } from '../../constants/Themes';
+import { DIVISIONS } from '../../constants/Themes';
+import { SOCIAL_FORMATS } from '../../constants/VideoTemplates';
+import { useAppContext } from '../../context/AppContext';
+import { Card } from '../../design-system';
 import {
   generateVideoPrompt,
   startVideoGeneration,
   pollVideoStatus,
   checkApiAccess,
-} from '../services/GeminiService';
-import { bffFetch } from '../services/BFFClient';
+} from '../../services/GeminiService';
+import { bffFetch } from '../../services/BFFClient';
 import { FileVideo, Upload, Check, AlertTriangle, Download, X, Film, Scissors, Type, Sparkles, Youtube, Instagram, MonitorPlay, Zap, RefreshCw, Mic, Volume2, Loader2 } from 'lucide-react';
 
 interface AIVideoLabProps {

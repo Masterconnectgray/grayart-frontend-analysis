@@ -1,9 +1,9 @@
 import React, { useState, lazy, Suspense } from 'react';
 import type { Division } from '../../constants/Themes';
-import PlatformMonitor from '../PlatformMonitor';
+import PlatformMonitor from '../social/PlatformMonitor';
 import { BarChart3, Activity } from 'lucide-react';
 
-const SocialAnalytics = lazy(() => import('../SocialAnalytics'));
+const SocialAnalytics = lazy(() => import('../social/SocialAnalytics'));
 
 export const MonitorJourney: React.FC<{ division: Division }> = ({ division }) => {
   const [tab, setTab] = useState<'analytics' | 'monitor'>('analytics');

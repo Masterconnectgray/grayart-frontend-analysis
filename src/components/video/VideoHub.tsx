@@ -1,6 +1,6 @@
 import { useState, useRef, lazy, Suspense } from 'react';
-import type { Division } from '../constants/Themes';
-import { Card } from '../design-system';
+import type { Division } from '../../constants/Themes';
+import { Card } from '../../design-system';
 import { Film, Clapperboard, Server, ExternalLink, Check, X as XIcon, Clock } from 'lucide-react';
 
 const VideoGenerator = lazy(() => import('./VideoGenerator'));

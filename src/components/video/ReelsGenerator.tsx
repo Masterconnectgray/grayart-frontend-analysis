@@ -1,13 +1,13 @@
 import React, { useState, useCallback } from 'react';
-import type { Division } from '../constants/Themes';
-import { DIVISIONS } from '../constants/Themes';
-import { CONTENT_TEMPLATES } from '../constants/ContentTemplates';
-import type { Platform } from '../constants/ContentTemplates';
-import { useAppContext } from '../context/AppContext';
-import { PlatformIcon } from '../constants/SocialIcons';
-import { generateCopyWithGemini } from '../services/GeminiService';
-import { bffFetch } from '../services/BFFClient';
-import { Button, Card, StatusBadge, EmptyState } from '../design-system';
+import type { Division } from '../../constants/Themes';
+import { DIVISIONS } from '../../constants/Themes';
+import { CONTENT_TEMPLATES } from '../../constants/ContentTemplates';
+import type { Platform } from '../../constants/ContentTemplates';
+import { useAppContext } from '../../context/AppContext';
+import { PlatformIcon } from '../../constants/SocialIcons';
+import { generateCopyWithGemini } from '../../services/GeminiService';
+import { bffFetch } from '../../services/BFFClient';
+import { Button, Card, StatusBadge, EmptyState } from '../../design-system';
 import { Copy, Wand2, Video, Check, MessageSquareDot, RefreshCw, X, ArrowRight, Clock, History } from 'lucide-react';
 
 interface ReelsGeneratorProps {

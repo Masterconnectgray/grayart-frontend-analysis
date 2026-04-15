@@ -1,17 +1,17 @@
 import React, { useState, useRef, useCallback } from 'react';
-import type { Division } from '../constants/Themes';
-import { DIVISIONS } from '../constants/Themes';
-import { useAppContext } from '../context/AppContext';
-import { Card } from '../design-system';
+import type { Division } from '../../constants/Themes';
+import { DIVISIONS } from '../../constants/Themes';
+import { useAppContext } from '../../context/AppContext';
+import { Card } from '../../design-system';
 import {
   uploadMedia, listMedia, analyzeMedia, deleteMedia, formatFileSize,
   type MediaAsset, type MediaAnalysis,
-} from '../services/MediaService';
+} from '../../services/MediaService';
 import {
   Upload, FileVideo, Image, Trash2, Sparkles, Copy, Check,
   Film, Loader2,
 } from 'lucide-react';
-import { PlatformIcon } from '../constants/SocialIcons';
+import { PlatformIcon } from '../../constants/SocialIcons';
 
 interface MediaUploadProps {
   division: Division;

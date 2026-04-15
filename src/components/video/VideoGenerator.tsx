@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import type { Division } from '../constants/Themes';
-import { useAppContext } from '../context/AppContext';
-import { Card, Button } from '../design-system';
-import { bffFetch } from '../services/BFFClient';
+import type { Division } from '../../constants/Themes';
+import { useAppContext } from '../../context/AppContext';
+import { Card, Button } from '../../design-system';
+import { bffFetch } from '../../services/BFFClient';
 import {
   Video, Download, Play, Loader2, Film, Sparkles,
   RefreshCw, Clock, AlertTriangle, Check,

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import type { Division } from '../constants/Themes';
-import { useAppContext } from '../context/AppContext';
-import { Card } from '../design-system';
+import type { Division } from '../../constants/Themes';
+import { useAppContext } from '../../context/AppContext';
+import { Card } from '../../design-system';
 import { Plus, Trash2, CheckCircle2, Clock, Circle } from 'lucide-react';
 
 interface OperationsDashboardProps {

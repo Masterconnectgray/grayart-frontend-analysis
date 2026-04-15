@@ -1,15 +1,15 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import type { Division } from '../constants/Themes';
-import { DIVISIONS } from '../constants/Themes';
-import { useAppContext } from '../context/AppContext';
-import { Card, Button } from '../design-system';
-import { PlatformIcon } from '../constants/SocialIcons';
+import type { Division } from '../../constants/Themes';
+import { DIVISIONS } from '../../constants/Themes';
+import { useAppContext } from '../../context/AppContext';
+import { Card, Button } from '../../design-system';
+import { PlatformIcon } from '../../constants/SocialIcons';
 import {
   saveSocialCredential,
   listSocialCredentials,
   deleteSocialCredential,
   getSocialConfig,
-} from '../services/FlowAPIService';
+} from '../../services/FlowAPIService';
 import {
   disconnectPlatform,
   fetchConnectedAccounts,
@@ -17,7 +17,7 @@ import {
   simulateLoginWithPlatform,
   type ConnectedAccount,
   type PlatformKey,
-} from '../services/SocialOAuthService';
+} from '../../services/SocialOAuthService';
 import { Link2, Trash2, Settings2, Loader2, ShieldCheck, AlertTriangle } from 'lucide-react';
 
 interface InstagramIntegrationsProps {

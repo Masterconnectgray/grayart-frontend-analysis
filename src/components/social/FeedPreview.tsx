@@ -1,6 +1,6 @@
 import React, { useState, useCallback } from 'react';
-import type { Division } from '../constants/Themes';
-import { DIVISIONS } from '../constants/Themes';
+import type { Division } from '../../constants/Themes';
+import { DIVISIONS } from '../../constants/Themes';
 import {
   DndContext,
   closestCenter,
@@ -21,8 +21,8 @@ import {
   arrayMove,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { useAppContext } from '../context/AppContext';
-import { Card } from '../design-system';
+import { useAppContext } from '../../context/AppContext';
+import { Card } from '../../design-system';
 
 interface FeedPreviewProps { division: Division; }
 

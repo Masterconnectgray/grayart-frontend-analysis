@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import type { Division } from '../../constants/Themes';
-import MultiChannelPublisher from '../MultiChannelPublisher';
-import ContentCalendar from '../ContentCalendar';
-import FeedPreview from '../FeedPreview';
+import MultiChannelPublisher from '../social/MultiChannelPublisher';
+import ContentCalendar from '../content/ContentCalendar';
+import FeedPreview from '../social/FeedPreview';
 import { Send, Calendar, LayoutGrid } from 'lucide-react';
 
 export const PublishJourney: React.FC<{ division: Division }> = ({ division }) => {

@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
-import type { Division } from '../constants/Themes';
-import { DIVISIONS } from '../constants/Themes';
+import type { Division } from '../../constants/Themes';
+import { DIVISIONS } from '../../constants/Themes';
 import {
   Upload,
   AlertTriangle,

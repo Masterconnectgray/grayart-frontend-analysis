@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { bffFetch } from '../services/BFFClient'
-import type { Division } from '../constants/Themes'
+import { bffFetch } from '../../services/BFFClient'
+import type { Division } from '../../constants/Themes'
 
 interface WhatsAppChatProps {
   instanceName: string
