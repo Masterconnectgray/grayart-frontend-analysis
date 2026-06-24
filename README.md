@@ -1,73 +1,143 @@
-# React + TypeScript + Vite
+# Gray Art - AI Social Publishing and Operations Platform
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Gray Art is a full-stack product exploration for AI-assisted social publishing, media workflows, WhatsApp integration, and operations monitoring.
 
-Currently, two official plugins are available:
+The repository combines a React/TypeScript frontend, an Express backend-for-frontend layer, and Python service experiments for AI and media processing. It is intended to show how social, AI, dashboard, and automation features can be organized into one operational product.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## What It Demonstrates
 
-## React Compiler
+- Multi-channel publishing workflows for social platforms
+- Social OAuth connection flows and credential management design
+- WhatsApp connection and broadcast workflows through Evolution API paths
+- AI-assisted copy, video, media, and content planning flows
+- Operational dashboards, analytics, scheduling, and activity history
+- A componentized React interface for a real business tool
+- Express routes for BFF/API orchestration
+- Python service experiments for AI/media capabilities
+- PWA support through manifest and service worker files
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Stack
 
-## Expanding the ESLint configuration
+Frontend:
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+- React 19
+- TypeScript
+- Vite
+- Tailwind CSS
+- Recharts
+- dnd-kit
+- Lucide React
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+Backend:
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+- Node.js
+- Express
+- JWT authentication paths
+- SQLite / database layer
+- REST route organization
+- Rate limiting and security middleware
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+AI and integrations:
+
+- Gemini-oriented service paths
+- Social OAuth flow design
+- WhatsApp/Evolution API integration paths
+- Media upload and publishing flows
+- Python AI service folder
+
+## Repository Structure
+
+```text
+src/
+  components/
+    common/
+    content/
+    dashboard/
+    publisher/
+    social/
+    video/
+    whatsapp/
+  context/
+  design-system/
+  hooks/
+  services/
+server/
+  routes/
+  utils/
+  database/
+  ai-service/
+docs/
+public/
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## Local Development
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+Install dependencies:
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+npm install
 ```
+
+Run the frontend:
+
+```bash
+npm run dev
+```
+
+Run the Express server:
+
+```bash
+npm run server
+```
+
+Run both:
+
+```bash
+npm run dev:all
+```
+
+Build:
+
+```bash
+npm run build
+```
+
+Lint:
+
+```bash
+npm run lint
+```
+
+## Environment
+
+Use `.env.example` as the reference for local development placeholders.
+
+Production credentials must stay server-side. OAuth client secrets, API keys, publishing tokens, WhatsApp keys, and AI provider keys should not be exposed through browser-readable variables.
+
+Recommended production pattern:
+
+1. Browser talks only to the application backend.
+2. Backend stores and rotates sensitive credentials.
+3. OAuth exchange happens server-side.
+4. AI/video jobs are tracked as backend jobs.
+5. Logs include trace IDs, status, duration, and failure reasons.
+
+## Security Notes
+
+This public repository should be treated as a portfolio snapshot, not a production deployment package.
+
+Before using it as a polished public case study:
+
+- Replace the default template README with this project README.
+- Remove internal assistant notes that are not useful to external reviewers.
+- Remove generated database artifacts and sample uploads unless they are explicitly documented fixtures.
+- Add a license.
+- Add screenshots or a short demo recording.
+- Add a production architecture diagram.
+- Keep real credentials out of git.
+
+## Portfolio Summary
+
+Gray Art shows full-stack product engineering around a real operational problem: coordinating AI-assisted content creation, social publishing, WhatsApp communication, and business dashboard visibility in one interface.
+
+The strongest engineering signals are the breadth of integrations, the BFF direction for sensitive workflows, the domain-specific UI components, and the focus on turning marketing operations into repeatable software processes.
