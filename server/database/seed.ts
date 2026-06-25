@@ -39,23 +39,30 @@ function truncateTables() {
 }
 
 async function ensureSeedUser(): Promise<SeedUser> {
+  const seedEmail = process.env.SEED_ADMIN_EMAIL || 'admin@grayart.local';
+  const seedPassword = process.env.SEED_ADMIN_PASSWORD;
+
+  if (!seedPassword || seedPassword.length < 12) {
+    throw new Error('SEED_ADMIN_PASSWORD must be set with at least 12 characters before running the seed.');
+  }
+
   const existing = db.prepare(`
     SELECT id, email, name
     FROM users
     WHERE email = ?
-  `).get('admin@grayart.local') as SeedUser | undefined;
+  `).get(seedEmail) as SeedUser | undefined;
 
   if (existing) return existing;
 
-  const passwordHash = await hashPassword('12345678');
+  const passwordHash = await hashPassword(seedPassword);
   const result = db.prepare(`
     INSERT INTO users (email, password_hash, name, role)
     VALUES (?, ?, ?, ?)
-  `).run('admin@grayart.local', passwordHash, 'Gray Admin', 'user');
+  `).run(seedEmail, passwordHash, 'Gray Admin', 'user');
 
   return {
     id: Number(result.lastInsertRowid),
-    email: 'admin@grayart.local',
+    email: seedEmail,
     name: 'Gray Admin',
   };
 }

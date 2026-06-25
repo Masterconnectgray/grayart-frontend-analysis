@@ -97,8 +97,8 @@ Pontos positivos:
 
 Problemas:
 
-- `VITE_GEMINI_API_KEY` está no frontend.
-- Consumo da API é feito diretamente do navegador.
+- Versões anteriores do desenho previam chave Gemini no frontend; a referência pública atual deve manter `GEMINI_API_KEY` somente no backend.
+- O consumo da API deve passar pelo BFF, não diretamente pelo navegador.
 - Polling é controlado pelo cliente, sem fila nem persistência.
 - Não há rastreabilidade por job.
 - Não existe controle de custo por usuário, divisão ou operação.
@@ -176,8 +176,8 @@ Pontos positivos:
 
 Problemas:
 
-- `VITE_EVOLUTION_API_KEY` está exposta ao frontend.
-- O frontend fala diretamente com a Evolution API.
+- Versões anteriores do desenho previam chave Evolution no frontend; a referência pública atual deve manter `EVOLUTION_API_KEY` somente no backend.
+- O frontend deve falar com o BFF, e o BFF deve falar com a Evolution API.
 - Não existe camada interna para governar sessões, filas, templates e opt-in.
 - Disparo de mensagens parece síncrono e orientado por interface.
 - Não há trilha de auditoria, deduplicação ou controle de limite.
